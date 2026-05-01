@@ -33,7 +33,6 @@
     .bubble{max-width:90%;padding:12px 16px;border-radius:20px;line-height:1.5;font-size:0.95rem;word-break:break-word;white-space:pre-wrap}
     .bot .bubble{background:white;border-bottom-left-radius:4px;color:#1e2b3c}
     .user .bubble{background:#2c5a6e;color:white;border-bottom-right-radius:4px}
-    /* 資料核對訊息中的分隔線樣式 - 防止換行 */
     .bubble .separator-line {
       display: inline-block;
       width: 100%;
@@ -43,7 +42,6 @@
       overflow-x: auto;
       -webkit-overflow-scrolling: touch;
     }
-    /* 手機端分隔線處理 */
     @media (max-width: 480px) {
       .bubble .separator-line {
         font-size: 0.75rem;
@@ -102,11 +100,13 @@
 <script>
 (function(){
   // ============================================================
-  // ⚙️ 可調整設定區域
+  // ⚙️ 請修改這裡！填入您的 GAS 部署網址
   // ============================================================
+  const GAS_URL = "https://script.google.com/macros/s/AKfycby9idv95Gh_ihqmiEZ7f8ynS7equAnfaVgUqMJWJyjsZi56VgckRxWp8FqWM-_hlFCj4g/exec";
+  // ============================================================
+  
   const ACTIVITY_END_DATE = new Date(2026, 4, 1, 22, 59, 59);
   const MARQUEE_SPEED = 12;
-  // ============================================================
   
   let step = "askName";
   let user = { name: "", town: "", addr: "", id: "", phone: "", device: "" };
@@ -137,34 +137,34 @@
   
   const isMobile = /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
   
-  // 輸入限制函數
+  // ============================================================
+  // 呼叫 GAS 後端的函數
+  // ============================================================
+  async function callGAS(action, params = {}) {
+    try {
+      const response = await fetch(GAS_URL, {
+        method: 'POST',
+        mode: 'cors',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action, ...params })
+      });
+      const result = await response.json();
+      return result;
+    } catch (error) {
+      console.error(`呼叫 ${action} 失敗:`, error);
+      return { success: false, error: error.message };
+    }
+  }
+  
   function setInputRestrictions() {
     let maxLen = 100;
-    let inputType = "text";
-    
-    if(step === "askName") {
-      maxLen = 10;
-      inputType = "text";
-    } 
-    else if(step === "askAddr") {
-      maxLen = 25;
-      inputType = "text";
-    }
-    else if(step === "askId") {
-      maxLen = 10;
-      inputType = "text";
-    }
-    else if(step === "askPhone") {
-      maxLen = 10;
-      inputType = "tel";
-    }
-    else {
-      maxLen = 100;
-      inputType = "text";
-    }
-    
+    if(step === "askName") { maxLen = 10; } 
+    else if(step === "askAddr") { maxLen = 25; }
+    else if(step === "askId") { maxLen = 10; }
+    else if(step === "askPhone") { maxLen = 10; }
+    else { maxLen = 100; }
     inputEl.maxLength = maxLen;
-    if(inputType === "tel") {
+    if(step === "askPhone") {
       inputEl.setAttribute("inputmode", "numeric");
       inputEl.setAttribute("pattern", "[0-9]*");
     } else {
@@ -173,9 +173,8 @@
     }
   }
   
-  function filterInput(e) {
+  function filterInput() {
     let val = inputEl.value;
-    
     if(step === "askPhone") {
       val = val.replace(/[^0-9]/g, '');
       if(val.length > 10) val = val.substring(0, 10);
@@ -221,30 +220,12 @@
   
   function getUserDisplayName() {
     if(!user.name || user.name.length === 0) return { avatar: "?", display: "" };
-    const firstName = user.name.charAt(0);
-    let remainingName = user.name.substring(1);
-    if(remainingName.length === 0) remainingName = "";
-    return { avatar: firstName, display: remainingName };
-  }
-  
-  function setInputMode(mode) {
-    if(isMobile) {
-      inputEl.setAttribute("inputmode", mode);
-      inputEl.focus();
-    }
-  }
-  
-  function resetInputMode() {
-    if(isMobile) {
-      inputEl.setAttribute("inputmode", "text");
-    }
+    return { avatar: user.name.charAt(0), display: user.name.substring(1) };
   }
   
   function setMarqueeSpeed() {
     const marqueeText = document.querySelector('.marquee-text');
-    if(marqueeText) {
-      marqueeText.style.animation = `marquee ${MARQUEE_SPEED}s linear infinite`;
-    }
+    if(marqueeText) marqueeText.style.animation = `marquee ${MARQUEE_SPEED}s linear infinite`;
   }
   
   function checkAndShowMarquee() {
@@ -260,16 +241,13 @@
     }
   }
   
-  function fetchParticipantCount() {
-    if(typeof google !== 'undefined' && google.script && google.script.run) {
-      google.script.run.withSuccessHandler(function(result) {
-        if(result && typeof result.total === 'number') {
-          totalParticipants = result.total;
-          statsBadge.innerHTML = `👥 ${totalParticipants}人`;
-        } else {
-          statsBadge.innerHTML = `👥 統計中`;
-        }
-      }).getStats();
+  async function fetchParticipantCount() {
+    const result = await callGAS("getStats");
+    if(result && typeof result.total === 'number') {
+      totalParticipants = result.total;
+      statsBadge.innerHTML = `👥 ${totalParticipants}人`;
+    } else {
+      statsBadge.innerHTML = `👥 統計中`;
     }
   }
   
@@ -294,10 +272,7 @@
   
   function recordError() {
     errorCount++;
-    if(errorCount >= 5 && !isLocked) {
-      lockSession();
-      return true;
-    }
+    if(errorCount >= 5 && !isLocked) { lockSession(); return true; }
     return false;
   }
   
@@ -306,16 +281,14 @@
   function addMsgWithoutTyping(text, who, btns, isQuiz = false) {
     const div = document.createElement("div");
     div.className = "msg " + who;
-    
     const header = document.createElement("div");
     header.className = "msg-header";
-    
     if(who === "bot") {
       const icon = document.createElement("div");
       icon.className = "icon";
       icon.innerText = "🤖";
       const nameSpan = document.createElement("span");
-      nameSpan.style.fontSize = "0.75rem";
+      nameSpan.style.fontSize = "0.7rem";
       nameSpan.style.opacity = "0.7";
       nameSpan.innerText = "阿保";
       header.appendChild(icon);
@@ -326,26 +299,22 @@
       userAvatar.className = "user-avatar";
       userAvatar.innerText = displayInfo.avatar;
       const nameSpan = document.createElement("span");
-      nameSpan.style.fontSize = "0.75rem";
+      nameSpan.style.fontSize = "0.7rem";
       nameSpan.style.opacity = "0.7";
       nameSpan.innerText = displayInfo.display || "";
       header.appendChild(userAvatar);
       header.appendChild(nameSpan);
     }
-    
     const bubble = document.createElement("div");
     bubble.className = "bubble";
-    // 處理分隔線顯示 - 確保不換行
     let displayText = text;
     if(text.includes("━━━━━━━━━━━━━━━━━━━━")) {
       displayText = text.replace(/━━━━━━━━━━━━━━━━━━━━/g, '<span class="separator-line">━━━━━━━━━━━━━━━━━━━━</span>');
     }
     bubble.innerHTML = displayText.replace(/\n/g,"<br>");
-    
     div.appendChild(header);
     div.appendChild(bubble);
     msgsDiv.appendChild(div);
-    
     if(btns && btns.length){
       const panel = document.createElement("div");
       panel.className = "options";
@@ -353,19 +322,7 @@
         const b = document.createElement("button");
         b.innerText = btns[i].label;
         b.className = btns[i].type === "tf" ? "opt-tf" : "opt";
-        b.setAttribute('data-value', btns[i].value);
-        b.onclick = (function(val, btnElement) { 
-          return function(e) {
-            e.stopPropagation();
-            if(btnElement.classList.contains('disabled')) return;
-            const allBtns = panel.querySelectorAll('.opt, .opt-tf');
-            allBtns.forEach(btn => {
-              btn.classList.add('disabled');
-              btn.style.pointerEvents = 'none';
-            });
-            handleInput(val);
-          };
-        })(btns[i].value, b);
+        b.onclick = (function(val) { return function() { handleInput(val); }; })(btns[i].value);
         panel.appendChild(b);
       }
       bubble.after(panel);
@@ -377,49 +334,37 @@
   }
   
   function addMsgWithTyping(text, who, btns) {
-    if(who === "user") {
-      addMsgWithoutTyping(text, who, btns);
-      return;
-    }
-    
+    if(who === "user") { addMsgWithoutTyping(text, who, btns); return; }
     if(isTyping) return;
     isTyping = true;
-    
     const div = document.createElement("div");
     div.className = "msg " + who;
-    
     const header = document.createElement("div");
     header.className = "msg-header";
     const icon = document.createElement("div");
     icon.className = "icon";
     icon.innerText = "🤖";
     const nameSpan = document.createElement("span");
-    nameSpan.style.fontSize = "0.75rem";
+    nameSpan.style.fontSize = "0.7rem";
     nameSpan.style.opacity = "0.7";
     nameSpan.innerText = "阿保";
     header.appendChild(icon);
     header.appendChild(nameSpan);
-    
     const bubble = document.createElement("div");
     bubble.className = "bubble";
-    
     div.appendChild(header);
     div.appendChild(bubble);
     msgsDiv.appendChild(div);
-    
-    let i = 0;
-    const speed = 50;
-    // 處理分隔線格式化
     let processedText = text;
     if(text.includes("━━━━━━━━━━━━━━━━━━━━")) {
       processedText = text.replace(/━━━━━━━━━━━━━━━━━━━━/g, '<span class="separator-line">━━━━━━━━━━━━━━━━━━━━</span>');
     }
     const formattedText = processedText;
-    
+    let i = 0;
+    const speed = 50;
     function typeNext() {
       if(i < formattedText.length) {
-        let currentHtml = formattedText.substring(0, i+1);
-        bubble.innerHTML = currentHtml.replace(/\n/g,"<br>");
+        bubble.innerHTML = formattedText.substring(0, i+1).replace(/\n/g,"<br>");
         i++;
         scrollBottom();
         setTimeout(typeNext, speed);
@@ -433,19 +378,7 @@
             const b = document.createElement("button");
             b.innerText = btns[j].label;
             b.className = btns[j].type === "tf" ? "opt-tf" : "opt";
-            b.setAttribute('data-value', btns[j].value);
-            b.onclick = (function(val, btnElement) { 
-              return function(e) {
-                e.stopPropagation();
-                if(btnElement.classList.contains('disabled')) return;
-                const allBtns = panel.querySelectorAll('.opt, .opt-tf');
-                allBtns.forEach(btn => {
-                  btn.classList.add('disabled');
-                  btn.style.pointerEvents = 'none';
-                });
-                handleInput(val);
-              };
-            })(btns[j].value, b);
+            b.onclick = (function(val) { return function() { handleInput(val); }; })(btns[j].value);
             panel.appendChild(b);
           }
           bubble.after(panel);
@@ -469,26 +402,19 @@
   function showConfirmScreen() {
     disableInput(true);
     const confirmMsg = "📋 請核對您的資料\n\n━━━━━━━━━━━━━━━━━━━━\n👤 姓名：" + user.name + "\n🏘️ 鄉鎮：" + user.town + "\n🏠 地址：" + user.addr + "\n🆔 身分證：" + user.id + "\n📱 手機：" + user.phone + "\n💻 裝置：" + user.device + "\n━━━━━━━━━━━━━━━━━━━━\n\n⚠️ 資料錯誤無法參加抽獎或領取獎項！請您仔細核對！！\n\n✅ 確認無誤請按「正確送出」\n✏️ 需要修改請按「我要修改」";
-    
     const confirmBtns = [
       {label:"✅ 正確送出", value:"confirm", type:"tf"},
       {label:"✏️ 我要修改", value:"modify", type:"tf"}
     ];
-    
-    // 使用打字機效果顯示確認訊息
     botMsg(confirmMsg, confirmBtns, true);
     step = "confirmData";
     updateRestrictionsOnStepChange();
     canInput = true;
   }
   
-  function handleInput(raw){
+  async function handleInput(raw){
     if(!canInput || isLocked || isTyping) return;
-    
-    if(isActivityExpired) {
-      botMsg("活動已結束，感謝您的參與！", null, false);
-      return;
-    }
+    if(isActivityExpired) { botMsg("活動已結束，感謝您的參與！", null, false); return; }
     
     if(step === "confirmData"){
       if(raw === "modify"){
@@ -516,21 +442,15 @@
     }
     
     const val = raw.trim();
-    if(!val && step !== "quiz"){
-      botMsg("請輸入內容～", null, true);
-      autoFocus();
-      return;
-    }
+    if(!val && step !== "quiz"){ botMsg("請輸入內容～", null, true); autoFocus(); return; }
     
     canInput = false;
     addMsgWithoutTyping(val || "✅", "user");
     
     if(step === "askName"){
-      const nameRegex = /^[A-Za-z\u4e00-\u9fa5]{1,10}$/;
-      if(!nameRegex.test(val)){
+      if(!/^[A-Za-z\u4e00-\u9fa5]{1,10}$/.test(val)){
         botMsg("姓名只能包含中文或英文，長度1~10個字，請重新輸入", null, true);
         canInput = true;
-        autoFocus();
         if(recordError()) return;
         return;
       }
@@ -542,21 +462,14 @@
       step = "askTown";
       updateRestrictionsOnStepChange();
       canInput = true;
-      autoFocus();
       return;
     }
     
     if(step === "askTown"){
       const towns = ["南竿鄉","北竿鄉","莒光鄉","東引鄉"];
-      let found = false;
-      for(let i=0; i<towns.length; i++) if(towns[i] === val) found = true;
-      if(!found){
-        botMsg("請點選上方鄉鎮按鈕", [
-          {label:"南竿鄉",value:"南竿鄉"},{label:"北竿鄉",value:"北竿鄉"},
-          {label:"莒光鄉",value:"莒光鄉"},{label:"東引鄉",value:"東引鄉"}
-        ], true);
+      if(!towns.includes(val)){
+        botMsg("請點選上方鄉鎮按鈕", [ {label:"南竿鄉",value:"南竿鄉"},{label:"北竿鄉",value:"北竿鄉"},{label:"莒光鄉",value:"莒光鄉"},{label:"東引鄉",value:"東引鄉"} ], true);
         canInput = true;
-        autoFocus();
         if(recordError()) return;
         return;
       }
@@ -565,31 +478,17 @@
       step = "askAddr";
       updateRestrictionsOnStepChange();
       canInput = true;
-      autoFocus();
       return;
     }
     
     if(step === "askAddr"){
-      if(val.length > 25){
-        botMsg("地址字數過長，請精簡輸入（最多25字）", null, true);
-        canInput = true;
-        autoFocus();
-        if(recordError()) return;
-        return;
-      }
-      if(!/號$/.test(val)){
-        botMsg("地址結尾必須是「號」，例如：復興村123號", null, true);
-        canInput = true;
-        autoFocus();
-        if(recordError()) return;
-        return;
-      }
+      if(val.length > 25){ botMsg("地址字數過長，請精簡輸入（最多25字）", null, true); canInput = true; if(recordError()) return; return; }
+      if(!/號$/.test(val)){ botMsg("地址結尾必須是「號」，例如：復興村123號", null, true); canInput = true; if(recordError()) return; return; }
       user.addr = val;
       botMsg("🔢 請輸入身分證字號（第一個英文字母會自動轉為大寫，共10碼）\n範例：A123456789", null, true);
       step = "askId";
       updateRestrictionsOnStepChange();
       canInput = true;
-      autoFocus();
       return;
     }
     
@@ -598,19 +497,23 @@
       if(!/^[A-Z][0-9]{9}$/.test(upperVal)){
         botMsg("身分證格式錯誤，請輸入大寫英文+9碼數字\n範例：A123456789", null, true);
         canInput = true;
-        autoFocus();
         if(recordError()) return;
         return;
       }
       user.id = upperVal;
       botMsg("🔍 驗證中...", null, false);
-      google.script.run.withSuccessHandler(function(res){
+      const result = await callGAS("checkID", { id: user.id });
+      if(result && result.valid) {
         botMsg("✅ 驗證通過！請輸入手機號碼（09開頭10碼）\n範例：0912345678", null, true);
         step = "askPhone";
         updateRestrictionsOnStepChange();
         canInput = true;
         autoFocus();
-      }).checkID(user.id);
+      } else {
+        botMsg("❌ 身分證驗證失敗，請重新輸入", null, true);
+        canInput = true;
+        if(recordError()) return;
+      }
       return;
     }
     
@@ -618,103 +521,58 @@
       if(!/^09[0-9]{8}$/.test(val)){
         botMsg("手機格式錯誤，須為 09xxxxxxxx 共10碼\n只能輸入數字", null, true);
         canInput = true;
-        autoFocus();
         if(recordError()) return;
         return;
       }
       user.phone = val;
       user.device = isMobile ? "手機" : "電腦";
-      resetInputMode();
       showConfirmScreen();
       return;
     }
     
     if(step === "readyQuiz"){
       if(val !== "開始"){
-        botMsg("請點選「開始測驗」按鈕開始答題", [
-          {label:"🎯 開始測驗", value:"開始", type:"tf"}
-        ], false);
+        botMsg("請點選「開始測驗」按鈕開始答題", [{label:"🎯 開始測驗", value:"開始", type:"tf"}], false);
         canInput = true;
         if(recordError()) return;
         return;
       }
       botMsg("📚 載入題庫中...", null, false);
       canInput = false;
-      google.script.run.withSuccessHandler(function(bank){
-        if(!bank.success){
-          botMsg("題庫讀取失敗："+(bank.error||"請聯絡管理員"), null, false);
-          canInput = true;
-          return;
-        }
-        
-        tfQuestions = [];
-        mcQuestions = [];
-        for(let i=0; i<bank.data.trueFalse.length; i++){
-          let q = bank.data.trueFalse[i];
-          tfQuestions.push({id:q.id, q:q.question, ans:q.answer, type:"tf"});
-        }
-        for(let i=0; i<bank.data.multipleChoice.length; i++){
-          let q = bank.data.multipleChoice[i];
-          mcQuestions.push({id:q.id, q:q.question, opts:q.options, ans:q.answer, type:"mc"});
-        }
-        
-        selectedTF = [];
-        let tfCopy = [...tfQuestions];
-        for(let i=tfCopy.length-1; i>0; i--){
-          let j = Math.floor(Math.random()*(i+1));
-          let tmp = tfCopy[i];
-          tfCopy[i] = tfCopy[j];
-          tfCopy[j] = tmp;
-        }
-        selectedTF = tfCopy.slice(0, 5);
-        
-        selectedMC = [];
-        let mcCopy = [...mcQuestions];
-        for(let i=mcCopy.length-1; i>0; i--){
-          let j = Math.floor(Math.random()*(i+1));
-          let tmp = mcCopy[i];
-          mcCopy[i] = mcCopy[j];
-          mcCopy[j] = tmp;
-        }
-        selectedMC = mcCopy.slice(0, 5);
-        
-        totalTFCount = selectedTF.length;
-        totalMCCount = selectedMC.length;
-        
-        currentQuestionType = "tf";
-        qIndex = 0;
-        answers = {};
-        answeredQuestions.clear();
-        
-        disableInput(true);
-        step = "quiz";
-        updateRestrictionsOnStepChange();
+      const bank = await callGAS("getQuestionBank");
+      if(!bank.success){
+        botMsg("題庫讀取失敗："+(bank.error||"請聯絡管理員"), null, false);
         canInput = true;
-        showQuestion();
-      }).getQuestionBank();
+        return;
+      }
+      
+      tfQuestions = bank.data.trueFalse.map(q => ({id:q.id, q:q.question, ans:q.answer, type:"tf"}));
+      mcQuestions = bank.data.multipleChoice.map(q => ({id:q.id, q:q.question, opts:q.options, ans:q.answer, type:"mc"}));
+      selectedTF = [...tfQuestions].sort(()=>Math.random()-0.5).slice(0,5);
+      selectedMC = [...mcQuestions].sort(()=>Math.random()-0.5).slice(0,5);
+      totalTFCount = selectedTF.length;
+      totalMCCount = selectedMC.length;
+      currentQuestionType = "tf";
+      qIndex = 0;
+      answers = {};
+      answeredQuestions.clear();
+      disableInput(true);
+      step = "quiz";
+      canInput = true;
+      showQuestion();
       return;
     }
     
     if(step === "quiz"){
       let currentList = (currentQuestionType === "tf") ? selectedTF : selectedMC;
       let qq = currentList[qIndex];
-      let questionKey = currentQuestionType + "_" + qq.id;
-      
-      if(answeredQuestions.has(questionKey)) {
-        canInput = true;
-        return;
-      }
-      
+      if(answeredQuestions.has(currentQuestionType + "_" + qq.id)) { canInput = true; return; }
       let selected = "";
-      
       if(currentQuestionType === "tf"){
         if(val === "對") selected = "TRUE";
         else if(val === "錯") selected = "FALSE";
         else {
-          botMsg("請點選「對」或「錯」按鈕回答", [
-            {label:"✅ 對", value:"對", type:"tf"},
-            {label:"❌ 錯", value:"錯", type:"tf"}
-          ], false);
+          botMsg("請點選「對」或「錯」按鈕回答", [{label:"✅ 對", value:"對", type:"tf"},{label:"❌ 錯", value:"錯", type:"tf"}], false);
           canInput = true;
           if(recordError()) return;
           return;
@@ -722,20 +580,15 @@
       } else {
         let up = val.toUpperCase();
         if(up !== "A" && up !== "B" && up !== "C" && up !== "D"){
-          botMsg("請點選 Ⓐ Ⓑ Ⓒ Ⓓ 按鈕回答", [
-            {label:"Ⓐ", value:"A"},{label:"Ⓑ", value:"B"},
-            {label:"Ⓒ", value:"C"},{label:"Ⓓ", value:"D"}
-          ], false);
+          botMsg("請點選 Ⓐ Ⓑ Ⓒ Ⓓ 按鈕回答", [{label:"Ⓐ", value:"A"},{label:"Ⓑ", value:"B"},{label:"Ⓒ", value:"C"},{label:"Ⓓ", value:"D"}], false);
           canInput = true;
           if(recordError()) return;
           return;
         }
         selected = up;
       }
-      
-      answeredQuestions.add(questionKey);
+      answeredQuestions.add(currentQuestionType + "_" + qq.id);
       answers[qq.id] = selected;
-      
       if(qIndex + 1 < currentList.length){
         qIndex++;
         showQuestion();
@@ -760,60 +613,28 @@
     let q = currentList[qIndex];
     let total = (currentQuestionType === "tf") ? totalTFCount : totalMCCount;
     let typeName = (currentQuestionType === "tf") ? "是非題" : "選擇題";
-    
     let txt = "📌 " + typeName + " 第" + (qIndex+1) + "/" + total + "題\n\n" + q.q + "\n";
     let btns = null;
-    
     if(currentQuestionType === "tf"){
       txt += "\n請點選下方按鈕回答：";
-      btns = [
-        {label:"✅ 對", value:"對", type:"tf"},
-        {label:"❌ 錯", value:"錯", type:"tf"}
-      ];
+      btns = [{label:"✅ 對", value:"對", type:"tf"},{label:"❌ 錯", value:"錯", type:"tf"}];
     } else {
-      txt += "\nⒶ " + q.opts.A + "\n";
-      txt += "Ⓑ " + q.opts.B + "\n";
-      txt += "Ⓒ " + q.opts.C + "\n";
-      txt += "Ⓓ " + q.opts.D + "\n";
-      txt += "\n請點選下方按鈕回答：";
-      btns = [
-        {label:"Ⓐ", value:"A"},
-        {label:"Ⓑ", value:"B"},
-        {label:"Ⓒ", value:"C"},
-        {label:"Ⓓ", value:"D"}
-      ];
+      txt += "\nⒶ " + q.opts.A + "\nⒷ " + q.opts.B + "\nⒸ " + q.opts.C + "\nⒹ " + q.opts.D + "\n\n請點選下方按鈕回答：";
+      btns = [{label:"Ⓐ", value:"A"},{label:"Ⓑ", value:"B"},{label:"Ⓒ", value:"C"},{label:"Ⓓ", value:"D"}];
     }
     botMsg(txt, btns, false, true);
   }
   
-  function computeResult(){
+  async function computeResult(){
     let score = 0;
-    for(let i=0; i<selectedTF.length; i++){
-      const q = selectedTF[i];
-      const ua = answers[q.id];
-      if(!ua) continue;
-      const correct = q.ans ? "TRUE" : "FALSE";
-      if(ua === correct) score += 10;
-    }
-    for(let i=0; i<selectedMC.length; i++){
-      const q = selectedMC[i];
-      const ua = answers[q.id];
-      if(!ua) continue;
-      if(ua === q.ans) score += 10;
-    }
+    for(let q of selectedTF) if(answers[q.id] === (q.ans ? "TRUE" : "FALSE")) score += 10;
+    for(let q of selectedMC) if(answers[q.id] === q.ans) score += 10;
     finalScore = score;
     
-    const saveDataObj = {
-      name: user.name,
-      town: user.town,
-      address: user.addr,
-      id: user.id,
-      phone: user.phone,
-      score: finalScore,
-      device: user.device
-    };
-    
-    google.script.run.saveData(saveDataObj);
+    await callGAS("saveData", {
+      name: user.name, town: user.town, address: user.addr,
+      id: user.id, phone: user.phone, score: finalScore, device: user.device
+    });
     
     let medal = finalScore === 100 ? "🏆 滿分天才！" : (finalScore >= 70 ? "🎖️ 表現優異" : "📖 再加油！");
     let resultMsg = "📊 測驗完成！\n\n⭐ 您的總分："+finalScore+" 分 / 100 分\n"+medal+"\n\n感謝參加「2026犯罪被害人保護週」有獎徵答！";
@@ -824,78 +645,41 @@
     const lineBtn = document.createElement("button");
     lineBtn.innerText = "📱 LINE 分享";
     lineBtn.className = "share-line";
-    lineBtn.onclick = function() {
-      const text = encodeURIComponent("🎁 我完成「2026犯保週有獎徵答」，獲得 "+finalScore+" 分！一起來挑戰～");
-      window.open("https://line.me/R/msg/text/?"+text+"%0A"+window.location.href, "_blank");
-    };
+    lineBtn.onclick = () => window.open("https://line.me/R/msg/text/?"+encodeURIComponent("🎁 我完成「2026犯保週有獎徵答」，獲得 "+finalScore+" 分！一起來挑戰～")+"%0A"+window.location.href, "_blank");
     const fbBtn = document.createElement("button");
     fbBtn.innerText = "📘 Facebook 分享";
     fbBtn.className = "share-fb";
-    fbBtn.onclick = function() {
-      window.open("https://www.facebook.com/sharer/sharer.php?u="+encodeURIComponent(window.location.href), "_blank");
-    };
+    fbBtn.onclick = () => window.open("https://www.facebook.com/sharer/sharer.php?u="+encodeURIComponent(window.location.href), "_blank");
     shareDiv.appendChild(lineBtn);
     shareDiv.appendChild(fbBtn);
     const lastMsg = msgsDiv.lastChild;
-    if(lastMsg && lastMsg.querySelector(".bubble")){
-      lastMsg.querySelector(".bubble").after(shareDiv);
-    }
+    if(lastMsg && lastMsg.querySelector(".bubble")) lastMsg.querySelector(".bubble").after(shareDiv);
     
     step = "done";
-    updateRestrictionsOnStepChange();
     canInput = true;
     inputEl.placeholder = "測驗完成，可分享";
-    
     fetchParticipantCount();
   }
   
   inputEl.addEventListener("input", filterInput);
-  
-  inputEl.addEventListener("focus", function() {
-    setInputRestrictions();
-    if(!isMobile) return;
-    if(step === "askPhone") {
-      inputEl.setAttribute("inputmode", "numeric");
-    } else {
-      inputEl.setAttribute("inputmode", "text");
-    }
-  });
-  
-  sendBtn.onclick = function() {
-    const v = inputEl.value.trim();
-    if(v && !inputEl.disabled && step !== "confirmData" && step !== "quiz"){
-      inputEl.value = "";
-      handleInput(v);
-    }
-  };
-  inputEl.addEventListener("keypress", function(e) {
-    if(e.key === "Enter" && !inputEl.disabled && step !== "confirmData" && step !== "quiz") sendBtn.click();
-  });
+  inputEl.addEventListener("focus", function() { setInputRestrictions(); });
+  sendBtn.onclick = function() { const v = inputEl.value.trim(); if(v && !inputEl.disabled && step !== "confirmData" && step !== "quiz"){ inputEl.value = ""; handleInput(v); } };
+  inputEl.addEventListener("keypress", function(e) { if(e.key === "Enter" && !inputEl.disabled && step !== "confirmData" && step !== "quiz") sendBtn.click(); });
   
   const expired = checkActivityExpired();
   if(!expired) {
     checkAndShowMarquee();
     fetchParticipantCount();
     
-    // 判斷是否為蘋果手機
     const isAppleDevice = /iPhone|iPad|iPod/i.test(navigator.userAgent);
-
-    // 歡迎訊息
     let welcomeMsg = "🤖 嗨～我是犯保週小幫手「阿保」！\n\n2026 犯罪被害人保護週有獎徵答活動開跑！\n\n我會一步一步引導你填寫資料，並進行測驗：\n• 5題是非題（每題10分）\n• 5題選擇題（每題10分）\n\n請輸入你的「真實姓名」開始吧 👇";
-
-    // 如果是蘋果手機，加入粉紅色提示
     if(isAppleDevice) {
       welcomeMsg += "\n\n💡 蘋果手機用戶如果畫面體驗不佳，請用雙指捏合調整頁面 🤏";
-      // 使用 addMsgWithoutTyping 直接顯示（含粉紅色）
       addMsgWithoutTyping(welcomeMsg.replace("💡 蘋果手機用戶如果畫面體驗不佳，請用雙指捏合調整頁面 🤏", '<span style="color:#ff69b4;">💡 蘋果手機用戶如果畫面體驗不佳，請用雙指捏合調整頁面 🤏</span>'), "bot", null);
     } else {
       botMsg(welcomeMsg, null, true);
     }
-
     step = "askName";
-    updateRestrictionsOnStepChange();
-    canInput = true;
-    autoFocus();
     updateRestrictionsOnStepChange();
     canInput = true;
     autoFocus();

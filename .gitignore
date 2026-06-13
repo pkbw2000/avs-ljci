@@ -1,0 +1,11 @@
+﻿# Backup files
+backup-original/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+

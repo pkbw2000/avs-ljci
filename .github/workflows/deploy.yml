@@ -1,0 +1,38 @@
+name: Deploy Multiple Apps
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
+
+      - name: Prepare folders
+        run: |
+          mkdir _site
+          cp -r slot-game/ _site/slot-game/
+          cp -r BB/ _site/BB/
+
+      # 修正點 1: 使用這個 Action 來上傳 _site 資料夾
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+      # 修正點 2: deploy-pages 不接收 path 參數，它直接讀取上傳好的 artifact
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

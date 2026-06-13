@@ -1,0 +1,906 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>🐉 12生肖對對碰-兒童版</title>
+
+    <meta property="og:title" content="🐉 12生肖對對碰 - 兒童合成遊戲">
+    <meta property="og:description" content="快來挑戰12生肖合成樂！相同的動物碰撞會合體升級～">
+    <meta property="og:image" content="https://pkbw2000.github.io/avs-ljci/game/Qpig.jpg">
+    <meta property="og:image:width" content="512">
+    <meta property="og:image:height" content="512">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://pkbw2000.github.io/avs-ljci/game/Zodiac12.html">
+
+    <link rel="manifest" href="manifest.json">
+    <link rel="apple-touch-icon" href="zodiac-192.png">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="十二生肖遊戲">
+    <style>
+        * {
+            box-sizing: border-box;
+            user-select: none;
+            -webkit-user-select: none;
+            -webkit-tap-highlight-color: transparent;
+            touch-action: none;
+        }
+        body {
+            margin: 0;
+            overflow: hidden;
+            background: linear-gradient(145deg, #FFF5E6 0%, #FFECD6 100%);
+            font-family: "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", "Comic Neue", "Comic Sans MS", "YouYuan", "幼圓", sans-serif;
+            display: flex;
+            flex-direction: column;
+            height: 100dvh;
+            -webkit-text-size-adjust: 100%;
+            text-size-adjust: 100%;
+        }
+        body, canvas, button {
+            -webkit-touch-callout: none;
+            -webkit-user-select: none;
+            -khtml-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
+            user-select: none;
+        }
+        .game-header {
+            flex-shrink: 0;
+            background: linear-gradient(135deg, #FFE4B5 0%, #FFD9A5 100%);
+            padding: 12px 16px;
+            padding-top: max(12px, env(safe-area-inset-top));
+            box-shadow: 0 3px 10px rgba(0,0,0,0.1);
+            z-index: 20;
+            border-bottom: 3px solid #FFB347;
+        }
+        .score-bar {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            max-width: 650px;
+            margin: 0 auto;
+            gap: 12px;
+        }
+        .score-box {
+            background: white;
+            padding: 10px 24px;
+            border-radius: 50px;
+            font-weight: bold;
+            color: #FF8C00;
+            font-size: 1.2rem;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+            border: 2px solid #FFD966;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .score-box span {
+            font-size: 1.8rem;
+            color: #FF6347;
+            font-weight: 900;
+        }
+        .best-score {
+            background: #FFE0A3;
+            padding: 6px 16px;
+            border-radius: 40px;
+            font-size: 0.9rem;
+            color: #B97F10;
+            font-weight: bold;
+            white-space: nowrap;
+        }
+        .game-canvas-wrapper {
+            flex: 1;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background: linear-gradient(to bottom, #FFF9E8 0%, #FFF2DD 100%);
+            position: relative;
+            overflow: hidden;
+        }
+        canvas {
+            display: block;
+            width: 100%;
+            height: auto;
+            max-width: 700px;
+            background: #FFF9E8;
+            border-radius: 28px 28px 18px 18px;
+            box-shadow: 0 12px 28px rgba(0,0,0,0.2);
+            cursor: grab;
+            touch-action: none;
+        }
+        canvas:active { cursor: grabbing; }
+        .game-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.6);
+            backdrop-filter: blur(6px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 100;
+            visibility: hidden;
+            border-radius: 28px;
+        }
+        .overlay-card {
+            background: #FFF9E6;
+            border-radius: 48px;
+            padding: 24px 20px;
+            text-align: center;
+            max-width: 300px;
+            border: 5px solid #FFC48A;
+            box-shadow: 0 20px 30px rgba(0,0,0,0.2);
+        }
+        .overlay-card h2 {
+            font-size: 2rem;
+            margin: 0 0 8px;
+            color: #FF8C42;
+        }
+        .final-score {
+            font-size: 3rem;
+            font-weight: bold;
+            color: #FF5722;
+            background: #FFF1CF;
+            display: inline-block;
+            padding: 8px 24px;
+            border-radius: 60px;
+            margin: 12px 0;
+        }
+        .play-again {
+            background: #FFB347;
+            border: none;
+            font-size: 1.5rem;
+            padding: 12px 24px;
+            border-radius: 60px;
+            color: white;
+            font-weight: bold;
+            cursor: pointer;
+            margin-top: 12px;
+            width: 100%;
+        }
+        .share-btn {
+            background: linear-gradient(135deg, #1E90FF 0%, #1873CC 100%);
+            border: none;
+            font-size: 1.5rem;
+            padding: 12px 24px;
+            border-radius: 60px;
+            color: white;
+            font-weight: bold;
+            cursor: pointer;
+            margin-top: 12px;
+            width: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            box-shadow: 0 4px 12px rgba(30,144,255,0.3);
+            transition: all 0.2s ease;
+        }
+        .share-btn:active {
+            transform: translateY(2px);
+            box-shadow: 0 2px 6px rgba(30,144,255,0.2);
+        }
+        .btn-group {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin-top: 8px;
+        }
+        .tip {
+            position: absolute;
+            bottom: 16px;
+            left: 0;
+            right: 0;
+            text-align: center;
+            font-size: 0.8rem;
+            color: #B97F50;
+            background: rgba(255,250,210,0.85);
+            width: fit-content;
+            margin: 0 auto;
+            padding: 6px 18px;
+            border-radius: 40px;
+            backdrop-filter: blur(4px);
+            pointer-events: none;
+            z-index: 15;
+            font-weight: bold;
+            transition: opacity 0.5s ease;
+        }
+        @media (max-width: 600px) {
+            .score-box { padding: 6px 16px; font-size: 1rem; }
+            .score-box span { font-size: 1.4rem; }
+            .best-score { font-size: 0.75rem; padding: 4px 12px; }
+            .tip { font-size: 0.7rem; bottom: 12px; }
+            .play-again, .share-btn { font-size: 1.2rem; padding: 10px 20px; }
+        }
+    </style>
+    <title>🐉 12生肖合成樂 | 碰撞合成大挑戰</title>
+</head>
+<body>
+<div class="game-header">
+    <div class="score-bar">
+        <div class="score-box">
+            ⭐ 得分 <span id="currentScore">0</span>
+            <span class="best-score" id="bestScoreSpan">🏆 最高 0</span>
+        </div>
+    </div>
+</div>
+
+<div class="game-canvas-wrapper">
+    <canvas id="gameCanvas"></canvas>
+    <div class="tip" id="gameTip">👇 左右移動手指 ➕ 放開 → 丟下生肖球！ 相同動物會合體升級！</div>
+    <div id="gameOverlay" class="game-overlay">
+        <div class="overlay-card">
+            <h2>🎉 超厲害 🎉</h2>
+            <div>你獲得總分</div>
+            <div class="final-score" id="finalScoreSpan">0</div>
+            <div class="btn-group">
+                <button class="play-again" id="restartOverlayBtn">🐣 再玩一次</button>
+                <button class="share-btn" id="shareScoreBtn">📤 分享成績</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/matter-js/0.19.0/matter.min.js"></script>
+<script>
+    (function(){
+        // 禁止雙擊縮放 / 長按選單
+        document.addEventListener('gesturestart', function(e) { e.preventDefault(); });
+        document.addEventListener('dblclick', function(e) { e.preventDefault(); });
+        document.addEventListener('contextmenu', function(e) { e.preventDefault(); });
+        document.addEventListener('selectstart', function(e) { e.preventDefault(); });
+        
+        // 十二生肖 (等級0~11)
+        const ZODIACS = [
+            { name: "鼠", emoji: "🐭", color: "#C8A2C8", score: 2 },
+            { name: "牛", emoji: "🐮", color: "#BC9A6C", score: 4 },
+            { name: "虎", emoji: "🐯", color: "#F4A261", score: 8 },
+            { name: "兔", emoji: "🐰", color: "#F9C7C2", score: 16 },
+            { name: "龍", emoji: "🐲", color: "#E9C46A", score: 32 },
+            { name: "蛇", emoji: "🐍", color: "#6A9C78", score: 64 },
+            { name: "馬", emoji: "🐴", color: "#D9A066", score: 128 },
+            { name: "羊", emoji: "🐑", color: "#F4E2C6", score: 256 },
+            { name: "猴", emoji: "🐵", color: "#BF8F6B", score: 512 },
+            { name: "雞", emoji: "🐔", color: "#E07A5F", score: 1024 },
+            { name: "狗", emoji: "🐶", color: "#81B29A", score: 2048 },
+            { name: "豬", emoji: "🐷", color: "#F4A9A0", score: 4096 }
+        ];
+        const MAX_LEVEL = ZODIACS.length - 1;
+        let BALL_RADIUS = 35;
+        
+        let engine, world, runner, canvas, ctx;
+        let width = 500, height = 700;
+        let isGameActive = true;
+        let totalScore = 0;
+        let bestScore = parseInt(localStorage.getItem('zodiac_best')) || 0;
+        let currentUnlockLevel = 0;
+        let nextAnimalLevel = 0;
+        let canDrop = true;
+        let dropCooldown = 500;
+        let previewX = 250;
+        let gameBodies = [];
+        let dangerLineY = 120;
+        
+        const scoreSpan = document.getElementById('currentScore');
+        const finalScoreSpan = document.getElementById('finalScoreSpan');
+        const gameOverlayDiv = document.getElementById('gameOverlay');
+        const bestScoreSpan = document.getElementById('bestScoreSpan');
+        
+        // 分享功能
+        const SHARE_ICON_URL = "https://pkbw2000.github.io/avs-ljci/game/Qpig.jpg";
+		function shareGameScore() {
+		    // 直接从页面元素读取最终得分（更可靠）
+		    const finalScoreElem = document.getElementById('finalScoreSpan');
+		    let currentScore = totalScore;  // 后备值
+		    if (finalScoreElem) {
+		        const scoreText = finalScoreElem.innerText;
+		        if (scoreText && !isNaN(parseInt(scoreText))) {
+		            currentScore = parseInt(scoreText);
+		        }
+		    }
+		    const shareText = `🐉 我在「12生肖對對碰」得到 ${currentScore} 分！ 🎉 快來挑戰合成樂趣～`;
+		    const shareTitle = "12生肖對對碰遊戲";
+		    if (navigator.share) {
+		        navigator.share({
+		            title: shareTitle,
+		            text: shareText,
+		            url: window.location.href,
+		        }).catch(err => {
+		            console.log("分享取消或失敗", err);
+		            fallbackCopy(shareText);
+		        });
+		    } else {
+		        fallbackCopy(shareText);
+		    }
+		}
+        function fallbackCopy(text) {
+            navigator.clipboard.writeText(text).then(() => {
+                alert("✅ 成績已複製到剪貼簿！\n" + text);
+            }).catch(() => {
+                alert("📋 無法自動複製，但你可以手動分享這段成績：\n" + text);
+            });
+        }
+        
+        // 碰撞事件處理函數
+        let collisionHandler = null;
+        
+        // 更新解鎖等級 (根據分數)
+		function updateUnlockLevelByScore() {
+		    let newUnlock = 0;
+		    if(totalScore >= 100) newUnlock = 1;
+		    if(totalScore >= 300) newUnlock = 2;
+		    if(totalScore >= 700) newUnlock = 3;
+		    if(totalScore >= 1500) newUnlock = 4;
+		    if(totalScore >= 3000) newUnlock = 5;
+		    if(totalScore >= 6000) newUnlock = 6;
+		    if(totalScore >= 10000) newUnlock = 7;   // 羊
+		    if(totalScore >= 16000) newUnlock = 8;
+		    if(totalScore >= 24000) newUnlock = 9;
+		    if(totalScore >= 35000) newUnlock = 10;
+		    if(totalScore >= 50000) newUnlock = 11;
+		
+		    // 限制可掉落的最高等级为羊（7级）
+		    const maxDropLevel = 7;
+		    let targetUnlock = Math.min(newUnlock, maxDropLevel);
+		
+		    if (targetUnlock > currentUnlockLevel) {
+		        currentUnlockLevel = targetUnlock;
+		        const unlockedAnimal = ZODIACS[currentUnlockLevel];
+		        showFloatingMessage(`✨ 解鎖 ${unlockedAnimal.emoji} ${unlockedAnimal.name}！ ✨`, unlockedAnimal.emoji, 1800);
+		        if (nextAnimalLevel > currentUnlockLevel) {
+		            nextAnimalLevel = Math.floor(Math.random() * (currentUnlockLevel + 1));
+		        }
+		    }
+		}
+        
+        function updateUI() {
+            scoreSpan.innerText = totalScore;
+            if(totalScore > bestScore) {
+                bestScore = totalScore;
+                localStorage.setItem('zodiac_best', bestScore);
+                bestScoreSpan.innerHTML = `🏆 最高 ${bestScore}`;
+            }
+        }
+        
+        function addScore(points, level, worldX, worldY) {
+            if(!isGameActive) return;
+            totalScore += points;
+            updateUI();
+            updateUnlockLevelByScore();
+            createFloatingScore(worldX, worldY, `+${points}`);
+            if(navigator.vibrate) navigator.vibrate(30);
+            playMergeSound(level);
+        }
+        
+        // 音效
+        let audioCtx = null;
+        function initAudio() {
+            if(!audioCtx && window.AudioContext) {
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            }
+        }
+        function playMergeSound(level) {
+            if(!audioCtx) return;
+            try {
+                const now = audioCtx.currentTime;
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                osc.frequency.value = 440 + level * 50;
+                gain.gain.setValueAtTime(0.25, now);
+                gain.gain.exponentialRampToValueAtTime(0.0001, now+0.25);
+                osc.start();
+                osc.stop(now+0.25);
+            } catch(e) {}
+        }
+        function playDropSound() {
+            if(!audioCtx) return;
+            try {
+                const now = audioCtx.currentTime;
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                osc.frequency.value = 300;
+                gain.gain.setValueAtTime(0.15, now);
+                gain.gain.exponentialRampToValueAtTime(0.0001, now+0.15);
+                osc.start();
+                osc.stop(now+0.15);
+            } catch(e) {}
+        }
+        
+        function createFloatingScore(x, y, text) {
+            const div = document.createElement('div');
+            div.innerText = text;
+            div.style.position = 'absolute';
+            div.style.fontSize = '36px';
+            div.style.fontWeight = 'bold';
+            div.style.color = '#FFB347';
+            div.style.textShadow = '2px 2px 0 white';
+            div.style.pointerEvents = 'none';
+            div.style.zIndex = '200';
+            div.style.fontFamily = 'inherit';
+            div.style.whiteSpace = 'nowrap';
+            document.body.appendChild(div);
+            const canvasRect = canvas.getBoundingClientRect();
+            const scaleX = canvas.width / canvasRect.width;
+            const scaleY = canvas.height / canvasRect.height;
+            const screenX = canvasRect.left + (x / scaleX);
+            const screenY = canvasRect.top + (y / scaleY);
+            div.style.left = `${screenX}px`;
+            div.style.top = `${screenY}px`;
+            let opacity = 1, moveY = 0;
+            function animateFloat() {
+                moveY -= 1.8;
+                opacity -= 0.025;
+                div.style.transform = `translate(-50%, calc(-50% + ${moveY}px))`;
+                div.style.opacity = opacity;
+                if(opacity <= 0) div.remove();
+                else requestAnimationFrame(animateFloat);
+            }
+            requestAnimationFrame(animateFloat);
+        }
+        
+        function showFloatingMessage(msg, emoji, duration=1500) {
+            const div = document.createElement('div');
+            div.innerHTML = `${emoji} ${msg} ${emoji}`;
+            div.style.position = 'absolute';
+            div.style.top = '30%';
+            div.style.left = '50%';
+            div.style.transform = 'translate(-50%, -50%)';
+            div.style.background = 'rgba(255,245,190,0.95)';
+            div.style.padding = '12px 24px';
+            div.style.borderRadius = '60px';
+            div.style.fontSize = '1.4rem';
+            div.style.fontWeight = 'bold';
+            div.style.color = '#D2691E';
+            div.style.border = '3px solid #FFB347';
+            div.style.boxShadow = '0 8px 20px rgba(0,0,0,0.2)';
+            div.style.zIndex = '300';
+            div.style.whiteSpace = 'nowrap';
+            div.style.pointerEvents = 'none';
+            document.body.appendChild(div);
+            setTimeout(() => div.remove(), duration);
+        }
+        
+        function createAnimalBall(x, y, level) {
+            // 邊界鉗位
+            let clampedX = Math.min(width - BALL_RADIUS - 5, Math.max(BALL_RADIUS + 5, x));
+            let clampedY = Math.min(height - BALL_RADIUS - 5, Math.max(BALL_RADIUS + 5, y));
+            const animal = ZODIACS[level];
+            const ballBody = Matter.Bodies.circle(clampedX, clampedY, BALL_RADIUS, {
+                restitution: 0.45,
+                friction: 0.2,
+                density: 0.001,
+                label: `animal_${level}`
+            });
+            ballBody.gameLevel = level;
+            Matter.World.add(world, ballBody);
+            const newBall = {
+                body: ballBody,
+                level: level,
+                radius: BALL_RADIUS,
+                spawnTime: Date.now()
+            };
+            gameBodies.push(newBall);
+            return ballBody;
+        }
+        
+        function removeBall(ballObj) {
+            const idx = gameBodies.findIndex(b => b.body === ballObj.body);
+            if(idx !== -1) gameBodies.splice(idx, 1);
+            Matter.World.remove(world, ballObj.body);
+        }
+        
+        function tryMerge(bodyA, bodyB) {
+            if(bodyA.gameLevel === undefined || bodyB.gameLevel === undefined) return false;
+            const levelA = bodyA.gameLevel;
+            const levelB = bodyB.gameLevel;
+            if(levelA !== levelB) return false;
+            if(levelA >= MAX_LEVEL) return false;
+            
+            const ballObjA = gameBodies.find(b => b.body === bodyA);
+            const ballObjB = gameBodies.find(b => b.body === bodyB);
+            if(!ballObjA || !ballObjB) return false;
+            
+            let midX = (bodyA.position.x + bodyB.position.x) / 2;
+            let midY = (bodyA.position.y + bodyB.position.y) / 2;
+            // 鉗位合成位置，確保新球不超出邊界
+            midX = Math.min(width - BALL_RADIUS - 5, Math.max(BALL_RADIUS + 5, midX));
+            midY = Math.min(height - BALL_RADIUS - 5, Math.max(BALL_RADIUS + 5, midY));
+            
+            removeBall(ballObjA);
+            removeBall(ballObjB);
+            const newLevel = levelA + 1;
+            const newBallBody = createAnimalBall(midX, midY, newLevel);
+            Matter.Body.setVelocity(newBallBody, { x: (Math.random() - 0.5) * 2, y: -2 });
+            const addedScore = ZODIACS[newLevel].score;
+            addScore(addedScore, newLevel, midX, midY);
+            showMergeEffect(midX, midY, ZODIACS[newLevel].emoji);
+            return true;
+        }
+        
+        function showMergeEffect(x, y, emoji) {
+            const div = document.createElement('div');
+            div.innerHTML = `${emoji} 合成！ ${emoji}`;
+            div.style.position = 'absolute';
+            div.style.left = '0px';
+            div.style.top = '0px';
+            div.style.fontSize = '34px';
+            div.style.fontWeight = 'bold';
+            div.style.color = '#FFD966';
+            div.style.textShadow = '2px 2px 0 #B97F10';
+            div.style.pointerEvents = 'none';
+            div.style.zIndex = '250';
+            div.style.whiteSpace = 'nowrap';
+            document.body.appendChild(div);
+            const canvasRect = canvas.getBoundingClientRect();
+            const scaleX = canvas.width / canvasRect.width;
+            const scaleY = canvas.height / canvasRect.height;
+            const screenX = canvasRect.left + (x / scaleX);
+            const screenY = canvasRect.top + (y / scaleY);
+            div.style.left = `${screenX}px`;
+            div.style.top = `${screenY}px`;
+            div.style.transform = 'translate(-50%, -50%) scale(0.8)';
+            let scale = 0.8;
+            let opacity = 1;
+            function animate() {
+                scale += 0.05;
+                opacity -= 0.02;
+                div.style.transform = `translate(-50%, -50%) scale(${scale})`;
+                div.style.opacity = opacity;
+                if(opacity <= 0) div.remove();
+                else requestAnimationFrame(animate);
+            }
+            requestAnimationFrame(animate);
+        }
+        
+		function setupCollisionEvents() {
+			// 先移除旧的监听器，避免重复
+			if (collisionHandler) {
+				Matter.Events.off(engine, 'collisionStart', collisionHandler);
+			}
+			
+			collisionHandler = function(event) {
+				if (!isGameActive) return;
+				
+				const pairs = event.pairs;
+				for (let i = 0; i < pairs.length; i++) {
+					const bodyA = pairs[i].bodyA;
+					const bodyB = pairs[i].bodyB;
+					
+					// 获取两个碰撞物体的等级（注意属性名是 gameLevel）
+					const levelA = bodyA.gameLevel;
+					const levelB = bodyB.gameLevel;
+					
+					// 特殊彩蛋：两个都是猪（最高级，等级 11）
+					if (levelA !== undefined && levelB !== undefined && 
+						levelA === MAX_LEVEL && levelB === MAX_LEVEL) {
+						
+						// 额外加 10000 分
+						totalScore += 10000;
+						updateUI();   // 刷新分数显示
+						
+						// 播放一个喜庆的音效（复用合成音效，最高音调）
+						playMergeSound(MAX_LEVEL);
+						
+						// 显示全屏清场特效
+						showFloatingMessage("💥 豬王大合體！清空全場 +10000 💥", "🐷", 2000);
+						
+						// 清除所有掉落的动物球（保留静态墙体）
+						const allBodies = Matter.Composite.allBodies(world);
+						for (let j = 0; j < allBodies.length; j++) {
+							const body = allBodies[j];
+							if (!body.isStatic && body.gameLevel !== undefined) {
+								Matter.World.remove(world, body);
+							}
+						}
+						// 同时清空游戏内的球体数组
+						gameBodies = [];
+						
+						// 注意：这里不调用 endGame，游戏继续
+						// 且不需要执行 tryMerge，因为猪碰猪不产生新球
+						continue;  // 跳过本次循环的合成逻辑
+					}
+					
+					// 非猪碰猪的情况，交给原来的 tryMerge 处理
+					tryMerge(bodyA, bodyB);
+				}
+			};
+			
+			Matter.Events.on(engine, 'collisionStart', collisionHandler);
+		}
+        
+		function dropCurrentBall() {
+			if(!isGameActive || !canDrop) return false;
+			let dropX = Math.min(width - BALL_RADIUS - 8, Math.max(BALL_RADIUS + 8, previewX));
+			const dropY = Math.max(BALL_RADIUS + 10, 25);
+			createAnimalBall(dropX, dropY, nextAnimalLevel);
+			playDropSound();
+			canDrop = false;
+			let maxLevel = Math.min(currentUnlockLevel, 7);   // 限制最高掉落为羊
+			if(maxLevel < 0) maxLevel = 0;
+			let newLevel = Math.floor(Math.random() * (maxLevel + 1));
+			nextAnimalLevel = Math.min(maxLevel, newLevel);
+			setTimeout(() => { canDrop = true; }, dropCooldown);
+			return true;
+		}
+        
+        function checkGameOver() {
+            if(!isGameActive) return;
+            const now = Date.now();
+            for(let i=0; i<gameBodies.length; i++) {
+                const ball = gameBodies[i];
+                if(now - ball.spawnTime < 1200) continue;
+                const velocity = Math.abs(ball.body.velocity.x) + Math.abs(ball.body.velocity.y);
+                if(velocity > 1.2) continue;
+                const topY = ball.body.position.y - ball.radius;
+                if(topY <= dangerLineY) {
+                    endGame();
+                    break;
+                }
+            }
+        }
+        
+        function endGame() {
+            if(!isGameActive) return;
+            isGameActive = false;
+            if(runner) Matter.Runner.stop(runner);
+            finalScoreSpan.innerText = totalScore;
+            gameOverlayDiv.style.visibility = 'visible';
+        }
+        
+        function restartGame() {
+            // 清除所有動態物體
+            const allBodies = Matter.Composite.allBodies(world);
+            for(let i=0; i<allBodies.length; i++) {
+                if(!allBodies[i].isStatic) {
+                    Matter.World.remove(world, allBodies[i]);
+                }
+            }
+            gameBodies = [];
+            totalScore = 0;
+            currentUnlockLevel = 0;
+            nextAnimalLevel = 0;
+            isGameActive = true;
+            canDrop = true;
+            updateUI();
+            updateUnlockLevelByScore();
+            gameOverlayDiv.style.visibility = 'hidden';
+            if(runner) Matter.Runner.start(runner, engine);
+            previewX = width/2;
+            // 重新綁定碰撞事件（移除舊的再新增）
+            setupCollisionEvents();
+        }
+        
+        // 繪製球體
+        function shadeColor(color, percent) {
+            if(!color.startsWith('#')) return color;
+            let r = parseInt(color.slice(1,3),16);
+            let g = parseInt(color.slice(3,5),16);
+            let b = parseInt(color.slice(5,7),16);
+            r = Math.min(255, Math.max(0, r + (r*percent)/100));
+            g = Math.min(255, Math.max(0, g + (g*percent)/100));
+            b = Math.min(255, Math.max(0, b + (b*percent)/100));
+            return `rgb(${Math.floor(r)}, ${Math.floor(g)}, ${Math.floor(b)})`;
+        }
+        
+        function drawBall(ctx, x, y, radius, baseColor, emoji) {
+            const grad = ctx.createRadialGradient(x - radius*0.25, y - radius*0.25, radius*0.1, x, y, radius);
+            grad.addColorStop(0, '#FFFDE7');
+            grad.addColorStop(0.35, baseColor);
+            grad.addColorStop(1, shadeColor(baseColor, -35));
+            ctx.beginPath();
+            ctx.arc(x, y, radius, 0, Math.PI*2);
+            ctx.fillStyle = grad;
+            ctx.fill();
+            ctx.strokeStyle = 'rgba(255,255,200,0.9)';
+            ctx.lineWidth = 3;
+            ctx.stroke();
+            ctx.beginPath();
+            ctx.arc(x - radius*0.2, y - radius*0.2, radius*0.12, 0, Math.PI*2);
+            ctx.fillStyle = 'rgba(255,255,245,0.7)';
+            ctx.fill();
+            ctx.font = `${Math.floor(radius * 0.9)}px "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", "Helvetica Neue"`;
+            ctx.textAlign = "center";
+            ctx.textBaseline = "middle";
+            ctx.fillStyle = '#2c2c2c';
+            ctx.fillText(emoji, x, y + radius*0.05);
+        }
+        
+        function render() {
+            if(!ctx) return;
+            ctx.clearRect(0, 0, width, height);
+            ctx.fillStyle = '#FFF9E8';
+            ctx.fillRect(0,0,width,height);
+            ctx.beginPath();
+            ctx.setLineDash([12, 16]);
+            ctx.moveTo(0, dangerLineY);
+            ctx.lineTo(width, dangerLineY);
+            ctx.strokeStyle = '#FF6B6B';
+            ctx.lineWidth = 5;
+            ctx.stroke();
+            ctx.setLineDash([]);
+            for(let i=0; i<gameBodies.length; i++) {
+                const ball = gameBodies[i];
+                const animal = ZODIACS[ball.level];
+                drawBall(ctx, ball.body.position.x, ball.body.position.y, ball.radius, animal.color, animal.emoji);
+            }
+            if(isGameActive && gameOverlayDiv.style.visibility !== 'visible') {
+                const previewAnimal = ZODIACS[nextAnimalLevel];
+                let previewY = Math.min(height * 0.2, dangerLineY - BALL_RADIUS - 10);
+                if(previewY < BALL_RADIUS+15) previewY = BALL_RADIUS+20;
+                ctx.beginPath();
+                ctx.setLineDash([8, 8]);
+                ctx.moveTo(previewX, previewY);
+                ctx.lineTo(previewX, height-10);
+                ctx.strokeStyle = '#00C853';
+                ctx.lineWidth = 4;
+                ctx.stroke();
+                ctx.setLineDash([]);
+                ctx.globalAlpha = 0.85;
+                drawBall(ctx, previewX, previewY, BALL_RADIUS, previewAnimal.color, previewAnimal.emoji);
+                ctx.globalAlpha = 1;
+                ctx.beginPath();
+                ctx.arc(previewX, previewY, BALL_RADIUS+5, 0, Math.PI*2);
+                ctx.strokeStyle = '#FFD966';
+                ctx.lineWidth = 3;
+                ctx.stroke();
+            }
+            ctx.fillStyle = '#D9B382';
+            ctx.fillRect(0, height-8, width, 8);
+            ctx.fillStyle = '#C29A62';
+            ctx.fillRect(0, height-4, width, 4);
+        }
+        
+        function rebuildBoundaries() {
+            const allBodies = Matter.Composite.allBodies(world);
+            for(let i=0; i<allBodies.length; i++) {
+                if(allBodies[i].isStatic) Matter.World.remove(world, allBodies[i]);
+            }
+            const ground = Matter.Bodies.rectangle(width/2, height + 30, width+80, 60, { isStatic: true, restitution: 0.3 });
+            const leftWall = Matter.Bodies.rectangle(-35, height/2, 70, height+80, { isStatic: true });
+            const rightWall = Matter.Bodies.rectangle(width+35, height/2, 70, height+80, { isStatic: true });
+            Matter.World.add(world, [ground, leftWall, rightWall]);
+        }
+        
+		// 辅助函数：根据画布宽度动态计算球半径（确保至少能容纳5颗球）
+		function updateBallRadiusByWidth(currentWidth) {
+			// 左右各留20px边距，5颗球需要10个半径空间
+			let newRadius = Math.floor((currentWidth - 40) / 10);
+			// 限制最小半径30px（保持可爱），最大45px（避免过大）
+			newRadius = Math.min(45, Math.max(30, newRadius));
+			if (BALL_RADIUS !== newRadius) {
+				BALL_RADIUS = newRadius;
+				return true; // 半径变化
+			}
+			return false;
+		}
+
+		// 原有 resizeCanvasAndWorld 函数
+		function resizeCanvasAndWorld() {
+			const maxW = Math.min(window.innerWidth - 30, 700);
+			width = maxW;
+			const headerH = document.querySelector('.game-header')?.offsetHeight || 80;
+			const availableH = window.innerHeight - headerH - 30;
+			height = Math.max(550, Math.min(850, availableH));
+			canvas.width = width;
+			canvas.height = height;
+			canvas.style.width = width + 'px';
+			canvas.style.height = height + 'px';
+			
+			// 🔽 在这里调用半径动态计算，若半径改变且已有球体则重启游戏
+			if (updateBallRadiusByWidth(width)) {
+				if (gameBodies.length > 0) restartGame();
+			}
+			
+			dangerLineY = Math.max(60, height * 0.18);
+			if(world) rebuildBoundaries();
+			previewX = Math.min(width - BALL_RADIUS - 10, Math.max(BALL_RADIUS + 10, previewX));
+			if(previewX < BALL_RADIUS+5) previewX = width/2;
+		}
+        
+        function attachEvents() {
+            const getPointerX = (e) => {
+                const rect = canvas.getBoundingClientRect();
+                const scaleX = canvas.width / rect.width;
+                let clientX = 0;
+                if(e.touches) clientX = e.touches[0].clientX;
+                else clientX = e.clientX;
+                let canvasX = (clientX - rect.left) * scaleX;
+                return Math.min(width - BALL_RADIUS - 10, Math.max(BALL_RADIUS + 10, canvasX));
+            };
+            canvas.addEventListener('touchmove', (e) => {
+                e.preventDefault();
+                if(isGameActive) previewX = getPointerX(e);
+            });
+            canvas.addEventListener('mousemove', (e) => {
+                if(isGameActive) previewX = getPointerX(e);
+            });
+            canvas.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                if(isGameActive) previewX = getPointerX(e);
+            });
+            canvas.addEventListener('touchend', (e) => {
+                e.preventDefault();
+                if(isGameActive) dropCurrentBall();
+            });
+            canvas.addEventListener('mouseup', (e) => {
+                if(isGameActive) dropCurrentBall();
+            });
+            canvas.addEventListener('contextmenu', (e) => e.preventDefault());
+            canvas.addEventListener('dragstart', (e) => e.preventDefault());
+        }
+        
+        function animate() {
+            if(!engine || !world) return;
+            if(isGameActive && runner) {
+                checkGameOver();
+            }
+            render();
+            requestAnimationFrame(animate);
+        }
+        
+        function initGame() {
+            canvas = document.getElementById('gameCanvas');
+            ctx = canvas.getContext('2d');
+            engine = Matter.Engine.create();
+            world = engine.world;
+            engine.gravity.y = 1.0;
+            world.gravity.y = 1.0;
+            runner = Matter.Runner.create();
+            resizeCanvasAndWorld();
+            rebuildBoundaries();
+            attachEvents();
+            setupCollisionEvents();
+            Matter.Runner.run(runner, engine);
+            isGameActive = true;
+            canDrop = true;
+            totalScore = 0;
+            currentUnlockLevel = 0;
+            nextAnimalLevel = 0;
+            updateUI();
+            previewX = width/2;
+            gameBodies = [];
+            animate();
+            window.addEventListener('resize', () => {
+                setTimeout(() => { resizeCanvasAndWorld(); }, 80);
+            });
+            const enableAudio = () => {
+                initAudio();
+                if(audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+                document.removeEventListener('touchstart', enableAudio);
+                document.removeEventListener('mousedown', enableAudio);
+            };
+            document.addEventListener('touchstart', enableAudio);
+            document.addEventListener('mousedown', enableAudio);
+        }
+        
+        document.getElementById('restartOverlayBtn').addEventListener('click', () => restartGame());
+        document.getElementById('shareScoreBtn').addEventListener('click', () => shareGameScore());
+        
+        initGame();
+        
+        // 一分鐘後自動隱藏下方指引說明
+        setTimeout(() => {
+            const tipElement = document.getElementById('gameTip');
+            if (tipElement) {
+                tipElement.style.opacity = '0';
+                setTimeout(() => {
+                    if (tipElement.parentNode) tipElement.style.display = 'none';
+                }, 500);
+            }
+        }, 60000);
+    })();
+    if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('sw.js')
+        .then(reg => console.log('Service Worker 註冊成功，範圍:', reg.scope))
+        .catch(err => console.log('註冊失敗', err));
+    }
+</script>
+</body>
+</html>

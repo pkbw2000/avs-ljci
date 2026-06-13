@@ -1,0 +1,22 @@
+{
+  "name": "十二生肖遊戲",
+  "short_name": "生肖遊戲",
+  "description": "十二生肖益智挑戰",
+  "start_url": "Zodiac12.html",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#4CAF50",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "zodiac-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "zodiac-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}

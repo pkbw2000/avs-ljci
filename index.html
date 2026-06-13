@@ -1,0 +1,130 @@
+﻿<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="theme-color" content="#1a103f">
+    <meta name="description" content="可愛動物水果盤 - 經典 3×3 連線老虎機遊戲，可愛動物主題，累積大獎池等你來挑戰！">
+    <title>可愛動物水果盤 - 3X3 連線</title>
+    <link rel="icon" href="favicon.ico" type="image/x-icon">
+    <link rel="manifest" href="manifest.json">
+    <link rel="apple-touch-icon" href="icons/icon-192x192.png">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { background: #080418; min-height: 100vh; }
+    </style>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <!-- 學習引導層 -->
+    <div id="guideModal" class="guide-modal">
+        <div class="guide-content">
+            <h2>遊戲教學</h2>
+            <p>1. 點擊符號押注（每注10，上限100）</p>
+            <p>2. 點擊開始後可隨時停止遊戲</p>
+            <p>3. 幸運加倍機率出現同一符號可額外加分</p>
+            <p>4. 滿屏符號直接拿走全部累積大獎池</p>
+            <button id="closeGuide">開始遊戲</button>
+        </div>
+    </div>
+
+    <!-- 遊戲機殼 -->
+    <div class="game-machine">
+        <!-- 頂部跑馬燈 -->
+        <div class="marquee-wrap">
+            <div id="marqueeText" class="marquee-text"></div>
+        </div>
+
+        <!-- 頂部資費資訊 -->
+        <header class="game-header">
+            <div class="score-box">
+                <span>積分</span>
+                <span id="userScore">2000</span>
+            </div>
+            <div class="jackpot-box">
+                <span>累積大獎池</span>
+                <span id="jackpotPool">50000</span>
+            </div>
+        </header>
+
+        <!-- 押注面板 -->
+        <section class="bet-symbol-panel">
+            <div class="symbol-bet-list">
+                <div class="symbol-bet-item" data-sid="0">
+                    <div class="symbol-circle">
+                        <img src="symbols/lv1_s.png" alt="小黃鯊">
+                    </div>
+                    <div class="bet-num">0</div>
+                </div>
+                <div class="symbol-bet-item" data-sid="1">
+                    <div class="symbol-circle">
+                        <img src="symbols/lv2_a1.png" alt="鸚鵡">
+                    </div>
+                    <div class="bet-num">0</div>
+                </div>
+                <div class="symbol-bet-item" data-sid="2">
+                    <div class="symbol-circle">
+                        <img src="symbols/lv2_a2.png" alt="龍貓">
+                    </div>
+                    <div class="bet-num">0</div>
+                </div>
+                <div class="symbol-bet-item" data-sid="3">
+                    <div class="symbol-circle">
+                        <img src="symbols/lv3_b1.png" alt="企鵝">
+                    </div>
+                    <div class="bet-num">0</div>
+                </div>
+                <div class="symbol-bet-item" data-sid="4">
+                    <div class="symbol-circle">
+                        <img src="symbols/lv3_b2.png" alt="變色龍">
+                    </div>
+                    <div class="bet-num">0</div>
+                </div>
+                <div class="symbol-bet-item" data-sid="5">
+                    <div class="symbol-circle">
+                        <img src="symbols/lv3_b3.png" alt="孔雀">
+                    </div>
+                    <div class="bet-num">0</div>
+                </div>
+            </div>
+            <div class="total-bet-text">本局總押注 <span id="totalBet">0</span></div>
+        </section>
+
+        <!-- 九宮格遊戲區 -->
+        <div class="grid-control-row">
+            <main class="game-container">
+                <div class="slot-grid">
+                    <div class="grid-item" data-index="0"><img src="" alt=""></div>
+                    <div class="grid-item" data-index="1"><img src="" alt=""></div>
+                    <div class="grid-item" data-index="2"><img src="" alt=""></div>
+                    <div class="grid-item" data-index="3"><img src="" alt=""></div>
+                    <div class="grid-item" data-index="4"><img src="" alt=""></div>
+                    <div class="grid-item" data-index="5"><img src="" alt=""></div>
+                    <div class="grid-item" data-index="6"><img src="" alt=""></div>
+                    <div class="grid-item" data-index="7"><img src="" alt=""></div>
+                    <div class="grid-item" data-index="8"><img src="" alt=""></div>
+                </div>
+            </main>
+        </div>
+
+        <!-- 控制按鈕 -->
+        <section class="control-panel">
+            <button id="startBtn" class="start-btn">開始遊戲</button>
+            <button id="stopBtn" class="stop-btn" disabled>停止</button>
+        </section>
+    </div>
+
+    <!-- 中獎提示 -->
+    <div id="winTip" class="win-tip"></div>
+
+    <script src="js/utils.js"></script>
+    <script src="js/audioMgr.js"></script>
+    <script src="js/dataStore.js"></script>
+    <script src="js/uiCtrl.js"></script>
+    <script src="js/gameCore.js"></script>
+    <script src="js/main.js"></script>
+</body>
+</html>

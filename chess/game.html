@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
     <title>暗棋</title>
     <style>
-        /* ----- 強制全螢幕無捲軸 ----- */
         * {
             box-sizing: border-box;
             margin: 0;
@@ -21,13 +20,11 @@
             position: fixed;
             top: 0;
             left: 0;
-            background: #2b1b0e;
-            background: radial-gradient(ellipse at center, #3d281a, #1a0f08);
+            background: #1a0f08;
             font-family: 'Noto Sans SC', 'PingFang TC', 'Microsoft YaHei', sans-serif;
             touch-action: manipulation;
         }
 
-        /* ----- 主容器：強制豎屏 4x8 棋盤 ----- */
         .game-container {
             position: fixed;
             top: 0;
@@ -40,25 +37,21 @@
             justify-content: center;
             align-items: center;
             padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
-            background: #2b1b0e;
-            background: radial-gradient(ellipse at 50% 30%, #4d3220, #1a0f08);
+            background: radial-gradient(ellipse at 50% 30%, #3d281a, #1a0f08);
         }
 
-        /* ----- 棋盤外框 (木質) ----- */
+        /* ----- 棋盤外框：強制 4行 x 8列 豎向 ----- */
         .board-outer {
-            background: #d4a56a;
             background: linear-gradient(165deg, #c4925a, #e8c088);
             border-radius: clamp(12px, 3vw, 28px);
             padding: clamp(8px, 2vw, 24px);
             box-shadow: 0 20px 60px rgba(0,0,0,0.8), inset 0 1px 4px rgba(255,215,150,0.3);
-            width: min(94vw, 70vh);
-            max-width: 600px;
-            aspect-ratio: 4 / 8;
+            width: min(92vw, 75vh);
+            max-width: 560px;
             display: flex;
             flex-direction: column;
         }
 
-        /* ----- 標題 + 回合指示 (精簡) ----- */
         .header {
             display: flex;
             justify-content: space-between;
@@ -103,16 +96,16 @@
             box-shadow: 0 0 10px #88888888;
         }
 
-        /* ----- 棋盤本體 (4行 x 8列) ----- */
+        /* ----- 棋盤本體：固定 4行 x 8列 ----- */
         .board-wrapper {
-            flex: 1;
             width: 100%;
-            background: #dcb27a;
             background: linear-gradient(145deg, #c99f66, #eac68c);
             border-radius: clamp(6px, 1.5vw, 14px);
             box-shadow: inset 0 0 0 2px #b3874b, inset 0 0 30px #6f4f2a55;
             padding: clamp(3px, 1vw, 10px);
-            min-height: 0;
+            /* 關鍵：用 aspect-ratio 強制 4:8 (行:列) */
+            aspect-ratio: 4 / 8;
+            width: 100%;
         }
 
         .board-grid {
@@ -124,19 +117,16 @@
             gap: clamp(2px, 0.5vw, 5px);
         }
 
-        /* ----- 每個格子 ----- */
         .cell {
-            background: #dbaa72;
             background: radial-gradient(circle at 30% 30%, #eec291, #c79154);
             border-radius: clamp(3px, 0.8vw, 10px);
             box-shadow: inset 0 2px 6px rgba(90,55,20,0.3), 0 1px 2px rgba(255,215,140,0.2);
             display: flex;
             justify-content: center;
             align-items: center;
-            aspect-ratio: 1 / 1;
-            transition: background 0.12s;
             cursor: pointer;
             position: relative;
+            aspect-ratio: 1 / 1;
         }
 
         .cell.highlight {
@@ -148,7 +138,7 @@
             box-shadow: inset 0 0 0 2px #ffb0b0, 0 0 16px #e68c8c88;
         }
 
-        /* ----- 棋子樣式 (圓形) ----- */
+        /* ----- 棋子：絕對大小由容器決定 ----- */
         .piece {
             width: 90%;
             height: 90%;
@@ -163,17 +153,15 @@
             box-shadow: 0 3px 0 rgba(0,0,0,0.25), 0 5px 14px rgba(0,0,0,0.35);
             will-change: transform;
             border: 2px solid rgba(255,255,255,0.12);
-            background: #c09a6e;
             background: radial-gradient(circle at 35% 30%, #f5e3c0, #b8895a);
             color: #2d1b0a;
             position: relative;
             cursor: pointer;
             touch-action: manipulation;
+            flex-shrink: 0;
         }
 
-        /* 暗棋 (背面) */
         .piece.back {
-            background: #3d2a18;
             background: radial-gradient(circle at 40% 35%, #68543a, #2f1e0e);
             border: 2px solid #7a623e;
             box-shadow: 0 3px 0 #1f140a, 0 5px 14px rgba(0,0,0,0.5);
@@ -222,7 +210,6 @@
             animation: flipIn 0.2s ease-out;
         }
 
-        /* ----- 底部狀態列 (精簡) ----- */
         .status-bar {
             display: flex;
             justify-content: space-between;
@@ -273,22 +260,22 @@
             color: #ffefda;
         }
 
-        /* ----- 極小螢幕微調 ----- */
         @media (max-height: 700px) {
-            .header h1 { font-size: clamp(0.7rem, 2.8vw, 1rem); }
-            .turn-indicator { font-size: clamp(0.5rem, 2vw, 0.8rem); padding: 2px 10px; }
-            .status-msg { font-size: clamp(0.5rem, 1.8vw, 0.8rem); padding: 3px 10px; }
-            .btn { font-size: clamp(0.5rem, 1.8vw, 0.8rem); padding: 4px 12px; }
+            .header h1 { font-size: clamp(0.6rem, 2.5vw, 0.9rem); }
+            .turn-indicator { font-size: clamp(0.5rem, 1.8vw, 0.7rem); padding: 2px 10px; }
+            .status-msg { font-size: clamp(0.45rem, 1.6vw, 0.7rem); padding: 3px 10px; }
+            .btn { font-size: clamp(0.45rem, 1.6vw, 0.7rem); padding: 4px 12px; }
             .header { padding-bottom: 4px; }
             .status-bar { margin-top: 4px; }
-        }
-
-        @media (max-width: 400px) {
-            .board-outer { padding: 6px; border-radius: 10px; }
+            .board-outer { padding: 6px; }
             .board-wrapper { padding: 3px; }
         }
 
-        /* ----- 橫屏警告 (提示轉向) ----- */
+        @media (max-width: 400px) {
+            .board-outer { padding: 5px; border-radius: 8px; }
+            .board-wrapper { padding: 2px; }
+        }
+
         @media (orientation: landscape) and (max-height: 500px) {
             .game-container::before {
                 content: "↻ 請將手機轉為直立";
@@ -297,7 +284,7 @@
                 left: 0;
                 width: 100%;
                 height: 100%;
-                background: rgba(0,0,0,0.85);
+                background: rgba(0,0,0,0.9);
                 color: #f2dec6;
                 font-size: clamp(1.2rem, 5vw, 2rem);
                 display: flex;
@@ -314,7 +301,6 @@
 
 <div class="game-container">
     <div class="board-outer">
-        <!-- 標題列 -->
         <div class="header">
             <h1>♟ 暗棋</h1>
             <div class="turn-indicator">
@@ -323,12 +309,10 @@
             </div>
         </div>
 
-        <!-- 棋盤 -->
         <div class="board-wrapper">
             <div class="board-grid" id="boardGrid"></div>
         </div>
 
-        <!-- 底部 -->
         <div class="status-bar">
             <div class="status-msg" id="statusMsg">點擊翻牌</div>
             <button class="btn btn-primary" id="restartBtn">↺ 新局</button>
@@ -340,9 +324,14 @@
     (function() {
         "use strict";
 
-        // ----- 棋子資料 -----
-        const RED_NAMES = ['', '帥', '仕', '相', '俥', '傌', '炮', '兵'];
-        const BLACK_NAMES = ['', '將', '士', '象', '車', '馬', '砲', '卒'];
+        // ----- 棋子名稱對照 -----
+        function getPieceName(color, rank) {
+            if (color === 'red') {
+                return ['', '帥', '仕', '相', '俥', '傌', '炮', '兵'][rank];
+            } else {
+                return ['', '將', '士', '象', '車', '馬', '砲', '卒'][rank];
+            }
+        }
 
         function canCapture(attackerRank, defenderRank) {
             if (attackerRank === 7 && defenderRank === 1) return true;
@@ -365,23 +354,24 @@
         // ----- 初始化 -----
         function initGame() {
             const pieces = [];
-            // 紅方
-            pieces.push({ color: 'red', rank: 1, name: '帥' });
-            for (let i = 0; i < 2; i++) pieces.push({ color: 'red', rank: 2, name: '仕' });
-            for (let i = 0; i < 2; i++) pieces.push({ color: 'red', rank: 3, name: '相' });
-            for (let i = 0; i < 2; i++) pieces.push({ color: 'red', rank: 4, name: '俥' });
-            for (let i = 0; i < 2; i++) pieces.push({ color: 'red', rank: 5, name: '傌' });
-            for (let i = 0; i < 2; i++) pieces.push({ color: 'red', rank: 6, name: '炮' });
-            for (let i = 0; i < 5; i++) pieces.push({ color: 'red', rank: 7, name: '兵' });
-            // 黑方
-            pieces.push({ color: 'black', rank: 1, name: '將' });
-            for (let i = 0; i < 2; i++) pieces.push({ color: 'black', rank: 2, name: '士' });
-            for (let i = 0; i < 2; i++) pieces.push({ color: 'black', rank: 3, name: '象' });
-            for (let i = 0; i < 2; i++) pieces.push({ color: 'black', rank: 4, name: '車' });
-            for (let i = 0; i < 2; i++) pieces.push({ color: 'black', rank: 5, name: '馬' });
-            for (let i = 0; i < 2; i++) pieces.push({ color: 'black', rank: 6, name: '砲' });
-            for (let i = 0; i < 5; i++) pieces.push({ color: 'black', rank: 7, name: '卒' });
+            // 紅方: 帥1, 仕2, 相2, 俥2, 傌2, 炮2, 兵5
+            pieces.push({ color: 'red', rank: 1 });
+            for (let i = 0; i < 2; i++) pieces.push({ color: 'red', rank: 2 });
+            for (let i = 0; i < 2; i++) pieces.push({ color: 'red', rank: 3 });
+            for (let i = 0; i < 2; i++) pieces.push({ color: 'red', rank: 4 });
+            for (let i = 0; i < 2; i++) pieces.push({ color: 'red', rank: 5 });
+            for (let i = 0; i < 2; i++) pieces.push({ color: 'red', rank: 6 });
+            for (let i = 0; i < 5; i++) pieces.push({ color: 'red', rank: 7 });
+            // 黑方: 將1, 士2, 象2, 車2, 馬2, 砲2, 卒5
+            pieces.push({ color: 'black', rank: 1 });
+            for (let i = 0; i < 2; i++) pieces.push({ color: 'black', rank: 2 });
+            for (let i = 0; i < 2; i++) pieces.push({ color: 'black', rank: 3 });
+            for (let i = 0; i < 2; i++) pieces.push({ color: 'black', rank: 4 });
+            for (let i = 0; i < 2; i++) pieces.push({ color: 'black', rank: 5 });
+            for (let i = 0; i < 2; i++) pieces.push({ color: 'black', rank: 6 });
+            for (let i = 0; i < 5; i++) pieces.push({ color: 'black', rank: 7 });
 
+            // 洗牌
             for (let i = pieces.length - 1; i > 0; i--) {
                 const j = Math.floor(Math.random() * (i + 1));
                 [pieces[i], pieces[j]] = [pieces[j], pieces[i]];
@@ -396,7 +386,6 @@
                     row.push({
                         color: p.color,
                         rank: p.rank,
-                        name: p.name,
                         faceUp: false,
                     });
                 }
@@ -407,7 +396,7 @@
             selectedPos = null;
             highlightCells = [];
             gameOver = false;
-            updateUI();
+            render();
             statusMsg.innerText = '新遊戲 · 紅方先手';
         }
 
@@ -416,7 +405,7 @@
             return board[row][col];
         }
 
-        // ----- 走法生成 (含炮) -----
+        // ----- 走法生成 -----
         function generateMoves(row, col) {
             const piece = getPiece(row, col);
             if (!piece || !piece.faceUp) return [];
@@ -462,16 +451,15 @@
             return moves;
         }
 
-        // ----- 執行走法 -----
         function makeMove(fromRow, fromCol, toRow, toCol) {
             const piece = board[fromRow][fromCol];
             board[toRow][toCol] = piece;
-            board[fromRow][fromCol] = { color: null, rank: 0, name: '', faceUp: false };
+            board[fromRow][fromCol] = { color: null, rank: 0, faceUp: false };
 
             turn = (turn === 'red' ? 'black' : 'red');
             selectedPos = null;
             highlightCells = [];
-            updateUI();
+            render();
             checkGameOver();
         }
 
@@ -508,7 +496,6 @@
 
             const piece = getPiece(row, col);
 
-            // 有選中 -> 嘗試走法
             if (selectedPos) {
                 const isHighlight = highlightCells.some(h => h.row === row && h.col === col);
                 if (isHighlight) {
@@ -517,24 +504,23 @@
                 } else {
                     selectedPos = null;
                     highlightCells = [];
-                    updateUI();
+                    render();
                     if (piece && piece.faceUp && piece.color === turn) {
                         selectedPos = { row, col };
                         highlightCells = generateMoves(row, col);
-                        updateUI();
+                        render();
                     }
                     return;
                 }
             }
 
-            // 無選中: 翻牌 或 選己方
             if (!piece || !piece.faceUp) {
                 if (piece && !piece.faceUp) {
                     piece.faceUp = true;
-                    updateUI();
+                    render();
                     if (!checkGameOver()) {
                         turn = (turn === 'red' ? 'black' : 'red');
-                        updateUI();
+                        render();
                         statusMsg.innerText = `${turn === 'red' ? '紅' : '黑'}方回合`;
                     }
                 }
@@ -544,15 +530,15 @@
             if (piece.color === turn) {
                 selectedPos = { row, col };
                 highlightCells = generateMoves(row, col);
-                updateUI();
-                statusMsg.innerText = `選取 ${piece.color === 'red' ? '紅' : '黑'} ${piece.name}`;
+                render();
+                statusMsg.innerText = `選取 ${piece.color === 'red' ? '紅' : '黑'} ${getPieceName(piece.color, piece.rank)}`;
             } else {
                 statusMsg.innerText = `請選 ${turn === 'red' ? '紅' : '黑'}方棋子`;
             }
         }
 
         // ----- 渲染 -----
-        function updateUI() {
+        function render() {
             gridEl.innerHTML = '';
             for (let r = 0; r < 4; r++) {
                 for (let c = 0; c < 8; c++) {
@@ -562,4 +548,13 @@
 
                     const isHighlight = highlightCells.some(h => h.row === r && h.col === c);
                     if (isHighlight) {
-                        const hTyp
+                        const hType = highlightCells.find(h => h.row === r && h.col === c);
+                        cell.classList.add(hType.type === 'capture' ? 'highlight-capture' : 'highlight');
+                    }
+
+                    if (p && p.faceUp) {
+                        const pieceDiv = document.createElement('div');
+                        pieceDiv.className = `piece ${p.color}`;
+                        pieceDiv.innerText = getPieceName(p.color, p.rank);
+                        if (selectedPos && selectedPos.row === r && selectedPos.col === c) {
+                            pieceDiv.cla

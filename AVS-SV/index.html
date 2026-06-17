@@ -1,0 +1,423 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>雨滴漣漪 · 互動頁面</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+      background: #0b1a2b;
+      min-height: 100vh;
+      display: flex;
+      align-items: flex-end;
+      justify-content: center;
+      overflow: hidden;
+      touch-action: none; /* 避免觸控捲動干擾 */
+    }
+
+    /* 主視覺背景 + canvas 滿版 */
+    #bg-canvas {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      display: block;
+      background: radial-gradient(circle at 30% 40%, #1a3a4a, #0b1a2b 80%);
+      cursor: pointer; /* 暗示可互動 */
+      z-index: 1;
+    }
+
+    /* 底層按鈕區 — 固定在畫面最下方 */
+    .bottom-bar {
+      position: fixed;
+      bottom: 32px;
+      left: 0;
+      width: 100%;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      z-index: 20;
+      pointer-events: none; /* 讓按鈕本身可穿透，但內部按鈕可點擊 */
+    }
+
+    .slide-btn {
+      pointer-events: auto;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      background: rgba(10, 25, 40, 0.5);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border: 1px solid rgba(255, 255, 255, 0.25);
+      border-radius: 60px;
+      padding: 14px 28px 14px 34px;
+      box-shadow: 0 12px 32px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(255, 255, 255, 0.08) inset;
+      transition: all 0.25s ease;
+      min-width: 190px;
+      cursor: pointer;
+      background: rgba(0, 20, 40, 0.55);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+      border-color: rgba(180, 220, 255, 0.3);
+      transform: scale(1);
+      transition: transform 0.2s cubic-bezier(0.2, 0.9, 0.4, 1.1), box-shadow 0.2s;
+    }
+
+    .slide-btn:active {
+      transform: scale(0.94);
+      box-shadow: 0 6px 16px rgba(0, 0, 0, 0.7);
+    }
+
+    .btn-text {
+      font-size: 1.4rem;
+      font-weight: 600;
+      letter-spacing: 2px;
+      color: #f0f9ff;
+      text-shadow: 0 2px 8px rgba(0, 10, 20, 0.6);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    /* 閃動文字 */
+    .blink-text {
+      display: inline-block;
+      animation: blinkPulse 1.6s ease-in-out infinite;
+      background: linear-gradient(135deg, #b3e4ff, #7fc9ff);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+      font-weight: 700;
+      text-shadow: 0 0 20px rgba(100, 200, 255, 0.3);
+    }
+
+    @keyframes blinkPulse {
+      0% { opacity: 0.6; transform: scale(0.98); }
+      50% { opacity: 1; transform: scale(1.06); }
+      100% { opacity: 0.6; transform: scale(0.98); }
+    }
+
+    .arrow-icon {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.9rem;
+      color: #d4edff;
+      transition: transform 0.3s ease;
+      filter: drop-shadow(0 0 6px rgba(80, 180, 255, 0.4));
+      margin-left: 2px;
+    }
+
+    /* 動態向右箭頭 (輕微位移) */
+    .dynamic-arrow {
+      display: inline-block;
+      animation: arrowMove 1.4s ease-in-out infinite;
+    }
+
+    @keyframes arrowMove {
+      0% { transform: translateX(0); }
+      50% { transform: translateX(6px); }
+      100% { transform: translateX(0); }
+    }
+
+    /* 響應式調整 */
+    @media (max-width: 480px) {
+      .slide-btn {
+        padding: 12px 20px 12px 26px;
+        min-width: 150px;
+        gap: 8px;
+      }
+      .btn-text {
+        font-size: 1.2rem;
+      }
+      .arrow-icon {
+        font-size: 1.6rem;
+      }
+    }
+
+    /* 漣漪指標 (點擊反饋) 可由 canvas 繪製，此處保留純 canvas 互動 */
+  </style>
+</head>
+<body>
+
+  <!-- 滿版 Canvas：雨滴 + 漣漪 -->
+  <canvas id="bg-canvas"></canvas>
+
+  <!-- 底部滑動按鈕 -->
+  <div class="bottom-bar">
+    <div class="slide-btn" id="actionBtn" role="button" aria-label="報名入口">
+      <span class="btn-text">
+        <span class="blink-text">報名入口</span>
+      </span>
+      <span class="arrow-icon">
+        <span class="dynamic-arrow">→</span>
+      </span>
+    </div>
+  </div>
+
+  <script>
+    (function() {
+      const canvas = document.getElementById('bg-canvas');
+      const ctx = canvas.getContext('2d');
+
+      // 尺寸
+      let width = window.innerWidth;
+      let height = window.innerHeight;
+
+      // ---------- 雨滴參數 ----------
+      const RAIN_COUNT = 220;
+      const raindrops = [];
+
+      // ---------- 漣漪系統 ----------
+      const ripples = [];
+      const MAX_RIPPLE_RADIUS = 140;
+      const RIPPLE_LIFETIME = 1.6;    // 秒
+
+      // ---------- 初始雨滴 ----------
+      function initRaindrops() {
+        for (let i = 0; i < RAIN_COUNT; i++) {
+          raindrops.push({
+            x: Math.random() * width,
+            y: Math.random() * height * 1.2 - height * 0.2,
+            length: 14 + Math.random() * 24,
+            speed: 7 + Math.random() * 14,
+            opacity: 0.4 + Math.random() * 0.5,
+            width: 1.0 + Math.random() * 1.8,
+          });
+        }
+      }
+
+      // ---------- 新增漣漪 (由點擊觸發) ----------
+      function addRipple(x, y) {
+        // 避免太密集 (但可以多個)
+        const now = performance.now() / 1000;
+        // 簡單限流：若最近200ms內有相同座標附近漣漪，可省略 (但此處不強制)
+        ripples.push({
+          x: x,
+          y: y,
+          radius: 6,
+          maxRadius: MAX_RIPPLE_RADIUS * (0.8 + Math.random() * 0.4),
+          life: 0,
+          maxLife: RIPPLE_LIFETIME * (0.8 + Math.random() * 0.4),
+          opacity: 0.9,
+          speed: 110 + Math.random() * 60,  // 像素/秒
+          lineWidth: 2.0 + Math.random() * 3.0,
+        });
+        // 限制總數，避免過多
+        if (ripples.length > 35) {
+          ripples.shift();
+        }
+      }
+
+      // ---------- 更新雨滴 ----------
+      function updateRaindrops(deltaSec) {
+        for (let r of raindrops) {
+          r.y += r.speed * deltaSec * 1.2;
+          // 重置到頂部，製造連續雨感
+          if (r.y - r.length > height) {
+            r.y = -r.length - Math.random() * 20;
+            r.x = Math.random() * width;
+            r.speed = 7 + Math.random() * 14;
+            r.length = 14 + Math.random() * 24;
+          }
+        }
+      }
+
+      // ---------- 更新漣漪 ----------
+      function updateRipples(deltaSec) {
+        for (let i = ripples.length - 1; i >= 0; i--) {
+          const rip = ripples[i];
+          rip.life += deltaSec;
+          rip.radius += rip.speed * deltaSec;
+
+          // 透明度隨生命週期降低
+          const progress = rip.life / rip.maxLife;
+          rip.opacity = 0.9 * (1 - progress * 0.9);
+
+          // 移除消亡的漣漪
+          if (rip.life >= rip.maxLife || rip.radius >= rip.maxRadius) {
+            ripples.splice(i, 1);
+          }
+        }
+      }
+
+      // ---------- 繪製 ----------
+      function drawScene() {
+        ctx.clearRect(0, 0, width, height);
+
+        // ---- 1. 畫雨滴 (白色半透明線條) ----
+        ctx.lineCap = 'round';
+        for (let r of raindrops) {
+          ctx.beginPath();
+          ctx.moveTo(r.x, r.y);
+          ctx.lineTo(r.x, r.y + r.length);
+          ctx.strokeStyle = `rgba(210, 235, 255, ${r.opacity * 0.7})`;
+          ctx.lineWidth = r.width;
+          ctx.stroke();
+        }
+
+        // ---- 2. 畫漣漪 (光圈) ----
+        for (let rip of ripples) {
+          const alpha = Math.min(rip.opacity, 0.85);
+          ctx.beginPath();
+          ctx.arc(rip.x, rip.y, rip.radius, 0, Math.PI * 2);
+          ctx.strokeStyle = `rgba(180, 225, 255, ${alpha * 0.9})`;
+          ctx.lineWidth = rip.lineWidth * (0.6 + 0.4 * (1 - rip.life / rip.maxLife));
+          ctx.shadowColor = 'rgba(140, 210, 255, 0.5)';
+          ctx.shadowBlur = 18;
+          ctx.stroke();
+          // 內圈較亮微光 (增加層次)
+          if (rip.radius > 14) {
+            ctx.beginPath();
+            ctx.arc(rip.x, rip.y, rip.radius * 0.5, 0, Math.PI * 2);
+            ctx.strokeStyle = `rgba(220, 245, 255, ${alpha * 0.25})`;
+            ctx.lineWidth = rip.lineWidth * 0.4;
+            ctx.shadowBlur = 10;
+            ctx.stroke();
+          }
+        }
+        // 清除陰影避免影響後續
+        ctx.shadowBlur = 0;
+        ctx.shadowColor = 'transparent';
+
+        // ---- 3. 額外底部霧氣 (增加深度) ----
+        const gradient = ctx.createLinearGradient(0, height * 0.8, 0, height);
+        gradient.addColorStop(0, 'rgba(10, 30, 50, 0)');
+        gradient.addColorStop(1, 'rgba(10, 25, 40, 0.25)');
+        ctx.fillStyle = gradient;
+        ctx.fillRect(0, height * 0.8, width, height * 0.2);
+      }
+
+      // ---------- 動畫循環 ----------
+      let lastTime = performance.now() / 1000;
+
+      function animate(timeSec) {
+        const now = timeSec / 1000; // performance.now() 回傳 ms
+        let delta = Math.min(now - lastTime, 0.05); // 避免跳幀太大
+        lastTime = now;
+
+        // 更新物理
+        updateRaindrops(delta);
+        updateRipples(delta);
+
+        // 繪製
+        drawScene();
+
+        requestAnimationFrame(animate);
+      }
+
+      // ---------- 視窗resize ----------
+      function resizeCanvas() {
+        width = window.innerWidth;
+        height = window.innerHeight;
+        canvas.width = width;
+        canvas.height = height;
+        // 雨滴重新分佈 (避免跑出畫面)
+        for (let r of raindrops) {
+          r.x = Math.min(r.x, width);
+          r.y = Math.min(r.y, height + 20);
+        }
+        // 不重置所有雨滴，維持連續性
+      }
+
+      // ---------- 事件綁定 (點擊/觸控) ----------
+      function handlePointerDown(e) {
+        let clientX, clientY;
+        if (e.touches) {
+          // 觸控事件
+          e.preventDefault();
+          const touch = e.touches[0];
+          if (!touch) return;
+          clientX = touch.clientX;
+          clientY = touch.clientY;
+        } else {
+          // 滑鼠事件
+          clientX = e.clientX;
+          clientY = e.clientY;
+        }
+
+        // 取得 canvas 座標 (相對於 canvas)
+        const rect = canvas.getBoundingClientRect();
+        const x = clientX - rect.left;
+        const y = clientY - rect.top;
+
+        // 加入漣漪 (多個小漣漪增加豐富度)
+        addRipple(x, y);
+        // 在周圍隨機增加幾個小漣漪 (更自然)
+        for (let i = 0; i < 2; i++) {
+          const offsetX = (Math.random() - 0.5) * 28;
+          const offsetY = (Math.random() - 0.5) * 28;
+          addRipple(x + offsetX, y + offsetY);
+        }
+      }
+
+      // 綁定事件 (canvas 點擊 / 觸碰)
+      canvas.addEventListener('mousedown', handlePointerDown);
+      canvas.addEventListener('touchstart', handlePointerDown, { passive: false });
+
+      // 按鈕點擊 (不干擾漣漪, 額外反饋)
+      const btn = document.getElementById('actionBtn');
+      btn.addEventListener('click', function(e) {
+        e.stopPropagation(); // 避免冒泡到canvas (不過canvas是獨立)
+        // 觸發按鈕本身的漣漪 (在按鈕位置)
+        const rect = btn.getBoundingClientRect();
+        const cx = rect.left + rect.width / 2;
+        const cy = rect.top + rect.height / 2;
+        // 轉換為canvas座標 (因canvas滿版，直接用client座標)
+        const canvasRect = canvas.getBoundingClientRect();
+        const x = cx - canvasRect.left;
+        const y = cy - canvasRect.top;
+        // 製造漣漪效果 (較大)
+        for (let i = 0; i < 6; i++) {
+          setTimeout(() => {
+            const offX = (Math.random() - 0.5) * 40;
+            const offY = (Math.random() - 0.5) * 40;
+            addRipple(x + offX, y + offY);
+          }, i * 20);
+        }
+        // 簡單 alert 模擬入口 (互動反饋)
+        // 此處僅做示意，若需導向可置換
+        // alert('報名入口 · 即將開啟');
+        // 可改為實際連結
+        window.location.href = '#'; // 可替換為報名連結
+      });
+
+      // ---------- 初始化 ----------
+      initRaindrops();
+      resizeCanvas();
+      window.addEventListener('resize', resizeCanvas);
+
+      // 添加一開場幾個漣漪 (歡迎)
+      setTimeout(() => {
+        for (let i = 0; i < 6; i++) {
+          const x = width * (0.2 + Math.random() * 0.6);
+          const y = height * (0.2 + Math.random() * 0.5);
+          addRipple(x, y);
+        }
+      }, 200);
+
+      // 啟動動畫
+      requestAnimationFrame(animate);
+
+      // 額外：每3秒隨機產生雨滴漣漪 (豐富視覺)
+      setInterval(() => {
+        if (ripples.length < 20) {
+          const x = Math.random() * width;
+          const y = Math.random() * height * 0.7;
+          addRipple(x, y);
+        }
+      }, 2800);
+
+    })();
+  </script>
+</body>
+</html>

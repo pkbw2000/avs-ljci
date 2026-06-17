@@ -9,14 +9,14 @@
     <link rel="apple-touch-icon" href="Bubble192.png">
     <meta property="og:title" content="快樂 3D 連線球 - 幼兒連線消除遊戲">
     <meta property="og:description" content="快來挑戰好玩的 3D 連線消除！益智又有趣，快來跟朋友比比看誰的分數高！">
-    <meta property="og:image" content="https://pkbw2000.github.io/avs-ljci/BB/Bubble512.png">
-    <meta property="og:url" content="https://pkbw2000.github.io/avs-ljci/BB/game.html">
+    <meta property="og:image" content="https://pkbw2000.github.io/avs-ljci/Bobble-ball/Bubble512.png">
+    <meta property="og:url" content="https://pkbw2000.github.io/avs-ljci/Bobble-ball/game.html">
     <meta property="og:site_name" content="快樂 3D 連線球">
     <meta property="og:type" content="website">
     <meta name="line:card" content="summary">
     <meta name="line:title" content="🔵 快樂 3D 連線球 - 幼兒連線消除遊戲">
     <meta name="line:description" content="快來挑戰好玩的 3D 連線消除！益智又有趣！">
-    <meta name="line:image" content=" https://pkbw2000.github.io/avs-ljci/BB/Bubble512.png ">
+    <meta name="line:image" content=" https://pkbw2000.github.io/avs-ljci/Bobble-ball/Bubble512.png ">
     <style>
         * {
             margin: 0;
@@ -43,988 +43,1492 @@
             height: auto;
             max-height: 100vh;
             touch-action: manipulation;
+            position: relative;
+        }
+        .sr-only {
+            position: absolute;
+            width: 1px;
+            height: 1px;
+            padding: 0;
+            margin: -1px;
+            overflow: hidden;
+            clip: rect(0,0,0,0);
+            border: 0;
         }
     </style>
 </head>
 <body>
-    <canvas id="gameCanvas"></canvas>
+    <canvas id="gameCanvas" role="application" aria-label="快樂 3D 連線球遊戲，使用滑鼠或觸控拖曳連線，鍵盤方向鍵移動游標，空白鍵選擇"></canvas>
+    <div class="sr-only" aria-live="polite" id="statusMessage"></div>
     <script>
         (function() {
-            const canvas = document.getElementById('gameCanvas');
-            const ctx = canvas.getContext('2d');
+            "use strict";
 
-            document.addEventListener('contextmenu', (e) => e.preventDefault());
-            canvas.ondragstart = () => false;
+            // ======================== 配置集中化 ========================
+            const CONFIG = {
+                GRID: { cols: 6, rows: 8 },
+                SIDE_MARGIN: 10,
+                TOP_PANEL: { height: 92, yOffset: 8 },
+                WAVE: { height: 50, yOffset: 2 },
+                SLIDER: { height: 28, yOffset: 4 },
+                BALL_RADIUS_RATIO: 0.45,
+                ELIMINATE_DUR: 0.28,
+                FALL_DUR: 0.32,
+                ENCOURAGE_DUR: 2.2,
+                INITIAL_TARGET_SCORE: 300,
+                SCORE_PER_LEVEL: 150,
+                MIN_COLORS: 3,
+                MAX_COLORS: 6,
+                WAVEFORM_SAMPLES: 64,
+                BOMB: {
+                    START_LEVEL: 11,
+                    BASE_PROB: 0.2,
+                    INCREMENT_PER_10_LEVELS: 0.1,
+                    MAX_PROB: 0.8,
+                    MISS_LIMIT: 5,
+                    DEFUSE_BONUS: 50
+                },
+                COLORS: {
+                    HEX: ['#FF5252','#448AFF','#69F0AE','#FFD740','#E040FB','#FF6E40'],
+                    DARK: ['#B71C1C','#0D47A1','#1B5E20','#F57F17','#4A148C','#BF360C']
+                },
+                LEADERBOARD_KEY: 'bubbleLeaderboard',
+                LEADERBOARD_MAX: 10,
+                PARTICLE_COUNT: 30,
+                PARTICLE_DURATION: 1.2
+            };
 
-            if (!CanvasRenderingContext2D.prototype.roundRect) {
-                CanvasRenderingContext2D.prototype.roundRect = function(x, y, w, h, r) {
-                    if (w < 2 * r) r = w / 2;
-                    if (h < 2 * r) r = h / 2;
-                    this.moveTo(x+r, y);
-                    this.lineTo(x+w-r, y);
-                    this.quadraticCurveTo(x+w, y, x+w, y+r);
-                    this.lineTo(x+w, y+h-r);
-                    this.quadraticCurveTo(x+w, y+h, x+w-r, y+h);
-                    this.lineTo(x+r, y+h);
-                    this.quadraticCurveTo(x, y+h, x, y+h-r);
-                    this.lineTo(x, y+r);
-                    this.quadraticCurveTo(x, y, x+r, y);
-                    return this;
-                };
+            // ======================== 工具函数 ========================
+            function roundRect(ctx, x, y, w, h, r) {
+                if (w < 2*r) r = w/2;
+                if (h < 2*r) r = h/2;
+                ctx.moveTo(x+r, y);
+                ctx.lineTo(x+w-r, y);
+                ctx.quadraticCurveTo(x+w, y, x+w, y+r);
+                ctx.lineTo(x+w, y+h-r);
+                ctx.quadraticCurveTo(x+w, y+h, x+w-r, y+h);
+                ctx.lineTo(x+r, y+h);
+                ctx.quadraticCurveTo(x, y+h, x, y+h-r);
+                ctx.lineTo(x, y+r);
+                ctx.quadraticCurveTo(x, y, x+r, y);
+                return ctx;
             }
 
-            // 讀取炸彈模式設定
-            let bombModeEnabled = true;
-            try {
-                const saved = localStorage.getItem('bubbleBombMode');
-                if (saved !== null) bombModeEnabled = (saved === 'true');
-            } catch(e) {}
-            function saveBombMode() {
-                try {
-                    localStorage.setItem('bubbleBombMode', bombModeEnabled);
-                } catch(e) {}
-            }
+            // ======================== AudioManager ========================
+            class AudioManager {
+                constructor() {
+                    this.ctx = null;
+                    this.masterGain = null;
+                    this.musicGain = null;
+                    this.sfxGain = null;
+                    this.musicMuted = false;
+                    this.bgmAudio = null;
+                    this.bgmSource = null;
+                    this.musicPlaying = false;
+                    this.analyser = null;
+                    this.waveformData = null;
+                    this.bgmVolume = 0.2;
+                    this.sfxVolume = 0.9;
+                    this.init();
+                }
 
-            // Audio 初始化
-            let audioCtx = null;
-            let masterGain = null;
-            let musicGain = null;
-            let sfxGain = null;
-            let musicMuted = false;
-            let bgmAudio = null;
-            let musicPlaying = false;
-            let analyserNode = null;
-            let waveformData = null;
-            const WAVEFORM_SAMPLES = 64;
-            let bgmVolume = 0.2;
-            let sfxVolume = 0.9;
-
-            let maxCombo = 0;
-            let encouragementText = '';
-            let encouragementTimer = 0;
-            const ENCOURAGE_DUR = 2.2;
-
-            // 本地儲存最高總分
-            let highScoreTotal = 0;
-            try {
-                const saved = localStorage.getItem('bubbleHighScore');
-                if (saved) highScoreTotal = parseInt(saved) || 0;
-            } catch(e) {}
-
-            function saveHighScore() {
-                if (totalScore > highScoreTotal) {
-                    highScoreTotal = totalScore;
+                init() {
+                    if (this.ctx) return;
                     try {
-                        localStorage.setItem('bubbleHighScore', highScoreTotal);
-                    } catch(e) {}
+                        this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+                        this.masterGain = this.ctx.createGain();
+                        this.masterGain.gain.value = 0.5;
+                        this.masterGain.connect(this.ctx.destination);
+                        this.musicGain = this.ctx.createGain();
+                        this.musicGain.gain.value = this.musicMuted ? 0 : this.bgmVolume;
+                        this.musicGain.connect(this.masterGain);
+                        this.sfxGain = this.ctx.createGain();
+                        this.sfxGain.gain.value = this.sfxVolume;
+                        this.sfxGain.connect(this.masterGain);
+                        this.analyser = this.ctx.createAnalyser();
+                        this.analyser.fftSize = 256;
+                        this.analyser.connect(this.masterGain);
+                        this.musicGain.connect(this.analyser);
+                        this.waveformData = new Uint8Array(this.analyser.frequencyBinCount);
+                        this.bgmAudio = new Audio('https://pkbw2000.github.io/avs-ljci/BGM.mp3');
+                        this.bgmAudio.loop = true;
+                        this.bgmAudio.crossOrigin = "anonymous";
+                        this.bgmAudio.load();
+                        this.bgmAudio.onerror = () => { if (this.musicGain) this.musicGain.gain.value = 0; };
+                    } catch(e) { console.warn('Audio init error', e); }
+                }
+
+                async resume() {
+                    if (this.ctx && this.ctx.state === 'suspended') await this.ctx.resume();
+                    if (!this.bgmSource && this.bgmAudio) {
+                        try {
+                            this.bgmSource = this.ctx.createMediaElementSource(this.bgmAudio);
+                            this.bgmSource.connect(this.musicGain);
+                        } catch(e) {}
+                    }
+                }
+
+                playBGM() {
+                    if (!this.bgmAudio || this.musicMuted) return;
+                    if (this.bgmAudio.paused) {
+                        this.bgmAudio.play().catch(()=>{});
+                    }
+                    this.musicPlaying = true;
+                }
+
+                stopBGM() {
+                    if (this.bgmAudio) {
+                        this.bgmAudio.pause();
+                        this.musicPlaying = false;
+                    }
+                }
+
+                toggleMusic() {
+                    this.musicMuted = !this.musicMuted;
+                    this.updateBGMVolume();
+                    if (!this.musicMuted) this.playBGM();
+                    else this.stopBGM();
+                }
+
+                updateBGMVolume() {
+                    if (this.musicGain) {
+                        this.musicGain.gain.value = this.musicMuted ? 0 : this.bgmVolume;
+                    }
+                }
+
+                updateSFXVolume() {
+                    if (this.sfxGain) this.sfxGain.gain.value = this.sfxVolume;
+                }
+
+                getWaveform() {
+                    if (this.analyser && !this.musicMuted && this.bgmAudio && !this.bgmAudio.error) {
+                        this.analyser.getByteFrequencyData(this.waveformData);
+                        return this.waveformData;
+                    }
+                    return null;
+                }
+
+                playSFX(type) {
+                    if (!this.ctx) return;
+                    const now = this.ctx.currentTime;
+                    const createOsc = (freq, start, dur, oscType='sine', vol=0.25) => {
+                        try {
+                            const osc = this.ctx.createOscillator();
+                            const gain = this.ctx.createGain();
+                            osc.type = oscType;
+                            osc.frequency.setValueAtTime(freq, now + start);
+                            gain.gain.setValueAtTime(vol, now + start);
+                            gain.gain.exponentialRampToValueAtTime(0.001, now + start + dur);
+                            osc.connect(gain);
+                            gain.connect(this.sfxGain);
+                            osc.start(now + start);
+                            osc.stop(now + start + dur);
+                        } catch(e) {}
+                    };
+                    switch(type) {
+                        case 'eliminate':
+                            createOsc(523,0,0.12,'sine');
+                            createOsc(659,0.06,0.12,'sine');
+                            createOsc(784,0.12,0.15,'sine');
+                            break;
+                        case 'score': createOsc(880,0,0.1,'triangle'); createOsc(1100,0.04,0.1,'triangle'); break;
+                        case 'fall': createOsc(150,0,0.15,'sine',0.15); break;
+                        case 'combo': for(let i=0;i<3;i++) createOsc(660+i*110,i*0.05,0.1,'sine'); break;
+                        case 'levelUp': [523,659,784,1047].forEach((f,i)=>createOsc(f,i*0.12,0.25,'triangle',0.2)); break;
+                        case 'bombAppear': createOsc(440,0,0.2,'sawtooth',0.3); createOsc(880,0.1,0.2,'sawtooth',0.2); break;
+                        case 'bombDefuse': createOsc(660,0,0.15,'triangle',0.2); createOsc(880,0.1,0.2,'triangle',0.25); break;
+                        case 'bombExplode': createOsc(150,0,0.4,'sawtooth',0.5); createOsc(100,0.1,0.5,'sawtooth',0.4); break;
+                        default: break;
+                    }
                 }
             }
 
-            function initAudio() {
-                if (audioCtx) return;
-                try {
-                    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-                    masterGain = audioCtx.createGain();
-                    masterGain.gain.value = 0.5;
-                    masterGain.connect(audioCtx.destination);
-                    musicGain = audioCtx.createGain();
-                    musicGain.gain.value = musicMuted ? 0 : bgmVolume;
-                    musicGain.connect(masterGain);
-                    sfxGain = audioCtx.createGain();
-                    sfxGain.gain.value = sfxVolume;
-                    sfxGain.connect(masterGain);
-                    analyserNode = audioCtx.createAnalyser();
-                    analyserNode.fftSize = 256;
-                    analyserNode.connect(masterGain);
-                    musicGain.connect(analyserNode);
-                    waveformData = new Uint8Array(analyserNode.frequencyBinCount);
-                    bgmAudio = new Audio('https://pkbw2000.github.io/avs-ljci/BGM.mp3');
-                    bgmAudio.loop = true;
-                    bgmAudio.crossOrigin = "anonymous";
-                    bgmAudio.load();
-                    bgmAudio.onerror = () => { if (musicGain) musicGain.gain.value = 0; };
-                    bgmSource = audioCtx.createMediaElementSource(bgmAudio);
-                    bgmSource.connect(musicGain);
-                } catch(e) { console.warn(e); }
-            }
-
-            async function resumeAudio() {
-                if (audioCtx && audioCtx.state === 'suspended') await audioCtx.resume();
-            }
-            function playBGM() {
-                if (!bgmAudio || musicMuted) return;
-                if (bgmAudio.paused) {
-                    bgmAudio.play().catch(e=>{ console.log('BGM 播放失敗', e); });
+            // ======================== Grid ========================
+            class Grid {
+                constructor(rows, cols) {
+                    this.rows = rows;
+                    this.cols = cols;
+                    this.data = [];
+                    this.colorCount = CONFIG.MIN_COLORS;
                 }
-                musicPlaying = true;
-            }
-            function stopBGM() { if (bgmAudio) { bgmAudio.pause(); musicPlaying = false; } }
-            function updateBGMVolume() { if (musicGain) musicGain.gain.value = musicMuted ? 0 : bgmVolume; }
-            function updateSFXVolume() { if (sfxGain) sfxGain.gain.value = sfxVolume; }
-            async function toggleMusic() {
-                await resumeAudio(); initAudio(); musicMuted = !musicMuted; updateBGMVolume();
-                if (!musicMuted && bgmAudio && bgmAudio.paused) playBGM();
-                else if (musicMuted && bgmAudio) bgmAudio.pause();
-            }
 
-            function playSFX(type) {
-                if (!audioCtx) return;
-                const now = audioCtx.currentTime;
-                const createOsc = (freq, start, dur, type='sine', vol=0.25) => {
-                    const osc = audioCtx.createOscillator();
-                    const gain = audioCtx.createGain();
-                    osc.type = type;
-                    osc.frequency.setValueAtTime(freq, now + start);
-                    gain.gain.setValueAtTime(vol, now + start);
-                    gain.gain.exponentialRampToValueAtTime(0.001, now + start + dur);
-                    osc.connect(gain);
-                    gain.connect(sfxGain);
-                    osc.start(now + start);
-                    osc.stop(now + start + dur);
-                };
-                switch(type) {
-                    case 'eliminate':
-                        createOsc(523,0,0.12,'sine'); createOsc(659,0.06,0.12,'sine'); createOsc(784,0.12,0.15,'sine'); break;
-                    case 'score': createOsc(880,0,0.1,'triangle'); createOsc(1100,0.04,0.1,'triangle'); break;
-                    case 'fall': createOsc(150,0,0.15,'sine',0.15); break;
-                    case 'combo': for(let i=0;i<3;i++) createOsc(660+i*110,i*0.05,0.1,'sine'); break;
-                    case 'levelUp': [523,659,784,1047].forEach((f,i)=>createOsc(f,i*0.12,0.25,'triangle',0.2)); break;
-                    case 'bombAppear': createOsc(440,0,0.2,'sawtooth',0.3); createOsc(880,0.1,0.2,'sawtooth',0.2); break;
-                    case 'bombDefuse': createOsc(660,0,0.15,'triangle',0.2); createOsc(880,0.1,0.2,'triangle',0.25); break;
-                    case 'bombExplode': createOsc(150,0,0.4,'sawtooth',0.5); createOsc(100,0.1,0.5,'sawtooth',0.4); break;
-                }
-            }
-
-            // 遊戲基本參數
-            const COLS = 6, ROWS = 8;
-            const SIDE_MARGIN = 10;
-            let W, H;
-            let CELL_SIZE, BALL_RADIUS, GRID_X, GRID_W, TOP_Y, TOP_HEIGHT, WAVE_Y, WAVE_HEIGHT, SLIDER_Y, SLIDER_HEIGHT, GAME_Y;
-            let sliderBGM, sliderSFX;
-            
-            function updateLayout() {
-                const rect = canvas.getBoundingClientRect();
-                W = rect.width;
-                H = rect.height;
-                GRID_W = W - SIDE_MARGIN * 2;
-                CELL_SIZE = Math.floor(GRID_W / COLS);
-                BALL_RADIUS = CELL_SIZE * 0.45;
-                GRID_X = SIDE_MARGIN;
-                TOP_Y = 8;
-                TOP_HEIGHT = 92;
-                WAVE_Y = TOP_Y + TOP_HEIGHT + 2;
-                WAVE_HEIGHT = 50;
-                SLIDER_Y = WAVE_Y + WAVE_HEIGHT;
-                SLIDER_HEIGHT = 28;
-                GAME_Y = SLIDER_Y + SLIDER_HEIGHT + 4;
-                const maxGameY = H - ROWS * CELL_SIZE - 10;
-                if (GAME_Y > maxGameY) {
-                    GAME_Y = Math.max(TOP_Y + TOP_HEIGHT + 10, maxGameY);
-                }
-                sliderBGM = { x: 60, y: SLIDER_Y + 8, w: 100, h: 12, thumbR: 10 };
-                sliderSFX = { x: W - 130, y: SLIDER_Y + 8, w: 100, h: 12, thumbR: 10 };
-            }
-            
-            function relocateBalls() {
-                if (!grid.length) return;
-                for (let r = 0; r < ROWS; r++) {
-                    for (let c = 0; c < COLS; c++) {
-                        if (grid[r][c].color !== -1) {
-                            grid[r][c].currY = GAME_Y + r * CELL_SIZE + CELL_SIZE/2;
+                init(colorCount) {
+                    this.colorCount = colorCount;
+                    this.data = [];
+                    for (let r = 0; r < this.rows; r++) {
+                        this.data[r] = [];
+                        for (let c = 0; c < this.cols; c++) {
+                            this.data[r][c] = {
+                                color: Math.floor(Math.random() * colorCount),
+                                currY: 0,
+                                scale: 1,
+                                alpha: 1,
+                                eliminating: false,
+                                isBomb: false
+                            };
                         }
                     }
                 }
-            }
 
-            const COLOR_HEX = ['#FF5252','#448AFF','#69F0AE','#FFD740','#E040FB','#FF6E40'];
-            const COLOR_DARK = ['#B71C1C','#0D47A1','#1B5E20','#F57F17','#4A148C','#BF360C'];
+                isValid(r, c) {
+                    return r >= 0 && r < this.rows && c >= 0 && c < this.cols;
+                }
 
-            let level = 1, targetScore = 300, colorCount = 3;
-            let score = 0;
-            let totalScore = 0;
-            let grid = [], selectedPath = [];
-            let gameState = 'start';
-            let animState = 'idle', animTimer = 0;
-            const ELIMINATE_DUR = 0.28, FALL_DUR = 0.32;
-            let lastTimestamp = 0;
-            let startBtnBounds = null, nextBtnBounds = null, musicBtnBounds = null;
-            let restartBtnBounds = null, shareLineBtnBounds = null;
-            let bombModeBtnBounds = null;   // 開始畫面上的炸彈模式切換按鈕
-            let sliderDragging = null;
+                isAdjacent(r1,c1,r2,c2) {
+                    return Math.abs(r1-r2) <= 1 && Math.abs(c1-c2) <= 1 && !(r1===r2 && c1===c2);
+                }
 
-            let bombActive = false;
-            let bombRow = -1, bombCol = -1;
-            let missedBombCount = 0;
-            const MAX_MISSED = 10;
+                findHint() {
+                    const visited = Array(this.rows).fill().map(()=>Array(this.cols).fill(false));
+                    for (let r = 0; r < this.rows; r++) {
+                        for (let c = 0; c < this.cols; c++) {
+                            if (visited[r][c] || this.data[r][c].color === -1) continue;
+                            const color = this.data[r][c].color;
+                            const queue = [{r,c}];
+                            visited[r][c] = true;
+                            const path = [];
+                            while (queue.length) {
+                                const {r: cr, c: cc} = queue.shift();
+                                path.push({row: cr, col: cc});
+                                for (let dr = -1; dr <= 1; dr++) {
+                                    for (let dc = -1; dc <= 1; dc++) {
+                                        if (dr === 0 && dc === 0) continue;
+                                        const nr = cr + dr, nc = cc + dc;
+                                        if (this.isValid(nr,nc) && !visited[nr][nc] &&
+                                            this.data[nr][nc].color === color && this.data[nr][nc].color !== -1) {
+                                            visited[nr][nc] = true;
+                                            queue.push({r:nr, c:nc});
+                                        }
+                                    }
+                                }
+                            }
+                            if (path.length >= 3) return path;
+                        }
+                    }
+                    return null;
+                }
 
-            function resetMaxCombo() { maxCombo = 0; encouragementText = ''; encouragementTimer = 0; }
+                hasValidMove() {
+                    return this.findHint() !== null;
+                }
 
-            function initGrid() {
-                grid = [];
-                for (let r = 0; r < ROWS; r++) {
-                    grid[r] = [];
-                    for (let c = 0; c < COLS; c++) {
-                        grid[r][c] = {
-                            color: Math.floor(Math.random() * colorCount),
-                            currY: GAME_Y + r * CELL_SIZE + CELL_SIZE/2,
-                            scale: 1, alpha: 1, eliminating: false,
-                            isBomb: false
-                        };
+                shuffleBoard(colorCount) {
+                    this.colorCount = colorCount;
+                    let attempts = 0;
+                    do {
+                        for (let r = 0; r < this.rows; r++) {
+                            for (let c = 0; c < this.cols; c++) {
+                                this.data[r][c].color = Math.floor(Math.random() * colorCount);
+                                this.data[r][c].scale = 1;
+                                this.data[r][c].alpha = 1;
+                                this.data[r][c].eliminating = false;
+                                this.data[r][c].isBomb = false;
+                            }
+                        }
+                        if (++attempts > 100 && !this.hasValidMove()) {
+                            this.forceValidMove();
+                            break;
+                        }
+                    } while (!this.hasValidMove() && attempts < 100);
+                }
+
+                forceValidMove() {
+                    for (let r = 0; r < this.rows - 2; r++) {
+                        for (let c = 0; c < this.cols - 2; c++) {
+                            const col = this.data[r][c].color;
+                            if (col === -1) continue;
+                            if (this.data[r+1][c].color !== col || this.data[r+2][c].color !== col) {
+                                this.data[r+1][c].color = col;
+                                this.data[r+2][c].color = col;
+                                return true;
+                            }
+                        }
+                    }
+                    for (let r = 0; r < this.rows; r++) {
+                        for (let c = 0; c < this.cols - 1; c++) {
+                            if (this.data[r][c].color !== -1) {
+                                this.data[r][c+1].color = this.data[r][c].color;
+                                return true;
+                            }
+                        }
+                    }
+                    return false;
+                }
+
+                clearBomb() {
+                    for (let r = 0; r < this.rows; r++) {
+                        for (let c = 0; c < this.cols; c++) {
+                            if (this.data[r][c].isBomb) {
+                                this.data[r][c].isBomb = false;
+                            }
+                        }
                     }
                 }
-                if (!hasValidMove()) shuffleBoard();
-            }
 
-            function clearBomb() {
-                if (bombActive && bombRow >=0 && bombCol >=0 && grid[bombRow] && grid[bombRow][bombCol]) {
-                    grid[bombRow][bombCol].isBomb = false;
-                }
-                bombActive = false;
-                bombRow = bombCol = -1;
-                missedBombCount = 0;
-            }
-
-            function getBombProbability() {
-                if (!bombModeEnabled) return 0;   // 炸彈模式關閉 → 永遠不生成
-                if (level <= 10) return 0;
-                let prob = 0.2 + Math.floor((level - 11) / 10) * 0.1;
-                return Math.min(prob, 1.0);
-            }
-
-            function tryGenerateBombAfterFall() {
-                if (!bombModeEnabled) return;      // 炸彈模式關閉
-                if (gameState !== 'playing') return;
-                if (bombActive) return;
-                const prob = getBombProbability();
-                if (prob === 0) return;
-                if (Math.random() < prob) {
-                    let candidates = [];
-                    for (let r = 0; r < ROWS; r++) {
-                        for (let c = 0; c < COLS; c++) {
-                            if (!grid[r][c].eliminating && grid[r][c].color !== -1 && !grid[r][c].isBomb) {
+                getCandidatesForBomb() {
+                    const candidates = [];
+                    for (let r = 0; r < this.rows; r++) {
+                        for (let c = 0; c < this.cols; c++) {
+                            const cell = this.data[r][c];
+                            if (!cell.eliminating && cell.color !== -1 && !cell.isBomb) {
                                 candidates.push([r, c]);
                             }
                         }
                     }
-                    if (candidates.length === 0) return;
-                    let idx = Math.floor(Math.random() * candidates.length);
-                    let [r, c] = candidates[idx];
-                    grid[r][c].isBomb = true;
-                    bombActive = true;
-                    bombRow = r;
-                    bombCol = c;
-                    missedBombCount = 0;
-                    playSFX('bombAppear');
-                    encouragementText = "💣 炸彈球出現了！快用連線消除它！";
-                    encouragementTimer = 2.5;
+                    return candidates;
                 }
             }
 
-            function pathContainsBomb(path) {
-                return path.some(p => grid[p.row][p.col].isBomb);
+            // ======================== 粒子系统 ========================
+            class Particle {
+                constructor(x, y, color, speed, angle, life) {
+                    this.x = x;
+                    this.y = y;
+                    this.vx = Math.cos(angle) * speed;
+                    this.vy = Math.sin(angle) * speed;
+                    this.radius = 3 + Math.random() * 4;
+                    this.color = color;
+                    this.life = life;
+                    this.maxLife = life;
+                    this.alpha = 1;
+                }
+
+                update(dt) {
+                    this.x += this.vx * dt;
+                    this.y += this.vy * dt;
+                    this.vy += 30 * dt;
+                    this.life -= dt;
+                    this.alpha = Math.max(0, this.life / this.maxLife);
+                    return this.life > 0;
+                }
+
+                draw(ctx) {
+                    ctx.globalAlpha = this.alpha;
+                    ctx.beginPath();
+                    ctx.arc(this.x, this.y, this.radius, 0, Math.PI*2);
+                    ctx.fillStyle = this.color;
+                    ctx.fill();
+                    ctx.globalAlpha = 1;
+                }
             }
 
-            function defuseBombByPath(path) {
-                if (!bombActive) return false;
-                for (let p of path) {
-                    if (grid[p.row][p.col].isBomb) {
-                        grid[p.row][p.col].isBomb = false;
-                        bombActive = false;
-                        bombRow = bombCol = -1;
-                        missedBombCount = 0;
-                        let bonus = 50;
-                        score += bonus;
-                        totalScore += bonus;
-                        playSFX('bombDefuse');
-                        encouragementText = `✓ 炸彈拆除！ +${bonus}分`;
-                        encouragementTimer = 1.8;
-                        saveHighScore();
-                        return true;
+            // ======================== 排行榜管理 ========================
+            class Leaderboard {
+                constructor() {
+                    this.key = CONFIG.LEADERBOARD_KEY;
+                    this.max = CONFIG.LEADERBOARD_MAX;
+                    this.entries = this.load();
+                }
+
+                load() {
+                    try {
+                        const data = localStorage.getItem(this.key);
+                        return data ? JSON.parse(data) : [];
+                    } catch(e) { return []; }
+                }
+
+                save() {
+                    try {
+                        localStorage.setItem(this.key, JSON.stringify(this.entries));
+                    } catch(e) {}
+                }
+
+                addEntry(score, level) {
+                    this.entries.push({ score, level, date: new Date().toISOString() });
+                    this.entries.sort((a,b) => b.score - a.score);
+                    if (this.entries.length > this.max) this.entries = this.entries.slice(0, this.max);
+                    this.save();
+                }
+
+                getTop() {
+                    return this.entries;
+                }
+
+                getHighest() {
+                    return this.entries.length > 0 ? this.entries[0].score : 0;
+                }
+            }
+
+            // ======================== 渲染器（含离屏缓存） ========================
+            class Renderer {
+                constructor(canvas) {
+                    this.canvas = canvas;
+                    this.ctx = canvas.getContext('2d');
+                    this.W = 0;
+                    this.H = 0;
+                    this.layout = {};
+                    this.offscreenCanvas = null;
+                    this.offscreenCtx = null;
+                    this.dirty = true;
+                    this.resize();
+                }
+
+                resize() {
+                    const rect = this.canvas.getBoundingClientRect();
+                    this.W = rect.width;
+                    this.H = rect.height;
+                    const cols = CONFIG.GRID.cols, rows = CONFIG.GRID.rows;
+                    const margin = CONFIG.SIDE_MARGIN;
+                    const gridW = this.W - margin * 2;
+                    const cellSize = Math.floor(gridW / cols);
+                    const ballRadius = cellSize * CONFIG.BALL_RADIUS_RATIO;
+                    const gridX = margin;
+                    const topY = CONFIG.TOP_PANEL.yOffset;
+                    const topH = CONFIG.TOP_PANEL.height;
+                    const waveY = topY + topH + CONFIG.WAVE.yOffset;
+                    const waveH = CONFIG.WAVE.height;
+                    const sliderY = waveY + waveH + CONFIG.SLIDER.yOffset;
+                    const sliderH = CONFIG.SLIDER.height;
+                    let gameY = sliderY + sliderH + 4;
+                    const maxGameY = this.H - rows * cellSize - 10;
+                    if (gameY > maxGameY) gameY = Math.max(topY + topH + 10, maxGameY);
+                    const sliderBGM = { x: 60, y: sliderY + 8, w: 100, h: 12, thumbR: 10 };
+                    const sliderSFX = { x: this.W - 130, y: sliderY + 8, w: 100, h: 12, thumbR: 10 };
+                    this.layout = {
+                        W: this.W, H: this.H,
+                        cols, rows, cellSize, ballRadius, gridX, gridW,
+                        topY, topH, waveY, waveH, sliderY, sliderH, gameY,
+                        sliderBGM, sliderSFX,
+                        musicBtn: { x: this.W - 35, y: waveY + (waveH-26)/2, w: 26, h: 26 },
+                        hintBtn: { x: this.W - 80, y: waveY + 4, w: 50, h: waveH - 8 }
+                    };
+                    this.dirty = true;
+                    this.offscreenCanvas = document.createElement('canvas');
+                    this.offscreenCanvas.width = this.W;
+                    this.offscreenCanvas.height = this.H;
+                    this.offscreenCtx = this.offscreenCanvas.getContext('2d');
+                }
+
+                renderStatic(level, maxCombo, highScoreTotal, totalScore, score, targetScore,
+                             musicMuted, waveformData, bgmVolume, sfxVolume, audioError) {
+                    const ctx = this.offscreenCtx;
+                    const l = this.layout;
+                    ctx.clearRect(0, 0, this.W, this.H);
+                    const grad = ctx.createLinearGradient(0,0,0,this.H);
+                    grad.addColorStop(0,'#3d2b6b');
+                    grad.addColorStop(0.3,'#2b1e4a');
+                    grad.addColorStop(1,'#1e1533');
+                    ctx.fillStyle = grad;
+                    ctx.fillRect(0,0,this.W,this.H);
+
+                    this.drawTopPanel(ctx, level, maxCombo, highScoreTotal, totalScore, score, targetScore);
+                    this.drawWaveform(ctx, musicMuted, waveformData, audioError);
+                    this.drawSliders(ctx, bgmVolume, sfxVolume);
+                    this.drawGridBackground(ctx);
+                    this.dirty = false;
+                }
+
+                drawTopPanel(ctx, level, maxCombo, highScoreTotal, totalScore, score, targetScore) {
+                    const l = this.layout;
+                    ctx.save();
+                    ctx.shadowBlur = 0;
+                    ctx.fillStyle = 'rgba(20,12,40,0.85)';
+                    ctx.beginPath(); roundRect(ctx, 10, l.topY, l.W-20, l.topH, 18); ctx.fill();
+                    ctx.strokeStyle = '#FFD740'; ctx.lineWidth = 2; ctx.stroke();
+                    ctx.textBaseline = 'top';
+                    ctx.fillStyle = '#FFF';
+                    ctx.font = 'bold 18px "Arial Rounded MT Bold"';
+                    ctx.textAlign = 'left';
+                    ctx.fillText(`第 ${level} 關`, 20, l.topY+8);
+                    ctx.font = '12px "Arial Rounded MT Bold"';
+                    ctx.textAlign = 'right';
+                    ctx.fillText(`🏆 最高連線 ${maxCombo} 球`, l.W-20, l.topY+8);
+                    ctx.font = 'bold 12px "Arial Rounded MT Bold"';
+                    ctx.fillStyle = '#FFAA55';
+                    ctx.fillText(`🏅 最高紀錄 ${highScoreTotal}`, l.W-20, l.topY+28);
+                    ctx.font = 'bold 15px "Arial Rounded MT Bold"';
+                    ctx.fillStyle = '#FFD740';
+                    ctx.textAlign = 'left';
+                    ctx.fillText(`🏆 總得分：${totalScore}`, 20, l.topY+40);
+                    const barX=20, barY=l.topY+62, barW=l.W-40, barH=10;
+                    ctx.fillStyle = '#2c1e4a';
+                    ctx.beginPath(); roundRect(ctx, barX, barY, barW, barH, 6); ctx.fill();
+                    const progress = Math.min(score/targetScore, 1);
+                    if (progress > 0) {
+                        const grad = ctx.createLinearGradient(barX,0,barX+barW,0);
+                        grad.addColorStop(0,'#FFD740'); grad.addColorStop(1,'#FF6E40');
+                        ctx.fillStyle = grad;
+                        ctx.beginPath(); roundRect(ctx, barX, barY, progress*barW, barH, 6); ctx.fill();
+                    }
+                    ctx.fillStyle = '#FFF';
+                    ctx.font = 'bold 10px "Arial Rounded MT Bold"';
+                    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+                    ctx.fillText(`${score}/${targetScore}`, l.W/2, barY+barH/2);
+                    ctx.restore();
+                }
+
+                drawWaveform(ctx, musicMuted, waveformData, audioError) {
+                    const l = this.layout;
+                    ctx.fillStyle = 'rgba(20,12,40,0.5)';
+                    ctx.beginPath(); roundRect(ctx, 10, l.waveY, l.W-20, l.waveH, 14); ctx.fill();
+                    if (waveformData && !musicMuted && !audioError) {
+                        const barWidth = (l.W-40) / CONFIG.WAVEFORM_SAMPLES;
+                        const bottomY = l.waveY + l.waveH - 6;
+                        const maxH = l.waveH - 10;
+                        ctx.save();
+                        for (let i=0; i<CONFIG.WAVEFORM_SAMPLES; i++) {
+                            const value = waveformData[Math.floor(i*(waveformData.length/CONFIG.WAVEFORM_SAMPLES))] / 255;
+                            let h = Math.max(2, value * maxH);
+                            h = Math.min(h, maxH);
+                            const x = 20 + i * barWidth;
+                            const hue = (i/CONFIG.WAVEFORM_SAMPLES) * 270;
+                            ctx.fillStyle = `hsl(${hue},90%,65%)`;
+                            ctx.fillRect(x, bottomY-h, barWidth-1, h);
+                        }
+                        ctx.restore();
+                    } else {
+                        ctx.fillStyle = '#AAA';
+                        ctx.font = '12px "Arial Rounded MT Bold"';
+                        ctx.textAlign = 'center';
+                        ctx.fillText('🎵 音樂無效或已關閉', l.W/2, l.waveY + l.waveH/2 + 5);
+                    }
+                    const btn = l.musicBtn;
+                    ctx.fillStyle = musicMuted ? '#888' : '#FFD740';
+                    ctx.beginPath(); ctx.arc(btn.x+btn.w/2, btn.y+btn.h/2, btn.w/2, 0, Math.PI*2); ctx.fill();
+                    ctx.fillStyle = '#2b1e4a';
+                    ctx.font = '18px "Arial Rounded MT Bold"';
+                    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+                    ctx.fillText(musicMuted ? '🔇' : '♪', btn.x+btn.w/2, btn.y+btn.h/2+1);
+                }
+
+                drawSliders(ctx, bgmVolume, sfxVolume) {
+                    const l = this.layout;
+                    const sBGM = l.sliderBGM, sSFX = l.sliderSFX;
+                    ctx.fillStyle = 'rgba(20,12,40,0.5)';
+                    ctx.fillRect(10, l.sliderY, l.W-20, l.sliderH);
+                    ctx.fillStyle = '#FFF';
+                    ctx.font = '10px "Arial Rounded MT Bold"';
+                    ctx.textAlign = 'left';
+                    ctx.fillText('🔈BGM', 12, l.sliderY+14);
+                    ctx.fillStyle = '#444';
+                    ctx.beginPath(); roundRect(ctx, sBGM.x, sBGM.y, sBGM.w, sBGM.h, 6); ctx.fill();
+                    const bgmFill = bgmVolume * sBGM.w;
+                    if (bgmFill > 0) { ctx.fillStyle = '#FFD740'; ctx.beginPath(); roundRect(ctx, sBGM.x, sBGM.y, bgmFill, sBGM.h, 6); ctx.fill(); }
+                    ctx.fillStyle = '#FFF';
+                    ctx.beginPath(); ctx.arc(sBGM.x + bgmFill, sBGM.y + sBGM.h/2, sBGM.thumbR, 0, Math.PI*2); ctx.fill();
+                    ctx.strokeStyle = '#FFD740'; ctx.lineWidth = 2; ctx.stroke();
+
+                    ctx.fillStyle = '#FFF';
+                    ctx.fillText('🔊音效', sSFX.x-45, l.sliderY+14);
+                    ctx.fillStyle = '#444';
+                    ctx.beginPath(); roundRect(ctx, sSFX.x, sSFX.y, sSFX.w, sSFX.h, 6); ctx.fill();
+                    const sfxFill = sfxVolume * sSFX.w;
+                    if (sfxFill > 0) { ctx.fillStyle = '#69F0AE'; ctx.beginPath(); roundRect(ctx, sSFX.x, sSFX.y, sfxFill, sSFX.h, 6); ctx.fill(); }
+                    ctx.fillStyle = '#FFF';
+                    ctx.beginPath(); ctx.arc(sSFX.x + sfxFill, sSFX.y + sSFX.h/2, sSFX.thumbR, 0, Math.PI*2); ctx.fill();
+                    ctx.strokeStyle = '#69F0AE'; ctx.lineWidth = 2; ctx.stroke();
+                }
+
+                drawGridBackground(ctx) {
+                    const l = this.layout;
+                    ctx.fillStyle = '#1e1533';
+                    ctx.fillRect(l.gridX, l.gameY, l.cols*l.cellSize, l.rows*l.cellSize);
+                    for (let r = 0; r < l.rows; r++) {
+                        for (let c = 0; c < l.cols; c++) {
+                            const cx = l.gridX + c*l.cellSize + l.cellSize/2;
+                            const cy = l.gameY + r*l.cellSize + l.cellSize/2;
+                            const baseX = cx - l.cellSize/2 + 2;
+                            const baseY = cy - l.cellSize/2 + 2;
+                            const baseW = l.cellSize - 4;
+                            const baseH = l.cellSize - 4;
+                            ctx.save();
+                            ctx.fillStyle = 'rgba(255,255,255,0.12)';
+                            ctx.beginPath(); roundRect(ctx, baseX, baseY, baseW, baseH, 6); ctx.fill();
+                            ctx.strokeStyle = 'rgba(255,215,0,0.4)'; ctx.lineWidth = 1.2;
+                            ctx.beginPath(); roundRect(ctx, baseX, baseY, baseW, baseH, 6); ctx.stroke();
+                            ctx.restore();
+                        }
                     }
                 }
-                return false;
-            }
 
-            function addMissedBombCount() {
-                missedBombCount++;
-                if (missedBombCount >= MAX_MISSED) {
-                    explodeGameOver();
-                    return true;
-                } else {
-                    encouragementText = `⚠️ 炸彈危機 ${missedBombCount}/${MAX_MISSED}！快連線消除炸彈球！`;
-                    encouragementTimer = 1.5;
-                    playSFX('bombAppear');
-                    return false;
+                // 动态绘制
+                drawDynamic(grid, selectedPath, hintPath, particles, gameState, animState,
+                            encouragementText, encouragementTimer, totalScore, level, cursorRow, cursorCol, keyboardMode) {
+                    const ctx = this.ctx;
+                    const l = this.layout;
+                    ctx.drawImage(this.offscreenCanvas, 0, 0);
+
+                    // 球体
+                    for (let r = 0; r < l.rows; r++) {
+                        for (let c = 0; c < l.cols; c++) {
+                            const cell = grid.data[r][c];
+                            if (cell.color === -1) continue;
+                            const cx = l.gridX + c*l.cellSize + l.cellSize/2;
+                            const isSelected = (gameState === 'playing' && animState === 'idle' &&
+                                selectedPath.some(p => p.row === r && p.col === c));
+                            const isHint = hintPath && hintPath.some(p => p.row === r && p.col === c);
+                            let scale = cell.scale * (isSelected || isHint ? 1.12 : 1);
+                            if (isHint) {
+                                const pulse = 1 + 0.08 * Math.sin(Date.now() / 200);
+                                scale *= pulse;
+                            }
+                            this.drawBall(ctx, cx, cell.currY, l.ballRadius, cell.color, scale, cell.alpha, cell.isBomb);
+                        }
+                    }
+
+                    // 路径线
+                    if (gameState === 'playing' && animState === 'idle' && selectedPath.length >= 2) {
+                        ctx.beginPath();
+                        ctx.strokeStyle = '#FFF';
+                        ctx.lineWidth = 7;
+                        ctx.lineCap = 'round';
+                        ctx.lineJoin = 'round';
+                        ctx.shadowColor = '#FFD740';
+                        ctx.shadowBlur = 15;
+                        const first = this.getCellCenter(selectedPath[0].row, selectedPath[0].col);
+                        ctx.moveTo(first.x, first.y);
+                        for (let i=1; i<selectedPath.length; i++) {
+                            const pt = this.getCellCenter(selectedPath[i].row, selectedPath[i].col);
+                            ctx.lineTo(pt.x, pt.y);
+                        }
+                        ctx.stroke();
+                        ctx.shadowBlur = 0;
+                    }
+
+                    // 粒子
+                    for (let p of particles) {
+                        p.draw(ctx);
+                    }
+
+                    // 鼓励文字
+                    if (encouragementTimer > 0) {
+                        const alpha = Math.min(1, encouragementTimer / 0.5);
+                        ctx.save();
+                        ctx.globalAlpha = alpha;
+                        ctx.fillStyle = '#FFD740';
+                        ctx.font = 'bold 22px "Arial Rounded MT Bold"';
+                        ctx.textAlign = 'center';
+                        ctx.shadowColor = '#000';
+                        ctx.shadowBlur = 8;
+                        ctx.fillText(encouragementText, l.W/2, l.H/2-50);
+                        ctx.restore();
+                    }
+
+                    // 键盘游标
+                    if (keyboardMode && gameState === 'playing' && animState === 'idle') {
+                        const cx = l.gridX + cursorCol*l.cellSize + l.cellSize/2;
+                        const cy = l.gameY + cursorRow*l.cellSize + l.cellSize/2;
+                        ctx.save();
+                        ctx.strokeStyle = '#FFD740';
+                        ctx.lineWidth = 3;
+                        ctx.setLineDash([4,4]);
+                        ctx.beginPath();
+                        ctx.arc(cx, cy, l.ballRadius*1.3, 0, Math.PI*2);
+                        ctx.stroke();
+                        ctx.restore();
+                    }
+
+                    // 提示按钮
+                    const hintBtn = l.hintBtn;
+                    ctx.save();
+                    ctx.fillStyle = 'rgba(255,215,0,0.8)';
+                    ctx.beginPath(); roundRect(ctx, hintBtn.x, hintBtn.y, hintBtn.w, hintBtn.h, 12); ctx.fill();
+                    ctx.fillStyle = '#2b1e4a';
+                    ctx.font = '14px "Arial Rounded MT Bold"';
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    ctx.fillText('💡提示', hintBtn.x+hintBtn.w/2, hintBtn.y+hintBtn.h/2);
+                    ctx.restore();
+
+                    // 覆盖层
+                    if (gameState === 'start') {
+                        this.drawOverlay(ctx, '🌈 彩球連連', '小心隱藏炸彈球！', '開始');
+                    } else if (gameState === 'levelComplete') {
+                        this.drawOverlay(ctx, '🎉 過關！', `總得分：${totalScore}`, '繼續');
+                    } else if (gameState === 'gameOver') {
+                        this.drawGameOver(ctx, totalScore, level);
+                    }
+                }
+
+                drawBall(ctx, x, y, r, colorIdx, scale=1, alpha=1, isBomb=false) {
+                    if (alpha <= 0.01) return;
+                    ctx.save();
+                    ctx.globalAlpha = alpha;
+                    const rad = r * scale;
+                    const grad = ctx.createRadialGradient(x-rad*0.3, y-rad*0.35, rad*0.1, x, y, rad);
+                    grad.addColorStop(0, '#FFFFFF');
+                    grad.addColorStop(0.3, CONFIG.COLORS.HEX[colorIdx]);
+                    grad.addColorStop(1, CONFIG.COLORS.DARK[colorIdx]);
+                    ctx.beginPath();
+                    ctx.arc(x, y, rad, 0, Math.PI*2);
+                    ctx.fillStyle = grad;
+                    ctx.fill();
+                    ctx.strokeStyle = 'rgba(255,255,255,0.6)';
+                    ctx.lineWidth = 1.5;
+                    ctx.stroke();
+                    if (isBomb) {
+                        ctx.font = `${Math.floor(rad * 1.1)}px "Segoe UI Emoji"`;
+                        ctx.fillStyle = '#FFFFFF';
+                        ctx.shadowBlur = 5;
+                        ctx.shadowColor = 'black';
+                        ctx.beginPath();
+                        ctx.arc(x + rad*0.08, y - rad*0.08, rad*0.5, 0, Math.PI*2);
+                        ctx.fillStyle = 'rgba(0,0,0,0.6)';
+                        ctx.fill();
+                        ctx.fillStyle = '#FFFFFF';
+                        ctx.fillText('💣', x - rad*0.12, y + rad*0.28);
+                        ctx.shadowBlur = 0;
+                    }
+                    ctx.restore();
+                }
+
+                getCellCenter(row, col) {
+                    const l = this.layout;
+                    return { x: l.gridX + col*l.cellSize + l.cellSize/2,
+                             y: l.gameY + row*l.cellSize + l.cellSize/2 };
+                }
+
+                drawOverlay(ctx, text, subText, btnText) {
+                    ctx.fillStyle = 'rgba(0,0,0,0.75)';
+                    ctx.fillRect(0,0,this.W,this.H);
+                    ctx.fillStyle = '#FFF';
+                    ctx.font = 'bold 34px "Arial Rounded MT Bold"';
+                    ctx.textAlign = 'center';
+                    ctx.fillText(text, this.W/2, 150);
+                    if (subText) {
+                        ctx.font = '18px "Arial Rounded MT Bold"';
+                        ctx.fillText(subText, this.W/2, 210);
+                    }
+                    const btnX = this.W/2 - 75, btnY = 280, btnW = 150, btnH = 56;
+                    ctx.fillStyle = '#FFD740';
+                    ctx.beginPath(); roundRect(ctx, btnX, btnY, btnW, btnH, 28); ctx.fill();
+                    ctx.fillStyle = '#2b1e4a';
+                    ctx.font = 'bold 24px "Arial Rounded MT Bold"';
+                    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+                    ctx.fillText(btnText, btnX+btnW/2, btnY+btnH/2);
+                    if (text === '🌈 彩球連連') {
+                        ctx.font = '14px sans-serif'; ctx.fillStyle = '#FFD740';
+                        ctx.fillText('✨ 連線同色球 (可斜角) ✨', this.W/2, 360);
+                        ctx.font = '13px sans-serif'; ctx.fillStyle = '#FFAA66';
+                        ctx.fillText('⚠️ 炸彈球需用連線消除，五次未消則爆炸', this.W/2, 390);
+                    }
+                    return { x: btnX, y: btnY, w: btnW, h: btnH };
+                }
+
+                drawGameOver(ctx, totalScore, level) {
+                    ctx.fillStyle = 'rgba(0,0,0,0.85)'; ctx.fillRect(0,0,this.W,this.H);
+                    ctx.fillStyle = '#FFF'; ctx.font = 'bold 34px "Arial Rounded MT Bold"'; ctx.textAlign = 'center';
+                    ctx.fillText('💥 遊戲結束 💥', this.W/2, 180);
+                    ctx.font = '22px "Arial Rounded MT Bold"';
+                    ctx.fillText(`總得分：${totalScore}`, this.W/2, 240);
+                    ctx.font = '18px "Arial Rounded MT Bold"';
+                    ctx.fillText(`到達關卡：${level}`, this.W/2, 280);
+                    const btnW = 120, btnH = 50, gap = 20;
+                    const leftX = this.W/2 - btnW - gap/2;
+                    const rightX = this.W/2 + gap/2;
+                    const btnY = 340;
+                    ctx.fillStyle = '#4488FF';
+                    ctx.beginPath(); roundRect(ctx, leftX, btnY, btnW, btnH, 25); ctx.fill();
+                    ctx.fillStyle = '#FFF';
+                    ctx.font = 'bold 18px "Arial Rounded MT Bold"';
+                    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+                    ctx.fillText('再玩一次', leftX+btnW/2, btnY+btnH/2);
+                    // 存储按钮位置供事件使用（由Game类存储）
+                    ctx.fillStyle = '#06C755';
+                    ctx.beginPath(); roundRect(ctx, rightX, btnY, btnW, btnH, 25); ctx.fill();
+                    ctx.fillStyle = '#FFF';
+                    ctx.fillText('📱 Line分享', rightX+btnW/2, btnY+btnH/2);
+                    // 返回按钮边界给Game
+                    this._gameOverBtnRestart = { x: leftX, y: btnY, w: btnW, h: btnH };
+                    this._gameOverBtnShare = { x: rightX, y: btnY, w: btnW, h: btnH };
+                }
+
+                getHintBtnBounds() {
+                    return this.layout.hintBtn;
                 }
             }
 
-            function explodeGameOver() {
-                if (gameState !== 'playing') return;
-                gameState = 'gameOver';
-                playSFX('bombExplode');
-                stopBGM();
-                encouragementText = "💥 遊戲結束！點擊重新開始 💥";
-                encouragementTimer = 3.0;
-                saveHighScore();
-            }
+            // ======================== 主游戏类 ========================
+            class Game {
+                constructor(canvas) {
+                    this.canvas = canvas;
+                    this.audio = new AudioManager();
+                    this.grid = new Grid(CONFIG.GRID.rows, CONFIG.GRID.cols);
+                    this.renderer = new Renderer(canvas);
+                    this.leaderboard = new Leaderboard();
 
-            function resetGame() {
-                level = 1;
-                score = 0;
-                totalScore = 0;
-                updateLevelParams();
-                initGrid();
-                selectedPath = [];
-                animState = 'idle';
-                gameState = 'playing';
-                resetMaxCombo();
-                clearBomb();
-                missedBombCount = 0;
-                resumeAudio().then(() => {
-                    initAudio();
-                    if (!musicMuted) playBGM();
-                }).catch(e => console.log);
-                saveHighScore();
-            }
+                    this.level = 1;
+                    this.targetScore = CONFIG.INITIAL_TARGET_SCORE;
+                    this.colorCount = CONFIG.MIN_COLORS;
+                    this.score = 0;
+                    this.totalScore = 0;
+                    this.maxCombo = 0;
+                    this.selectedPath = [];
+                    this.hintPath = null;
+                    this.particles = [];
+                    this.gameState = 'start';
+                    this.animState = 'idle';
+                    this.animTimer = 0;
+                    this.encouragementText = '';
+                    this.encouragementTimer = 0;
+                    this.bombActive = false;
+                    this.bombRow = -1;
+                    this.bombCol = -1;
+                    this.missedBombCount = 0;
+                    this.highScoreTotal = this.leaderboard.getHighest();
 
-            function goToNextLevel() {
-                level++;
-                score = 0;
-                updateLevelParams();
-                initGrid();
-                selectedPath = [];
-                animState = 'idle';
-                gameState = 'playing';
-                clearBomb();
-                missedBombCount = 0;
-                playSFX('levelUp');
-                saveHighScore();
-            }
+                    this.cursorRow = 0;
+                    this.cursorCol = 0;
+                    this.keyboardMode = false;
 
-            function updateLevelParams() {
-                colorCount = 3 + ((level - 1) % 4);
-                targetScore = 300 + (level - 1) * 150;
-            }
+                    // 按钮边界
+                    this.startBtnBounds = null;
+                    this.nextBtnBounds = null;
+                    this.restartBtnBounds = null;
+                    this.shareLineBtnBounds = null;
 
-            function getCellCenter(row, col) {
-                return { x: GRID_X + col * CELL_SIZE + CELL_SIZE/2, y: GAME_Y + row * CELL_SIZE + CELL_SIZE/2 };
-            }
-            function isValidCell(row, col) { return row>=0 && row<ROWS && col>=0 && col<COLS; }
-            function isAdjacent(r1,c1,r2,c2) { return Math.abs(r1-r2)<=1 && Math.abs(c1-c2)<=1 && !(r1===r2 && c1===c2); }
+                    this.sliderDragging = null;
+                    this._fallMoves = [];
 
-            function hasValidMove() {
-                const visited = Array(ROWS).fill().map(()=>Array(COLS).fill(false));
-                for(let r=0;r<ROWS;r++){
-                    for(let c=0;c<COLS;c++){
-                        if(visited[r][c] || grid[r][c].color===-1) continue;
-                        const color = grid[r][c].color;
-                        const queue = [{r,c}];
-                        visited[r][c]=true;
-                        let count=0;
-                        while(queue.length){
-                            const {r:cr,c:cc}=queue.shift();
-                            count++;
-                            for(let dr=-1;dr<=1;dr++){
-                                for(let dc=-1;dc<=1;dc++){
-                                    if(dr===0&&dc===0) continue;
-                                    const nr=cr+dr, nc=cc+dc;
-                                    if(isValidCell(nr,nc) && !visited[nr][nc] && 
-                                       grid[nr][nc].color !== -1 && grid[nr][nc].color === color){
-                                        visited[nr][nc]=true;
-                                        queue.push({r:nr,c:nc});
-                                    }
+                    this.bindEvents();
+                    // 先重置游戏（初始化grid），再resize
+                    this.resetGame(true);
+                    this.resize();
+                    this.lastTimestamp = 0;
+                    requestAnimationFrame((t)=>this.loop(t));
+                }
+
+                resetGame(fromStart = false) {
+                    this.level = 1;
+                    this.score = 0;
+                    this.totalScore = 0;
+                    this.updateLevelParams();
+                    this.grid.init(this.colorCount);
+                    this.selectedPath = [];
+                    this.hintPath = null;
+                    this.particles = [];
+                    this.animState = 'idle';
+                    this.bombActive = false;
+                    this.bombRow = this.bombCol = -1;
+                    this.missedBombCount = 0;
+                    this.maxCombo = 0;
+                    this.encouragementText = '';
+                    this.encouragementTimer = 0;
+                    if (!fromStart) {
+                        this.gameState = 'playing';
+                        if (!this.audio.musicMuted) this.audio.playBGM();
+                    } else {
+                        this.gameState = 'start';
+                        this.audio.stopBGM();
+                    }
+                    this.updatePositions();
+                    this.audio.resume();
+                    this.highScoreTotal = this.leaderboard.getHighest();
+                }
+
+                goToNextLevel() {
+                    this.level++;
+                    this.score = 0;
+                    this.updateLevelParams();
+                    this.grid.init(this.colorCount);
+                    this.selectedPath = [];
+                    this.hintPath = null;
+                    this.particles = [];
+                    this.animState = 'idle';
+                    this.bombActive = false;
+                    this.bombRow = this.bombCol = -1;
+                    this.missedBombCount = 0;
+                    this.gameState = 'playing';
+                    this.audio.playSFX('levelUp');
+                    this.updatePositions();
+                    this.highScoreTotal = this.leaderboard.getHighest();
+                }
+
+                updateLevelParams() {
+                    this.colorCount = CONFIG.MIN_COLORS + ((this.level - 1) % 4);
+                    if (this.colorCount > CONFIG.MAX_COLORS) this.colorCount = CONFIG.MAX_COLORS;
+                    this.targetScore = CONFIG.INITIAL_TARGET_SCORE + (this.level - 1) * CONFIG.SCORE_PER_LEVEL;
+                }
+
+                updatePositions() {
+                    const l = this.renderer.layout;
+                    if (!this.grid.data || this.grid.data.length === 0) return;
+                    for (let r=0; r<this.grid.rows; r++) {
+                        for (let c=0; c<this.grid.cols; c++) {
+                            if (this.grid.data[r] && this.grid.data[r][c] && this.grid.data[r][c].color !== -1) {
+                                this.grid.data[r][c].currY = l.gameY + r*l.cellSize + l.cellSize/2;
+                            }
+                        }
+                    }
+                }
+
+                getBombProbability() {
+                    if (this.level < CONFIG.BOMB.START_LEVEL) return 0;
+                    let prob = CONFIG.BOMB.BASE_PROB + Math.floor((this.level - CONFIG.BOMB.START_LEVEL) / 10) * CONFIG.BOMB.INCREMENT_PER_10_LEVELS;
+                    return Math.min(prob, CONFIG.BOMB.MAX_PROB);
+                }
+
+                tryGenerateBomb() {
+                    if (this.gameState !== 'playing' || this.bombActive) return;
+                    const prob = this.getBombProbability();
+                    if (prob === 0 || Math.random() >= prob) return;
+                    const candidates = this.grid.getCandidatesForBomb();
+                    if (candidates.length === 0) return;
+                    const idx = Math.floor(Math.random() * candidates.length);
+                    const [r, c] = candidates[idx];
+                    this.grid.data[r][c].isBomb = true;
+                    this.bombActive = true;
+                    this.bombRow = r;
+                    this.bombCol = c;
+                    this.missedBombCount = 0;
+                    this.audio.playSFX('bombAppear');
+                    this.setEncouragement('💣 炸彈球出現了！快用連線消除它！', 2.5);
+                }
+
+                defuseBomb(path) {
+                    for (let p of path) {
+                        if (this.grid.data[p.row][p.col].isBomb) {
+                            this.grid.data[p.row][p.col].isBomb = false;
+                            this.bombActive = false;
+                            this.bombRow = this.bombCol = -1;
+                            this.missedBombCount = 0;
+                            const bonus = CONFIG.BOMB.DEFUSE_BONUS;
+                            this.score += bonus;
+                            this.totalScore += bonus;
+                            this.audio.playSFX('bombDefuse');
+                            this.setEncouragement(`✓ 炸彈拆除！ +${bonus}分`, 1.8);
+                            this.saveHighScore();
+                            return true;
+                        }
+                    }
+                    return false;
+                }
+
+                addMissedBomb() {
+                    this.missedBombCount++;
+                    if (this.missedBombCount >= CONFIG.BOMB.MISS_LIMIT) {
+                        this.explodeGameOver();
+                        return true;
+                    } else {
+                        this.setEncouragement(`⚠️ 炸彈危機 ${this.missedBombCount}/${CONFIG.BOMB.MISS_LIMIT}！快連線消除炸彈球！`, 1.5);
+                        this.audio.playSFX('bombAppear');
+                        return false;
+                    }
+                }
+
+                explodeGameOver() {
+                    if (this.gameState !== 'playing') return;
+                    this.gameState = 'gameOver';
+                    this.audio.playSFX('bombExplode');
+                    this.audio.stopBGM();
+                    this.setEncouragement('💥 遊戲結束！點擊重新開始 💥', 3.0);
+                    this.saveHighScore();
+                    this.leaderboard.addEntry(this.totalScore, this.level);
+                }
+
+                setEncouragement(text, duration) {
+                    this.encouragementText = text;
+                    this.encouragementTimer = duration;
+                }
+
+                saveHighScore() {
+                    if (this.totalScore > this.highScoreTotal) {
+                        this.highScoreTotal = this.totalScore;
+                    }
+                }
+
+                eliminatePath(path) {
+                    if (path.length < 3) return false;
+                    let bombDefused = false;
+                    if (this.bombActive) {
+                        bombDefused = this.defuseBomb(path);
+                    }
+                    path.forEach(p => this.grid.data[p.row][p.col].eliminating = true);
+                    const len = path.length;
+                    const addPoints = len * 10 + (len >= 4 ? (len-3)*10 : 0);
+                    this.score += addPoints;
+                    this.totalScore += addPoints;
+                    if (len > this.maxCombo) {
+                        this.maxCombo = len;
+                        this.setEncouragement(`🏆 新紀錄！連線 ${len} 球！`, CONFIG.ENCOURAGE_DUR);
+                    } else if (len >= 6) {
+                        this.setEncouragement(`✨ 厲害！${len} 球連線！`, CONFIG.ENCOURAGE_DUR);
+                    }
+                    this.audio.playSFX('eliminate');
+                    if (len >= 6) setTimeout(()=>this.audio.playSFX('combo'), 150);
+                    setTimeout(()=>this.audio.playSFX('score'), 80);
+                    this.animState = 'eliminate';
+                    this.animTimer = 0;
+                    this.spawnParticles(path);
+                    if (!bombDefused && this.bombActive) {
+                        this.addMissedBomb();
+                    }
+                    this.saveHighScore();
+                    this.hintPath = null;
+                    return true;
+                }
+
+                spawnParticles(path) {
+                    const colors = CONFIG.COLORS.HEX;
+                    const l = this.renderer.layout;
+                    for (let p of path) {
+                        const center = this.renderer.getCellCenter(p.row, p.col);
+                        const color = colors[this.grid.data[p.row][p.col].color];
+                        for (let i=0; i<CONFIG.PARTICLE_COUNT; i++) {
+                            const angle = Math.random() * 2 * Math.PI;
+                            const speed = 50 + Math.random() * 150;
+                            const life = 0.5 + Math.random() * CONFIG.PARTICLE_DURATION;
+                            this.particles.push(new Particle(center.x, center.y, color, speed, angle, life));
+                        }
+                    }
+                }
+
+                finishEliminate() {
+                    for (let r=0; r<this.grid.rows; r++) {
+                        for (let c=0; c<this.grid.cols; c++) {
+                            if (this.grid.data[r][c].eliminating) {
+                                this.grid.data[r][c].color = -1;
+                                this.grid.data[r][c].eliminating = false;
+                                this.grid.data[r][c].scale = 1;
+                                this.grid.data[r][c].alpha = 1;
+                                if (this.grid.data[r][c].isBomb) {
+                                    this.grid.data[r][c].isBomb = false;
+                                    this.bombActive = false;
                                 }
                             }
                         }
-                        if(count>=3) return true;
+                    }
+                    this.prepareFall();
+                }
+
+                prepareFall() {
+                    const moves = [];
+                    const l = this.renderer.layout;
+                    for (let c=0; c<this.grid.cols; c++) {
+                        const columnBalls = [];
+                        for (let r=this.grid.rows-1; r>=0; r--) {
+                            if (this.grid.data[r][c].color !== -1) {
+                                columnBalls.push({
+                                    row: r,
+                                    color: this.grid.data[r][c].color,
+                                    isBomb: this.grid.data[r][c].isBomb
+                                });
+                            }
+                        }
+                        for (let r=0; r<this.grid.rows; r++) {
+                            this.grid.data[r][c].color = -1;
+                            this.grid.data[r][c].isBomb = false;
+                        }
+                        for (let i=0; i<columnBalls.length; i++) {
+                            const ball = columnBalls[i];
+                            const toRow = this.grid.rows - 1 - i;
+                            this.grid.data[toRow][c].color = ball.color;
+                            this.grid.data[toRow][c].isBomb = ball.isBomb;
+                            this.grid.data[toRow][c].currY = l.gameY + ball.row*l.cellSize + l.cellSize/2;
+                            if (ball.row !== toRow) {
+                                moves.push({fromRow: ball.row, col: c, toRow, isNew: false});
+                            }
+                        }
+                        const emptySlots = this.grid.rows - columnBalls.length;
+                        for (let i=0; i<emptySlots; i++) {
+                            const toRow = emptySlots - 1 - i;
+                            const newColor = Math.floor(Math.random() * this.colorCount);
+                            this.grid.data[toRow][c].color = newColor;
+                            this.grid.data[toRow][c].isBomb = false;
+                            this.grid.data[toRow][c].currY = l.gameY - l.cellSize + (i * l.cellSize);
+                            moves.push({fromRow: -1, col: c, toRow, isNew: true});
+                        }
+                    }
+                    if (moves.length > 0) this.audio.playSFX('fall');
+                    this._fallMoves = moves;
+                    this.animState = 'fall';
+                    this.animTimer = 0;
+                }
+
+                updateFall(progress) {
+                    const moves = this._fallMoves || [];
+                    const l = this.renderer.layout;
+                    moves.forEach(m => {
+                        const fromY = l.gameY + (m.fromRow >= 0 ? m.fromRow*l.cellSize + l.cellSize/2 : m.fromRow*l.cellSize - l.cellSize/2);
+                        const toY = l.gameY + m.toRow*l.cellSize + l.cellSize/2;
+                        if (this.grid.data[m.toRow] && this.grid.data[m.toRow][m.col]) {
+                            this.grid.data[m.toRow][m.col].currY = fromY + (toY - fromY) * progress;
+                        }
+                    });
+                }
+
+                finishFall() {
+                    const l = this.renderer.layout;
+                    for (let r=0; r<this.grid.rows; r++) {
+                        for (let c=0; c<this.grid.cols; c++) {
+                            this.grid.data[r][c].currY = l.gameY + r*l.cellSize + l.cellSize/2;
+                        }
+                    }
+                    this._fallMoves = [];
+                    this.tryGenerateBomb();
+                    this.animState = 'check';
+                }
+
+                checkAndReshuffle() {
+                    if (!this.grid.hasValidMove()) {
+                        this.grid.shuffleBoard(this.colorCount);
+                    }
+                    if (this.score >= this.targetScore) {
+                        this.gameState = 'levelComplete';
+                        setTimeout(()=>this.audio.playSFX('levelUp'), 300);
+                    }
+                    this.animState = 'idle';
+                    this.selectedPath = [];
+                    this.hintPath = null;
+                }
+
+                showHint() {
+                    if (this.gameState !== 'playing' || this.animState !== 'idle') return;
+                    const path = this.grid.findHint();
+                    if (path) {
+                        this.hintPath = path;
+                        this.setEncouragement('💡 試試連線這些球！', 1.5);
+                    } else {
+                        this.setEncouragement('🤔 暫無有效連線，洗牌中...', 1.5);
+                        this.grid.shuffleBoard(this.colorCount);
                     }
                 }
-                return false;
+
+                moveCursor(dRow, dCol) {
+                    if (this.gameState !== 'playing' || this.animState !== 'idle') return;
+                    this.keyboardMode = true;
+                    let nr = this.cursorRow + dRow;
+                    let nc = this.cursorCol + dCol;
+                    nr = Math.max(0, Math.min(this.grid.rows-1, nr));
+                    nc = Math.max(0, Math.min(this.grid.cols-1, nc));
+                    this.cursorRow = nr;
+                    this.cursorCol = nc;
+                }
+
+                selectCursor() {
+                    if (this.gameState !== 'playing' || this.animState !== 'idle') return;
+                    const r = this.cursorRow, c = this.cursorCol;
+                    if (this.grid.data[r][c].color === -1) return;
+                    const idx = this.selectedPath.findIndex(p => p.row === r && p.col === c);
+                    if (idx >= 0) {
+                        if (idx === this.selectedPath.length - 1) {
+                            this.selectedPath.pop();
+                        } else {
+                            this.selectedPath = this.selectedPath.slice(0, idx);
+                        }
+                        return;
+                    }
+                    if (this.selectedPath.length === 0) {
+                        this.selectedPath.push({row: r, col: c});
+                    } else {
+                        const last = this.selectedPath[this.selectedPath.length-1];
+                        if (this.grid.isAdjacent(last.row, last.col, r, c) &&
+                            this.grid.data[r][c].color === this.grid.data[last.row][last.col].color) {
+                            this.selectedPath.push({row: r, col: c});
+                        } else {
+                            this.setEncouragement('⚠️ 必須相鄰且同色', 0.8);
+                        }
+                    }
+                }
+
+                bindEvents() {
+                    const canvas = this.canvas;
+                    canvas.addEventListener('mousedown', (e)=>this.onPointerDown(e));
+                    canvas.addEventListener('mousemove', (e)=>this.onPointerMove(e));
+                    canvas.addEventListener('mouseup', (e)=>this.onPointerUp(e));
+                    canvas.addEventListener('mouseleave', (e)=>this.onPointerUp(e));
+                    canvas.addEventListener('touchstart', (e)=>this.onPointerDown(e), {passive:false});
+                    canvas.addEventListener('touchmove', (e)=>this.onPointerMove(e), {passive:false});
+                    canvas.addEventListener('touchend', (e)=>this.onPointerUp(e), {passive:false});
+                    canvas.addEventListener('touchcancel', (e)=>this.onPointerUp(e), {passive:false});
+                    document.addEventListener('keydown', (e)=>this.onKeyDown(e));
+                    window.addEventListener('resize', ()=>this.resize());
+                }
+
+                getPointerPos(e) {
+                    const rect = this.canvas.getBoundingClientRect();
+                    const scaleX = this.renderer.W / rect.width;
+                    const scaleY = this.renderer.H / rect.height;
+                    let cx, cy;
+                    if (e.touches) {
+                        cx = e.touches[0].clientX;
+                        cy = e.touches[0].clientY;
+                    } else {
+                        cx = e.clientX;
+                        cy = e.clientY;
+                    }
+                    return { x: (cx - rect.left)*scaleX, y: (cy - rect.top)*scaleY };
+                }
+
+                getCellFromPos(px, py) {
+                    const l = this.renderer.layout;
+                    if (py < l.gameY || py >= l.gameY + l.rows*l.cellSize) return null;
+                    const col = Math.floor((px - l.gridX) / l.cellSize);
+                    const row = Math.floor((py - l.gameY) / l.cellSize);
+                    if (col < 0 || col >= l.cols || row < 0 || row >= l.rows) return null;
+                    return {row, col};
+                }
+
+                onPointerDown(e) {
+                    e.preventDefault();
+                    this.audio.resume();
+                    const pos = this.getPointerPos(e);
+                    if (this.handleUI(pos)) return;
+                    if (this.gameState === 'start') {
+                        if (this.startBtnBounds && this.isInRect(pos, this.startBtnBounds)) {
+                            this.resetGame(false);
+                            if (!this.audio.musicMuted) this.audio.playBGM();
+                        }
+                        return;
+                    }
+                    if (this.gameState === 'levelComplete') {
+                        if (this.nextBtnBounds && this.isInRect(pos, this.nextBtnBounds)) {
+                            this.goToNextLevel();
+                        }
+                        return;
+                    }
+                    if (this.gameState === 'gameOver') {
+                        if (this.restartBtnBounds && this.isInRect(pos, this.restartBtnBounds)) {
+                            this.resetGame(false);
+                        }
+                        if (this.shareLineBtnBounds && this.isInRect(pos, this.shareLineBtnBounds)) {
+                            this.shareToLine();
+                        }
+                        return;
+                    }
+                    if (this.gameState !== 'playing' || this.animState !== 'idle') return;
+                    const cell = this.getCellFromPos(pos.x, pos.y);
+                    if (!cell || this.grid.data[cell.row][cell.col].color === -1) return;
+                    this.selectedPath = [cell];
+                    this.keyboardMode = false;
+                }
+
+                onPointerMove(e) {
+                    e.preventDefault();
+                    if (this.gameState !== 'playing' || this.animState !== 'idle' || this.selectedPath.length === 0) return;
+                    const pos = this.getPointerPos(e);
+                    const cell = this.getCellFromPos(pos.x, pos.y);
+                    if (!cell || this.grid.data[cell.row][cell.col].color === -1) return;
+                    const last = this.selectedPath[this.selectedPath.length-1];
+                    if (this.selectedPath.length >= 2 &&
+                        this.selectedPath[this.selectedPath.length-2].row === cell.row &&
+                        this.selectedPath[this.selectedPath.length-2].col === cell.col) {
+                        this.selectedPath.pop();
+                        return;
+                    }
+                    if (this.selectedPath.some(p => p.row === cell.row && p.col === cell.col)) return;
+                    if (!this.grid.isAdjacent(last.row, last.col, cell.row, cell.col)) return;
+                    if (this.grid.data[cell.row][cell.col].color !== this.grid.data[last.row][last.col].color) return;
+                    this.selectedPath.push(cell);
+                }
+
+                onPointerUp(e) {
+                    e.preventDefault();
+                    if (this.gameState === 'playing' && this.animState === 'idle' && this.selectedPath.length >= 3) {
+                        this.eliminatePath(this.selectedPath);
+                        this.selectedPath = [];
+                    } else {
+                        this.selectedPath = [];
+                    }
+                }
+
+                onKeyDown(e) {
+                    const key = e.key;
+                    if (this.gameState !== 'playing' || this.animState !== 'idle') {
+                        if (key === 'Enter' || key === ' ') {
+                            if (this.gameState === 'start') {
+                                this.resetGame(false);
+                                if (!this.audio.musicMuted) this.audio.playBGM();
+                            } else if (this.gameState === 'levelComplete') {
+                                this.goToNextLevel();
+                            } else if (this.gameState === 'gameOver') {
+                                this.resetGame(false);
+                            }
+                        }
+                        return;
+                    }
+                    switch(key) {
+                        case 'ArrowUp': e.preventDefault(); this.moveCursor(-1, 0); break;
+                        case 'ArrowDown': e.preventDefault(); this.moveCursor(1, 0); break;
+                        case 'ArrowLeft': e.preventDefault(); this.moveCursor(0, -1); break;
+                        case 'ArrowRight': e.preventDefault(); this.moveCursor(0, 1); break;
+                        case 'Enter':
+                        case ' ':
+                            e.preventDefault();
+                            this.selectCursor();
+                            break;
+                        case 'h':
+                        case 'H':
+                            this.showHint();
+                            break;
+                        default: break;
+                    }
+                }
+
+                handleUI(pos) {
+                    const l = this.renderer.layout;
+                    // 音乐按钮
+                    const mb = l.musicBtn;
+                    if (this.isInRect(pos, mb)) {
+                        this.audio.toggleMusic();
+                        return true;
+                    }
+                    // 滑块
+                    const hitSlider = (s) => pos.x >= s.x-25 && pos.x <= s.x+s.w+25 && pos.y >= s.y-15 && pos.y <= s.y+s.h+15;
+                    if (hitSlider(l.sliderBGM)) {
+                        this.sliderDragging = 'bgm';
+                        this.updateSlider(pos, 'bgm');
+                        return true;
+                    }
+                    if (hitSlider(l.sliderSFX)) {
+                        this.sliderDragging = 'sfx';
+                        this.updateSlider(pos, 'sfx');
+                        return true;
+                    }
+                    // 提示按钮
+                    const hintBtn = this.renderer.getHintBtnBounds();
+                    if (this.isInRect(pos, hintBtn)) {
+                        this.showHint();
+                        return true;
+                    }
+                    return false;
+                }
+
+                updateSlider(pos, type) {
+                    const l = this.renderer.layout;
+                    const s = type === 'bgm' ? l.sliderBGM : l.sliderSFX;
+                    let val = (pos.x - s.x) / s.w;
+                    val = Math.max(0, Math.min(1, val));
+                    if (type === 'bgm') {
+                        this.audio.bgmVolume = val;
+                        this.audio.updateBGMVolume();
+                    } else {
+                        this.audio.sfxVolume = val;
+                        this.audio.updateSFXVolume();
+                    }
+                }
+
+                isInRect(pos, rect) {
+                    return pos.x >= rect.x && pos.x <= rect.x+rect.w &&
+                           pos.y >= rect.y && pos.y <= rect.y+rect.h;
+                }
+
+                shareToLine() {
+                    const gameUrl = 'https://pkbw2000.github.io/avs-ljci/Bobble-ball/game.html?v=1';
+                    const message = `🎮 彩球連連挑戰結果 🎮\n🏆 總得分：${this.totalScore}\n📈 最高關卡：${this.level}\n💥 炸彈模式！快來挑戰！\n\n遊戲連結：${gameUrl}`;
+                    const encoded = encodeURIComponent(message);
+                    window.location.href = `https://line.me/R/share?text=${encoded}`;
+                }
+
+                resize() {
+                    const container = this.canvas.parentElement;
+                    const maxWidth = Math.min(window.innerWidth, 500);
+                    const maxHeight = window.innerHeight;
+                    this.canvas.style.width = 'auto';
+                    this.canvas.style.height = 'auto';
+                    this.canvas.width = maxWidth;
+                    this.canvas.height = maxHeight;
+                    this.renderer.resize();
+                    this.updatePositions();
+                    this.selectedPath = [];
+                    this.hintPath = null;
+                    this.animState = 'idle';
+                }
+
+                loop(timestamp) {
+                    if (this.lastTimestamp === 0) this.lastTimestamp = timestamp;
+                    const dt = Math.min(0.05, (timestamp - this.lastTimestamp) / 1000);
+                    this.lastTimestamp = timestamp;
+                    this.update(dt);
+                    this.render();
+                    requestAnimationFrame((t)=>this.loop(t));
+                }
+
+                update(dt) {
+                    if (this.encouragementTimer > 0) this.encouragementTimer -= dt;
+                    this.particles = this.particles.filter(p => p.update(dt));
+
+                    if (this.gameState !== 'playing') return;
+                    if (this.animState === 'eliminate') {
+                        this.animTimer += dt;
+                        const prog = Math.min(this.animTimer / CONFIG.ELIMINATE_DUR, 1);
+                        for (let r=0; r<this.grid.rows; r++) {
+                            for (let c=0; c<this.grid.cols; c++) {
+                                if (this.grid.data[r][c].eliminating) {
+                                    this.grid.data[r][c].scale = 1 - prog;
+                                    this.grid.data[r][c].alpha = 1 - prog;
+                                }
+                            }
+                        }
+                        if (prog >= 1) {
+                            this.finishEliminate();
+                            this.animTimer = 0;
+                        }
+                    } else if (this.animState === 'fall') {
+                        this.animTimer += dt;
+                        const prog = Math.min(this.animTimer / CONFIG.FALL_DUR, 1);
+                        this.updateFall(1 - Math.pow(1-prog, 3));
+                        if (prog >= 1) {
+                            this.finishFall();
+                            this.animTimer = 0;
+                        }
+                    } else if (this.animState === 'check') {
+                        this.checkAndReshuffle();
+                    }
+                }
+
+                render() {
+                    const l = this.renderer.layout;
+                    const waveform = this.audio.getWaveform();
+                    const audioError = !this.audio.bgmAudio || this.audio.bgmAudio.error;
+                    this.renderer.renderStatic(
+                        this.level,
+                        this.maxCombo,
+                        this.highScoreTotal,
+                        this.totalScore,
+                        this.score,
+                        this.targetScore,
+                        this.audio.musicMuted,
+                        waveform,
+                        this.audio.bgmVolume,
+                        this.audio.sfxVolume,
+                        audioError
+                    );
+                    this.renderer.drawDynamic(
+                        this.grid,
+                        this.selectedPath,
+                        this.hintPath,
+                        this.particles,
+                        this.gameState,
+                        this.animState,
+                        this.encouragementText,
+                        this.encouragementTimer,
+                        this.totalScore,
+                        this.level,
+                        this.cursorRow,
+                        this.cursorCol,
+                        this.keyboardMode
+                    );
+                    // 更新按钮边界（从渲染器获取）
+                    if (this.gameState === 'start') {
+                        const btnX = l.W/2 - 75, btnY = 280, btnW = 150, btnH = 56;
+                        this.startBtnBounds = {x: btnX, y: btnY, w: btnW, h: btnH};
+                    } else if (this.gameState === 'levelComplete') {
+                        const btnX = l.W/2 - 75, btnY = 280, btnW = 150, btnH = 56;
+                        this.nextBtnBounds = {x: btnX, y: btnY, w: btnW, h: btnH};
+                    } else if (this.gameState === 'gameOver') {
+                        // 从渲染器获取
+                        if (this.renderer._gameOverBtnRestart) {
+                            this.restartBtnBounds = this.renderer._gameOverBtnRestart;
+                            this.shareLineBtnBounds = this.renderer._gameOverBtnShare;
+                        }
+                    }
+                }
             }
 
-            function forceValidMove() {
-                for(let r=0; r<ROWS-2; r++) for(let c=0; c<COLS-2; c++){ const col = grid[r][c].color; if(col===-1)continue; if(grid[r+1][c].color!==col||grid[r+2][c].color!==col){ grid[r+1][c].color=col; grid[r+2][c].color=col; return true; } }
-                for(let r=0;r<ROWS;r++) for(let c=0;c<COLS-1;c++) if(grid[r][c].color!==-1){ grid[r][c+1].color=grid[r][c].color; return true; }
-                return false;
-            }
-            function shuffleBoard() {
-                let attempts=0;
-                do{
-                    for(let r=0;r<ROWS;r++) for(let c=0;c<COLS;c++){ 
-                        grid[r][c].color = Math.floor(Math.random()*colorCount);
-                        grid[r][c].scale=1; grid[r][c].alpha=1; grid[r][c].eliminating=false;
-                        grid[r][c].currY = GAME_Y + r*CELL_SIZE + CELL_SIZE/2;
-                        grid[r][c].isBomb=false;
-                    }
-                    if(++attempts>100 && !hasValidMove()) { forceValidMove(); break; }
-                } while(!hasValidMove() && attempts<100);
-                clearBomb();
-            }
-            function eliminatePath(path) {
-                if(path.length<3) return false;
-                let bombDefused = pathContainsBomb(path);
-                if (bombDefused) {
-                    defuseBombByPath(path);
-                }
-                path.forEach(({row,col}) => grid[row][col].eliminating = true);
-                const len = path.length;
-                const addPoints = len*10 + (len>=4?(len-3)*10:0);
-                score += addPoints;
-                totalScore += addPoints;
-                if(len>maxCombo){ maxCombo=len; encouragementText=`🏆 新紀錄！連線 ${len} 球！`; encouragementTimer=ENCOURAGE_DUR; }
-                else if(len>=6){ encouragementText=`✨ 厲害！${len} 球連線！`; encouragementTimer=ENCOURAGE_DUR; }
-                playSFX('eliminate');
-                if(len>=6) setTimeout(()=>playSFX('combo'),150);
-                setTimeout(()=>playSFX('score'),80);
-                animState='eliminate';
-                animTimer=0;
-                if (!bombDefused && bombActive) {
-                    addMissedBombCount();
-                }
-                saveHighScore();
-                return true;
-            }
-            function finishEliminate() {
-                for(let r=0;r<ROWS;r++) for(let c=0;c<COLS;c++) if(grid[r][c].eliminating){
-                    grid[r][c].color=-1; grid[r][c].eliminating=false; grid[r][c].scale=1; grid[r][c].alpha=1;
-                    if(grid[r][c].isBomb){ grid[r][c].isBomb=false; bombActive=false; }
-                }
-                prepareFall();
-            }
-            function prepareFall() {
-                const moves=[];
-                for(let c=0;c<COLS;c++){
-                    const columnBalls=[];
-                    for(let r=ROWS-1;r>=0;r--) if(grid[r][c].color!==-1) columnBalls.push({row:r, color:grid[r][c].color, isBomb:grid[r][c].isBomb});
-                    for(let r=0;r<ROWS;r++) { grid[r][c].color=-1; grid[r][c].isBomb=false; }
-                    for(let i=0;i<columnBalls.length;i++){
-                        const ball=columnBalls[i];
-                        const toRow=ROWS-1-i;
-                        grid[toRow][c].color=ball.color;
-                        grid[toRow][c].isBomb=ball.isBomb;
-                        grid[toRow][c].currY = GAME_Y + ball.row*CELL_SIZE + CELL_SIZE/2;
-                        if(ball.row !== toRow) moves.push({fromRow:ball.row, col:c, toRow, isNew:false, isBomb:ball.isBomb});
-                    }
-                    const emptySlots = ROWS - columnBalls.length;
-                    for(let i=0;i<emptySlots;i++){
-                        const toRow = emptySlots-1-i;
-                        const newColor = Math.floor(Math.random()*colorCount);
-                        grid[toRow][c].color = newColor;
-                        grid[toRow][c].isBomb = false;
-                        grid[toRow][c].currY = GAME_Y - CELL_SIZE + (i*CELL_SIZE);
-                        moves.push({fromRow:-1, col:c, toRow, isNew:true, color:newColor, isBomb:false});
-                    }
-                }
-                if(moves.length>0) playSFX('fall');
-                window._fallMoves = moves;
-                animState='fall';
-                animTimer=0;
-            }
-            function updateFall(progress) {
-                const moves=window._fallMoves||[];
-                moves.forEach(m=>{
-                    const fromY = GAME_Y + (m.fromRow>=0 ? m.fromRow*CELL_SIZE+CELL_SIZE/2 : m.fromRow*CELL_SIZE - CELL_SIZE/2);
-                    const toY = GAME_Y + m.toRow*CELL_SIZE+CELL_SIZE/2;
-                    if(grid[m.toRow] && grid[m.toRow][m.col]) grid[m.toRow][m.col].currY = fromY + (toY-fromY)*progress;
+            // ======================== 启动 ========================
+            const canvas = document.getElementById('gameCanvas');
+            const game = new Game(canvas);
+            window.__game = game;
+
+            if ('serviceWorker' in navigator) {
+                window.addEventListener('load', () => {
+                    navigator.serviceWorker.register('sw.js')
+                        .then(reg => console.log('Service Worker 注册成功', reg.scope))
+                        .catch(err => console.log('注册失败', err));
                 });
             }
-            function finishFall() {
-                for(let r=0;r<ROWS;r++) for(let c=0;c<COLS;c++) grid[r][c].currY = GAME_Y + r*CELL_SIZE + CELL_SIZE/2;
-                window._fallMoves=[];
-                tryGenerateBombAfterFall();
-                animState='check';
-            }
-            function checkAndReshuffle() {
-                if (!hasValidMove()) {
-                    shuffleBoard();
-                }
-                if (score >= targetScore) {
-                    gameState = 'levelComplete';
-                    setTimeout(()=>playSFX('levelUp'),300);
-                }
-                animState = 'idle';
-                selectedPath = [];
-            }
-
-            // 事件處理
-            function getEventPos(e) {
-                const rect = canvas.getBoundingClientRect();
-                const scaleX = W / rect.width;
-                const scaleY = H / rect.height;
-                let cx, cy;
-                if(e.touches){ cx=e.touches[0].clientX; cy=e.touches[0].clientY; }
-                else { cx=e.clientX; cy=e.clientY; }
-                return { x: (cx-rect.left)*scaleX, y: (cy-rect.top)*scaleY };
-            }
-            function getCellFromPos(px, py) {
-                if(py<GAME_Y || py>=GAME_Y+ROWS*CELL_SIZE) return null;
-                const col = Math.floor((px-GRID_X)/CELL_SIZE);
-                const row = Math.floor((py-GAME_Y)/CELL_SIZE);
-                if(col<0 || col>=COLS || row<0 || row>=ROWS) return null;
-                return {row, col};
-            }
-            function handleSliderStart(pos) {
-                if (!sliderBGM) return false;
-                const hit = (s)=> pos.x>=s.x-25 && pos.x<=s.x+s.w+25 && pos.y>=s.y-15 && pos.y<=s.y+s.h+15;
-                if(hit(sliderBGM)){ sliderDragging='bgm'; updateSliderFromPos(pos,'bgm'); return true; }
-                if(hit(sliderSFX)){ sliderDragging='sfx'; updateSliderFromPos(pos,'sfx'); return true; }
-                return false;
-            }
-            function updateSliderFromPos(pos,type){
-                const s=type==='bgm'?sliderBGM:sliderSFX;
-                let val=(pos.x-s.x)/s.w;
-                val=Math.max(0,Math.min(1,val));
-                if(type==='bgm'){ bgmVolume=val; updateBGMVolume(); }
-                else { sfxVolume=val; updateSFXVolume(); }
-            }
-            function shareToLine() {
-                const gameUrl = 'https://pkbw2000.github.io/avs-ljci/BB/game.html?v=1';
-                const message = `🎮 彩球連連挑戰結果 🎮\n🏆 總得分：${totalScore}\n📈 最高關卡：${level}\n💥 炸彈模式：${bombModeEnabled ? '開啟' : '關閉'}\n\n遊戲連結：${gameUrl}`;
-                const encoded = encodeURIComponent(message);
-                window.location.href = `https://line.me/R/share?text=${encoded}`;
-            }
-            function toggleBombMode() {
-                bombModeEnabled = !bombModeEnabled;
-                saveBombMode();
-                // 如果目前正在遊戲中且炸彈模式關閉，清除現有炸彈
-                if (!bombModeEnabled && bombActive) {
-                    clearBomb();
-                }
-                // 重繪開始畫面（因為文字會變）
-            }
-            function onDown(e){
-                e.preventDefault();
-                resumeAudio().then(()=>{ initAudio(); if(gameState==='start' && !musicPlaying && !musicMuted) playBGM(); });
-                const pos=getEventPos(e);
-                if(handleSliderStart(pos)) return;
-                if(musicBtnBounds && pos.x>=musicBtnBounds.x && pos.x<=musicBtnBounds.x+musicBtnBounds.w &&
-                   pos.y>=musicBtnBounds.y && pos.y<=musicBtnBounds.y+musicBtnBounds.h){ toggleMusic(); return; }
-                
-                // 開始畫面上的炸彈模式按鈕
-                if(gameState === 'start' && bombModeBtnBounds &&
-                   pos.x >= bombModeBtnBounds.x && pos.x <= bombModeBtnBounds.x + bombModeBtnBounds.w &&
-                   pos.y >= bombModeBtnBounds.y && pos.y <= bombModeBtnBounds.y + bombModeBtnBounds.h) {
-                    toggleBombMode();
-                    return;
-                }
-                
-                if(gameState === 'gameOver') {
-                    if(restartBtnBounds && pos.x>=restartBtnBounds.x && pos.x<=restartBtnBounds.x+restartBtnBounds.w &&
-                       pos.y>=restartBtnBounds.y && pos.y<=restartBtnBounds.y+restartBtnBounds.h){
-                        resetGame();
-                        return;
-                    }
-                    if(shareLineBtnBounds && pos.x>=shareLineBtnBounds.x && pos.x<=shareLineBtnBounds.x+shareLineBtnBounds.w &&
-                       pos.y>=shareLineBtnBounds.y && pos.y<=shareLineBtnBounds.y+shareLineBtnBounds.h){
-                        shareToLine();
-                        return;
-                    }
-                    return;
-                }
-                
-                if(gameState==='start'){
-                    if(startBtnBounds && pos.x>=startBtnBounds.x && pos.x<=startBtnBounds.x+startBtnBounds.w &&
-                       pos.y>=startBtnBounds.y && pos.y<=startBtnBounds.y+startBtnBounds.h){
-                        resumeAudio().then(()=>{ initAudio(); resetGame(); if(!musicPlaying && !musicMuted) playBGM(); });
-                    }
-                    return;
-                }
-                
-                if(gameState==='levelComplete'){
-                    if(nextBtnBounds && pos.x>=nextBtnBounds.x && pos.x<=nextBtnBounds.x+nextBtnBounds.w &&
-                       pos.y>=nextBtnBounds.y && pos.y<=nextBtnBounds.y+nextBtnBounds.h){
-                        goToNextLevel();
-                    }
-                    return;
-                }
-                
-                if(gameState!=='playing' || animState!=='idle') return;
-                const cell=getCellFromPos(pos.x,pos.y);
-                if(!cell) return;
-                if(grid[cell.row][cell.col].color === -1) return;
-                selectedPath = [cell];
-            }
-            function onMove(e){
-                e.preventDefault();
-                if(sliderDragging){ const pos=getEventPos(e); updateSliderFromPos(pos,sliderDragging); return; }
-                if(gameState!=='playing' || animState!=='idle' || selectedPath.length===0) return;
-                const pos=getEventPos(e);
-                const cell=getCellFromPos(pos.x,pos.y);
-                if(!cell) return;
-                if(grid[cell.row][cell.col].color === -1) return;
-                const last=selectedPath[selectedPath.length-1];
-                if(selectedPath.length>=2 && selectedPath[selectedPath.length-2].row===cell.row && selectedPath[selectedPath.length-2].col===cell.col){
-                    selectedPath.pop(); return;
-                }
-                if(selectedPath.some(p=>p.row===cell.row && p.col===cell.col)) return;
-                if(!isAdjacent(last.row,last.col,cell.row,cell.col)) return;
-                if(grid[cell.row][cell.col].color !== grid[last.row][last.col].color) return;
-                selectedPath.push(cell);
-            }
-            function onUp(e){
-                e.preventDefault();
-                if(sliderDragging){ sliderDragging=null; return; }
-                if(gameState!=='playing' || animState!=='idle' || selectedPath.length<3){
-                    if(selectedPath.length>0 && selectedPath.length<3 && encouragementTimer<=0){
-                        encouragementText='🔗 至少連 3 球喔！'; encouragementTimer=1.2;
-                    }
-                    selectedPath=[];
-                    return;
-                }
-                eliminatePath(selectedPath);
-                selectedPath=[];
-            }
-            canvas.addEventListener('mousedown',onDown);
-            canvas.addEventListener('mousemove',onMove);
-            canvas.addEventListener('mouseup',onUp);
-            canvas.addEventListener('mouseleave',onUp);
-            canvas.addEventListener('touchstart',onDown,{passive:false});
-            canvas.addEventListener('touchmove',onMove,{passive:false});
-            canvas.addEventListener('touchend',onUp);
-            canvas.addEventListener('touchcancel',onUp);
-
-            // 繪製函數
-            function drawBall(x,y,r,colorIdx,scale=1,alpha=1,isBomb=false){
-                if(alpha<=0.01) return;
-                ctx.save();
-                ctx.globalAlpha=alpha;
-                const rad=r*scale;
-                const grad=ctx.createRadialGradient(x-rad*0.3,y-rad*0.35,rad*0.1,x,y,rad);
-                grad.addColorStop(0,'#FFFFFF');
-                grad.addColorStop(0.3,COLOR_HEX[colorIdx]);
-                grad.addColorStop(1,COLOR_DARK[colorIdx]);
-                ctx.beginPath();
-                ctx.arc(x,y,rad,0,Math.PI*2);
-                ctx.fillStyle=grad;
-                ctx.fill();
-                ctx.strokeStyle='rgba(255,255,255,0.6)';
-                ctx.lineWidth=1.5;
-                ctx.stroke();
-				if(isBomb){
-				    ctx.font = `${Math.floor(rad * 1.1)}px "Segoe UI Emoji"`;
-				    ctx.fillStyle = '#FFFFFF';
-				    ctx.shadowBlur = 5;
-				    ctx.shadowColor = 'black';
-				    
-				    // 炸彈與陰影的共同偏移量
-				    var offsetX = -rad * 0.2;   // 向左偏移
-				    var offsetY = -rad * 1;     // 向上偏移
-				    
-				    // 黑色背景圓（陰影）跟隨炸彈位置
-				
-					
-					ctx.beginPath();
-					ctx.arc(x + rad * 0.2, y + rad * -0.1, rad * 0.5, 0, Math.PI * 2);
-					ctx.fillStyle = 'rgba(0,0,0,0.6)';
-					ctx.fill();
-				    
-				    // 炸彈圖示（位置相同，微調使圖示置中）
-				    ctx.fillStyle = '#FFFFFF';
-				    ctx.fillText('💣', x + offsetX - rad * 0.08, y + offsetY + rad * 0.08);
-				    ctx.shadowBlur = 0;
-				}
-                ctx.restore();
-            }
-
-            function drawTopPanel() {
-                ctx.save();
-                ctx.shadowBlur=0;
-                ctx.fillStyle='rgba(20,12,40,0.85)';
-                ctx.beginPath(); ctx.roundRect(10, TOP_Y, W-20, TOP_HEIGHT, 18); ctx.fill();
-                ctx.strokeStyle='#FFD740'; ctx.lineWidth=2; ctx.stroke();
-                ctx.textBaseline='top';
-                
-                ctx.fillStyle='#FFF';
-                ctx.font='bold 18px "Arial Rounded MT Bold"';
-                ctx.textAlign='left';
-                ctx.fillText(`第 ${level} 關`, 20, TOP_Y+8);
-                
-                ctx.font='12px "Arial Rounded MT Bold"';
-                ctx.textAlign='right';
-                ctx.fillText(`🏆 最高連線 ${maxCombo} 球`, W-20, TOP_Y+8);
-                
-                ctx.font='bold 12px "Arial Rounded MT Bold"';
-                ctx.fillStyle='#FFAA55';
-                ctx.fillText(`🏅 最高紀錄 ${highScoreTotal}`, W-20, TOP_Y+28);
-                
-                ctx.font='bold 15px "Arial Rounded MT Bold"';
-                ctx.fillStyle='#FFD740';
-                ctx.textAlign='left';
-                ctx.fillText(`🏆 總得分：${totalScore}`, 20, TOP_Y+40);
-                
-                const barX=20, barY=TOP_Y+62, barW=W-40, barH=10;
-                ctx.fillStyle='#2c1e4a';
-                ctx.beginPath(); ctx.roundRect(barX,barY,barW,barH,6); ctx.fill();
-                const progress=Math.min(score/targetScore,1);
-                if(progress>0){
-                    const grad=ctx.createLinearGradient(barX,0,barX+barW,0);
-                    grad.addColorStop(0,'#FFD740'); grad.addColorStop(1,'#FF6E40');
-                    ctx.fillStyle=grad;
-                    ctx.beginPath(); ctx.roundRect(barX,barY,progress*barW,barH,6); ctx.fill();
-                }
-                ctx.fillStyle='#FFF';
-                ctx.font='bold 10px "Arial Rounded MT Bold"';
-                ctx.textAlign='center'; ctx.textBaseline='middle';
-                ctx.fillText(`${score}/${targetScore}`, W/2, barY+barH/2);
-                ctx.restore();
-            }
-
-            function drawWaveformAndMusic() {
-                ctx.fillStyle='rgba(20,12,40,0.5)';
-                ctx.beginPath(); ctx.roundRect(10,WAVE_Y,W-20,WAVE_HEIGHT,14); ctx.fill();
-                if(analyserNode && !musicMuted && bgmAudio && !bgmAudio.error){
-                    analyserNode.getByteFrequencyData(waveformData);
-                    const barWidth=(W-40)/WAVEFORM_SAMPLES;
-                    const bottomY=WAVE_Y+WAVE_HEIGHT-6;
-                    const maxH=WAVE_HEIGHT-10;
-                    ctx.save();
-                    for(let i=0;i<WAVEFORM_SAMPLES;i++){
-                        const value=waveformData[Math.floor(i*(waveformData.length/WAVEFORM_SAMPLES))]/255;
-                        let h=Math.max(2,value*maxH);
-                        h=Math.min(h,maxH);
-                        const x=20+i*barWidth;
-                        const hue=(i/WAVEFORM_SAMPLES)*270;
-                        ctx.fillStyle=`hsl(${hue},90%,65%)`;
-                        ctx.fillRect(x,bottomY-h,barWidth-1,h);
-                    }
-                    ctx.restore();
-                }else{
-                    ctx.fillStyle='#AAA';
-                    ctx.font='12px "Arial Rounded MT Bold"';
-                    ctx.textAlign='center';
-                    ctx.fillText('🎵 音樂無效或已關閉', W/2, WAVE_Y+WAVE_HEIGHT/2+5);
-                }
-                const btnSize=26;
-                const btnX=W-35, btnY=WAVE_Y+(WAVE_HEIGHT-btnSize)/2;
-                musicBtnBounds={x:btnX,y:btnY,w:btnSize,h:btnSize};
-                ctx.fillStyle=musicMuted?'#888':'#FFD740';
-                ctx.beginPath(); ctx.arc(btnX+btnSize/2,btnY+btnSize/2,btnSize/2,0,Math.PI*2); ctx.fill();
-                ctx.fillStyle='#2b1e4a';
-                ctx.font='20px "Arial Rounded MT Bold"';
-                ctx.textAlign='center';
-                ctx.textBaseline='middle';
-                ctx.fillText(musicMuted?'🔇':'♪', btnX+btnSize/2, btnY+btnSize/2);
-                ctx.textBaseline='top';
-                ctx.restore();
-            }
-
-            function drawVolumeSliders() {
-                if (!sliderBGM) return;
-                ctx.fillStyle='rgba(20,12,40,0.5)';
-                ctx.fillRect(10,SLIDER_Y,W-20,SLIDER_HEIGHT);
-                ctx.fillStyle='#FFF';
-                ctx.font='10px "Arial Rounded MT Bold"';
-                ctx.textAlign='left';
-                ctx.fillText('🔈BGM',12,SLIDER_Y+14);
-                ctx.fillStyle='#444';
-                ctx.beginPath(); ctx.roundRect(sliderBGM.x,sliderBGM.y,sliderBGM.w,sliderBGM.h,6); ctx.fill();
-                const bgmFill=bgmVolume*sliderBGM.w;
-                if(bgmFill>0){ ctx.fillStyle='#FFD740'; ctx.beginPath(); ctx.roundRect(sliderBGM.x,sliderBGM.y,bgmFill,sliderBGM.h,6); ctx.fill(); }
-                ctx.fillStyle='#FFF';
-                ctx.beginPath(); ctx.arc(sliderBGM.x+bgmFill,sliderBGM.y+sliderBGM.h/2,sliderBGM.thumbR,0,Math.PI*2); ctx.fill();
-                ctx.strokeStyle='#FFD740'; ctx.lineWidth=2; ctx.stroke();
-                ctx.fillStyle='#FFF';
-                ctx.fillText('🔊音效', sliderSFX.x-45, SLIDER_Y+14);
-                ctx.fillStyle='#444';
-                ctx.beginPath(); ctx.roundRect(sliderSFX.x,sliderSFX.y,sliderSFX.w,sliderSFX.h,6); ctx.fill();
-                const sfxFill=sfxVolume*sliderSFX.w;
-                if(sfxFill>0){ ctx.fillStyle='#69F0AE'; ctx.beginPath(); ctx.roundRect(sliderSFX.x,sliderSFX.y,sfxFill,sliderSFX.h,6); ctx.fill(); }
-                ctx.fillStyle='#FFF';
-                ctx.beginPath(); ctx.arc(sliderSFX.x+sfxFill,sliderSFX.y+sliderSFX.h/2,sliderSFX.thumbR,0,Math.PI*2); ctx.fill();
-                ctx.strokeStyle='#69F0AE'; ctx.stroke();
-            }
-
-            function drawGrid() {
-                ctx.fillStyle='#1e1533';
-                ctx.fillRect(GRID_X, GAME_Y, COLS*CELL_SIZE, ROWS*CELL_SIZE);
-                for(let r=0;r<ROWS;r++) for(let c=0;c<COLS;c++){
-                    const cell=grid[r][c];
-                    if(cell.color===-1) continue;
-                    const center=getCellCenter(r,c);
-                    const baseX=center.x-CELL_SIZE/2+2, baseY=center.y-CELL_SIZE/2+2, baseW=CELL_SIZE-4, baseH=CELL_SIZE-4;
-                    ctx.save();
-                    ctx.fillStyle='rgba(255,255,255,0.12)';
-                    ctx.beginPath(); ctx.roundRect(baseX,baseY,baseW,baseH,6); ctx.fill();
-                    ctx.strokeStyle='rgba(255,215,0,0.4)'; ctx.lineWidth=1.2;
-                    ctx.beginPath(); ctx.roundRect(baseX,baseY,baseW,baseH,6); ctx.stroke();
-                    ctx.restore();
-                }
-                for(let r=0;r<ROWS;r++) for(let c=0;c<COLS;c++){
-                    const cell=grid[r][c];
-                    if(cell.color===-1) continue;
-                    const center=getCellCenter(r,c);
-                    let isSelected=(animState==='idle' && selectedPath.some(p=>p.row===r && p.col===c));
-                    const scale=cell.scale*(isSelected?1.12:1);
-                    drawBall(center.x,cell.currY,BALL_RADIUS,cell.color,scale,cell.alpha,cell.isBomb);
-                }
-            }
-
-            function drawPathLines(){
-                if(selectedPath.length<2 || animState!=='idle') return;
-                ctx.beginPath();
-                ctx.strokeStyle='#FFF'; ctx.lineWidth=7; ctx.lineCap='round'; ctx.lineJoin='round';
-                ctx.shadowColor='#FFD740'; ctx.shadowBlur=15;
-                const first=getCellCenter(selectedPath[0].row,selectedPath[0].col);
-                ctx.moveTo(first.x,first.y);
-                for(let i=1;i<selectedPath.length;i++){
-                    const pt=getCellCenter(selectedPath[i].row,selectedPath[i].col);
-                    ctx.lineTo(pt.x,pt.y);
-                }
-                ctx.stroke();
-                ctx.shadowBlur=0;
-            }
-
-            function drawEncouragement(){
-                if(encouragementTimer<=0) return;
-                const alpha=Math.min(1,encouragementTimer/0.5);
-                ctx.save(); ctx.globalAlpha=alpha;
-                ctx.fillStyle='#FFD740';
-                ctx.font='bold 22px "Arial Rounded MT Bold"';
-                ctx.textAlign='center';
-                ctx.shadowColor='#000'; ctx.shadowBlur=8;
-                ctx.fillText(encouragementText, W/2, H/2-50);
-                ctx.restore();
-            }
-
-            function drawGameOverOverlay() {
-                ctx.fillStyle='rgba(0,0,0,0.85)'; ctx.fillRect(0,0,W,H);
-                ctx.fillStyle='#FFF'; ctx.font='bold 34px "Arial Rounded MT Bold"'; ctx.textAlign='center';
-                ctx.fillText('💥 遊戲結束 💥', W/2, 180);
-                ctx.font='22px "Arial Rounded MT Bold"';
-                ctx.fillText(`總得分：${totalScore}`, W/2, 240);
-                ctx.font='18px "Arial Rounded MT Bold"';
-                ctx.fillText(`到達關卡：${level}`, W/2, 280);
-                const btnW = 120, btnH = 50, gap = 20;
-                const leftX = W/2 - btnW - gap/2;
-                const rightX = W/2 + gap/2;
-                const btnY = 340;
-                ctx.fillStyle = '#4488FF';
-                ctx.beginPath(); ctx.roundRect(leftX, btnY, btnW, btnH, 25); ctx.fill();
-                ctx.fillStyle = '#FFF';
-                ctx.font='bold 18px "Arial Rounded MT Bold"';
-                ctx.textAlign='center'; ctx.textBaseline='middle';
-                ctx.fillText('再玩一次', leftX+btnW/2, btnY+btnH/2);
-                restartBtnBounds = { x: leftX, y: btnY, w: btnW, h: btnH };
-                ctx.fillStyle = '#06C755';
-                ctx.beginPath(); ctx.roundRect(rightX, btnY, btnW, btnH, 25); ctx.fill();
-                ctx.fillStyle = '#FFF';
-                ctx.fillText('📱 Line分享', rightX+btnW/2, btnY+btnH/2);
-                shareLineBtnBounds = { x: rightX, y: btnY, w: btnW, h: btnH };
-            }
-
-            function drawGame() {
-                ctx.clearRect(0,0,W,H);
-                const grad=ctx.createLinearGradient(0,0,0,H);
-                grad.addColorStop(0,'#3d2b6b'); grad.addColorStop(0.3,'#2b1e4a'); grad.addColorStop(1,'#1e1533');
-                ctx.fillStyle=grad; ctx.fillRect(0,0,W,H);
-                drawTopPanel(); drawWaveformAndMusic(); drawVolumeSliders(); drawGrid();
-                if(gameState==='playing' && animState==='idle') drawPathLines();
-                drawEncouragement();
-                if(gameState==='start') startBtnBounds = drawOverlay('🌈 彩球連連', '小心隱藏炸彈球！', '開始');
-                else if(gameState==='levelComplete') nextBtnBounds = drawOverlay('🎉 過關！', `總得分：${totalScore}`, '繼續');
-                else if(gameState==='gameOver') drawGameOverOverlay();
-            }
-
-            function drawOverlay(text, subText, btnText) {
-                ctx.fillStyle='rgba(0,0,0,0.75)'; ctx.fillRect(0,0,W,H);
-                ctx.fillStyle='#FFF'; ctx.font='bold 34px "Arial Rounded MT Bold"'; ctx.textAlign='center';
-                ctx.fillText(text, W/2, 130);
-                if(subText){ ctx.font='18px "Arial Rounded MT Bold"'; ctx.fillText(subText, W/2, 190); }
-                
-                // 炸彈模式切換按鈕
-                const modeBtnY = 240;
-                const modeBtnW = 200, modeBtnH = 40;
-                const modeBtnX = W/2 - modeBtnW/2;
-                ctx.fillStyle = bombModeEnabled ? '#44AA44' : '#AA4444';
-                ctx.beginPath(); ctx.roundRect(modeBtnX, modeBtnY, modeBtnW, modeBtnH, 20); ctx.fill();
-                ctx.fillStyle = '#FFF';
-                ctx.font = 'bold 16px "Arial Rounded MT Bold"';
-                ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-                ctx.fillText(bombModeEnabled ? '💣 炸彈模式：開啟' : '🔘 炸彈模式：關閉', modeBtnX+modeBtnW/2, modeBtnY+modeBtnH/2);
-                bombModeBtnBounds = { x: modeBtnX, y: modeBtnY, w: modeBtnW, h: modeBtnH };
-                
-                // 開始按鈕
-                const btnX=W/2-75, btnY=300, btnW=150, btnH=56;
-                ctx.fillStyle='#FFD740';
-                ctx.beginPath(); ctx.roundRect(btnX, btnY, btnW, btnH, 28); ctx.fill();
-                ctx.fillStyle='#2b1e4a';
-                ctx.font='bold 24px "Arial Rounded MT Bold"';
-                ctx.fillText(btnText, btnX+btnW/2, btnY+btnH/2);
-                
-                // 提示文字（依據模式顯示不同內容）
-                ctx.font='14px sans-serif'; ctx.fillStyle='#FFD740';
-                ctx.fillText('✨ 連線同色球 (可斜角) ✨', W/2, 380);
-                if (bombModeEnabled) {
-                    ctx.font='13px sans-serif'; ctx.fillStyle='#FFAA66';
-                    ctx.fillText('⚠️ 炸彈球需用連線消除，10次未消則爆炸', W/2, 410);
-                } else {
-                    ctx.font='13px sans-serif'; ctx.fillStyle='#88FF88';
-                    ctx.fillText('⭐ 無炸彈模式，輕鬆遊玩！', W/2, 410);
-                }
-                return { x: btnX, y: btnY, w: btnW, h: btnH };
-            }
-
-            function update(dt) {
-                if(encouragementTimer>0) encouragementTimer-=dt;
-                if(gameState!=='playing') return;
-                if(animState==='eliminate'){
-                    animTimer+=dt;
-                    const prog=Math.min(animTimer/ELIMINATE_DUR,1);
-                    for(let r=0;r<ROWS;r++) for(let c=0;c<COLS;c++) if(grid[r][c].eliminating){
-                        grid[r][c].scale=1-prog;
-                        grid[r][c].alpha=1-prog;
-                    }
-                    if(prog>=1){ finishEliminate(); animTimer=0; }
-                }else if(animState==='fall'){
-                    animTimer+=dt;
-                    const prog=Math.min(animTimer/FALL_DUR,1);
-                    updateFall(1-Math.pow(1-prog,3));
-                    if(prog>=1){ finishFall(); animTimer=0; }
-                }else if(animState==='check') checkAndReshuffle();
-            }
-
-            function gameLoop(ts){
-                if(lastTimestamp===0) lastTimestamp=ts;
-                const dt=Math.min(0.05,(ts-lastTimestamp)/1000);
-                lastTimestamp=ts;
-                update(dt);
-                drawGame();
-                requestAnimationFrame(gameLoop);
-            }
-
-            function handleResize() {
-                const container = canvas.parentElement;
-                const maxWidth = Math.min(window.innerWidth, 500);
-                const maxHeight = window.innerHeight;
-                canvas.style.width = 'auto';
-                canvas.style.height = 'auto';
-                canvas.width = maxWidth;
-                canvas.height = maxHeight;
-                updateLayout();
-                relocateBalls();
-                animState = 'idle';
-                selectedPath = [];
-            }
-
-            window.addEventListener('resize', () => { setTimeout(handleResize, 50); });
-            handleResize();
-            updateLevelParams();
-            initGrid();
-            gameState = 'start';
-            totalScore = 0; score = 0;
-            resetMaxCombo();
-            clearBomb();
-            missedBombCount = 0;
-            requestAnimationFrame(gameLoop);
         })();
-
-        if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => {
-                navigator.serviceWorker.register('sw.js')
-                .then(reg => console.log('Service Worker 註冊成功', reg.scope))
-                .catch(err => console.log('註冊失敗', err));
-            });
-        }
     </script>
 </body>
 </html>

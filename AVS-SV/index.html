@@ -3,26 +3,48 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-  <title>雨滴漣漪 · 互動頁面</title>
+  <title>雨滴漣漪 · 主視覺背景</title>
   <style>
     * {
       margin: 0;
       padding: 0;
       box-sizing: border-box;
     }
-
     body {
-      font-family: system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-      background: #0b1a2b;
       min-height: 100vh;
       display: flex;
       align-items: flex-end;
       justify-content: center;
       overflow: hidden;
-      touch-action: none; /* 避免觸控捲動干擾 */
+      touch-action: none;
+      font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+      background: #0b1a2b;
     }
-
-    /* 主視覺背景 + canvas 滿版 */
+    /* 背景圖容器：滿版，置中，不重複 */
+    .bg-image {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background-image: url('https://pkbw2000.github.io/avs-ljci/AVS-platform/MainHero.jpg');
+      background-size: cover;
+      background-position: center;
+      background-repeat: no-repeat;
+      z-index: 0;
+      filter: brightness(0.85) saturate(1.1);
+    }
+    /* 半透明遮罩層，讓雨滴/漣漪更明顯，同時保留背景辨識度 */
+    .overlay-mask {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background: rgba(8, 20, 35, 0.2);
+      z-index: 1;
+      pointer-events: none; /* 讓點擊穿透到 canvas */
+    }
     #bg-canvas {
       position: fixed;
       top: 0;
@@ -30,80 +52,388 @@
       width: 100vw;
       height: 100vh;
       display: block;
-      background: radial-gradient(circle at 30% 40%, #1a3a4a, #0b1a2b 80%);
-      cursor: pointer; /* 暗示可互動 */
-      z-index: 1;
+      z-index: 2;
+      cursor: pointer;
+      background: transparent; /* 完全透明，顯示底層背景圖 */
     }
-
-    /* 底層按鈕區 — 固定在畫面最下方 */
     .bottom-bar {
       position: fixed;
-      bottom: 32px;
+      bottom: 36px;
       left: 0;
       width: 100%;
       display: flex;
       justify-content: center;
-      align-items: center;
       z-index: 20;
-      pointer-events: none; /* 讓按鈕本身可穿透，但內部按鈕可點擊 */
+      pointer-events: none;
     }
-
     .slide-btn {
       pointer-events: auto;
       display: flex;
       align-items: center;
       justify-content: space-between;
-      gap: 12px;
-      background: rgba(10, 25, 40, 0.5);
-      backdrop-filter: blur(12px);
-      -webkit-backdrop-filter: blur(12px);
-      border: 1px solid rgba(255, 255, 255, 0.25);
+      gap: 14px;
+      background: rgba(8, 28, 48, 0.55);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid rgba(180, 220, 255, 0.25);
       border-radius: 60px;
-      padding: 14px 28px 14px 34px;
-      box-shadow: 0 12px 32px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(255, 255, 255, 0.08) inset;
-      transition: all 0.25s ease;
+      padding: 14px 30px 14px 38px;
+      box-shadow: 0 12px 40px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(255, 255, 255, 0.06) inset;
+      transition: transform 0.2s cubic-bezier(0.2, 0.9, 0.4, 1.1), box-shadow 0.2s;
       min-width: 190px;
       cursor: pointer;
-      background: rgba(0, 20, 40, 0.55);
-      backdrop-filter: blur(14px);
-      -webkit-backdrop-filter: blur(14px);
-      border-color: rgba(180, 220, 255, 0.3);
       transform: scale(1);
-      transition: transform 0.2s cubic-bezier(0.2, 0.9, 0.4, 1.1), box-shadow 0.2s;
     }
-
     .slide-btn:active {
-      transform: scale(0.94);
-      box-shadow: 0 6px 16px rgba(0, 0, 0, 0.7);
+      transform: scale(0.92);
+      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.8);
     }
-
     .btn-text {
       font-size: 1.4rem;
       font-weight: 600;
       letter-spacing: 2px;
       color: #f0f9ff;
-      text-shadow: 0 2px 8px rgba(0, 10, 20, 0.6);
+      text-shadow: 0 2px 12px rgba(0, 10, 30, 0.5);
       display: flex;
       align-items: center;
       gap: 6px;
     }
-
-    /* 閃動文字 */
     .blink-text {
       display: inline-block;
-      animation: blinkPulse 1.6s ease-in-out infinite;
-      background: linear-gradient(135deg, #b3e4ff, #7fc9ff);
+      animation: blinkPulse 1.8s ease-in-out infinite;
+      background: linear-gradient(135deg, #b8e4ff, #7fc9ff);
       -webkit-background-clip: text;
       background-clip: text;
       color: transparent;
       font-weight: 700;
-      text-shadow: 0 0 20px rgba(100, 200, 255, 0.3);
+      text-shadow: 0 0 30px rgba(80, 200, 255, 0.3);
     }
-
     @keyframes blinkPulse {
-      0% { opacity: 0.6; transform: scale(0.98); }
-      50% { opacity: 1; transform: scale(1.06); }
-      100% { opacity: 0.6; transform: scale(0.98); }
+      0% { opacity: 0.5; transform: scale(0.96); }
+      50% { opacity: 1; transform: scale(1.08); }
+      100% { opacity: 0.5; transform: scale(0.96); }
+    }
+    .arrow-icon {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 2.0rem;
+      color: #d4edff;
+      filter: drop-shadow(0 0 10px rgba(60, 180, 255, 0.5));
+      margin-left: 4px;
+    }
+    .dynamic-arrow {
+      display: inline-block;
+      animation: arrowMove 1.4s ease-in-out infinite;
+    }
+    @keyframes arrowMove {
+      0% { transform: translateX(0); }
+      50% { transform: translateX(8px); }
+      100% { transform: translateX(0); }
+    }
+    @media (max-width: 480px) {
+      .slide-btn { padding: 12px 20px 12px 26px; min-width: 150px; gap: 8px; }
+      .btn-text { font-size: 1.2rem; }
+      .arrow-icon { font-size: 1.7rem; }
+    }
+  </style>
+</head>
+<body>
+  <!-- 背景圖片層 -->
+  <div class="bg-image"></div>
+  <!-- 半透明遮罩，讓雨滴更明顯 -->
+  <div class="overlay-mask"></div>
+  <!-- Canvas 繪製雨滴 + 漣漪 (透明背景) -->
+  <canvas id="bg-canvas"></canvas>
+
+  <div class="bottom-bar">
+    <div class="slide-btn" id="actionBtn" role="button" aria-label="報名入口">
+      <span class="btn-text"><span class="blink-text">報名入口</span></span>
+      <span class="arrow-icon"><span class="dynamic-arrow">→</span></span>
+    </div>
+  </div>
+
+  <script>
+    (function() {
+      const canvas = document.getElementById('bg-canvas');
+      const ctx = canvas.getContext('2d');
+      let width = window.innerWidth;
+      let height = window.innerHeight;
+
+      // ---------- 材質雨滴 ----------
+      const RAIN_COUNT = 170;
+      const raindrops = [];
+
+      // ---------- 漣漪系統 ----------
+      const ripples = [];
+      const MAX_RIPPLE_RADIUS = 160;
+      const RIPPLE_LIFETIME = 2.0;
+
+      // ---------- 初始化雨滴 ----------
+      function initRaindrops() {
+        for (let i = 0; i < RAIN_COUNT; i++) {
+          const baseLen = 18 + Math.random() * 32;
+          raindrops.push({
+            x: Math.random() * width,
+            y: Math.random() * height * 1.3 - height * 0.3,
+            length: baseLen,
+            speed: 9 + Math.random() * 18,
+            width: 1.6 + Math.random() * 3.2,
+            opacity: 0.5 + Math.random() * 0.5,
+            headBright: 0.3 + Math.random() * 0.5,
+          });
+        }
+      }
+
+      // ---------- 新增漣漪 (材質感) ----------
+      function addRipple(x, y, sizeScale = 1.0) {
+        const baseMax = MAX_RIPPLE_RADIUS * (0.7 + Math.random() * 0.5) * sizeScale;
+        ripples.push({
+          x, y,
+          radius: 4,
+          maxRadius: Math.min(baseMax, 200),
+          life: 0,
+          maxLife: RIPPLE_LIFETIME * (0.8 + Math.random() * 0.4),
+          opacity: 0.95,
+          speed: 100 + Math.random() * 70,
+          outerWidth: 2.8 + Math.random() * 3.5,
+          innerWidth: 1.2 + Math.random() * 2.0,
+        });
+        if (ripples.length > 45) ripples.shift();
+      }
+
+      // ---------- 更新雨滴 ----------
+      function updateRaindrops(deltaSec) {
+        for (let r of raindrops) {
+          r.y += r.speed * deltaSec * 1.1;
+          r.x += Math.sin(r.y * 0.008 + Date.now() * 0.0006) * 0.12 * deltaSec * 20;
+          if (r.y - r.length > height) {
+            r.y = -r.length - Math.random() * 30;
+            r.x = Math.random() * width;
+            r.speed = 9 + Math.random() * 18;
+            r.length = 18 + Math.random() * 32;
+            r.width = 1.6 + Math.random() * 3.2;
+          }
+          if (r.x < 0) r.x = 0;
+          if (r.x > width) r.x = width;
+        }
+      }
+
+      // ---------- 更新漣漪 ----------
+      function updateRipples(deltaSec) {
+        for (let i = ripples.length - 1; i >= 0; i--) {
+          const rip = ripples[i];
+          rip.life += deltaSec;
+          rip.radius += rip.speed * deltaSec;
+          const progress = rip.life / rip.maxLife;
+          rip.opacity = 0.9 * (1 - progress * 0.92);
+          if (rip.life >= rip.maxLife || rip.radius >= rip.maxRadius) {
+            ripples.splice(i, 1);
+          }
+        }
+      }
+
+      // ---------- 繪製 (雨滴 + 漣漪，透明背景) ----------
+      function drawScene() {
+        ctx.clearRect(0, 0, width, height);
+
+        // ----- 1. 材質雨滴 (半透明，帶高光) -----
+        for (let r of raindrops) {
+          const alpha = r.opacity * 0.85;
+          // 主體漸層
+          const gradient = ctx.createLinearGradient(r.x, r.y, r.x + 2, r.y + r.length);
+          gradient.addColorStop(0, `rgba(200, 240, 255, ${alpha * 0.9})`);
+          gradient.addColorStop(0.5, `rgba(150, 215, 250, ${alpha * 0.7})`);
+          gradient.addColorStop(1, `rgba(90, 180, 230, ${alpha * 0.4})`);
+          ctx.beginPath();
+          ctx.moveTo(r.x, r.y);
+          ctx.lineTo(r.x + 1.2, r.y + r.length * 0.9);
+          ctx.lineTo(r.x - 0.8, r.y + r.length);
+          ctx.closePath();
+          ctx.fillStyle = gradient;
+          ctx.fill();
+
+          // 高光邊線
+          ctx.beginPath();
+          ctx.moveTo(r.x - 0.5, r.y + 2);
+          ctx.lineTo(r.x - 0.5, r.y + r.length * 0.7);
+          ctx.strokeStyle = `rgba(230, 248, 255, ${alpha * 0.5})`;
+          ctx.lineWidth = 1.2;
+          ctx.stroke();
+
+          // 頭部亮點
+          ctx.beginPath();
+          ctx.arc(r.x + 0.5, r.y + 2, 2.2 + r.width * 0.4, 0, Math.PI * 2);
+          const headGlow = ctx.createRadialGradient(r.x + 0.5, r.y + 2, 0.5, r.x + 0.5, r.y + 2, 4);
+          headGlow.addColorStop(0, `rgba(255, 255, 255, ${alpha * 0.7})`);
+          headGlow.addColorStop(1, `rgba(200, 235, 255, 0)`);
+          ctx.fillStyle = headGlow;
+          ctx.fill();
+
+          // 細長拖尾
+          ctx.beginPath();
+          ctx.moveTo(r.x + 0.2, r.y + r.length * 0.3);
+          ctx.lineTo(r.x + 0.2, r.y + r.length * 0.9);
+          ctx.strokeStyle = `rgba(180, 225, 255, ${alpha * 0.25})`;
+          ctx.lineWidth = 0.6;
+          ctx.stroke();
+        }
+
+        // ----- 2. 材質漣漪 (多層次光暈) -----
+        for (let rip of ripples) {
+          const progress = rip.life / rip.maxLife;
+          const alpha = rip.opacity * (1 - progress * 0.85);
+
+          // 外圈模糊光暈
+          ctx.shadowColor = 'rgba(120, 210, 255, 0.2)';
+          ctx.shadowBlur = 28;
+          ctx.beginPath();
+          ctx.arc(rip.x, rip.y, rip.radius, 0, Math.PI * 2);
+          ctx.strokeStyle = `rgba(160, 220, 255, ${alpha * 0.25})`;
+          ctx.lineWidth = rip.outerWidth * (0.7 + 0.3 * (1 - progress));
+          ctx.stroke();
+
+          // 主圈 (清晰水波)
+          ctx.shadowBlur = 16;
+          ctx.shadowColor = 'rgba(100, 190, 255, 0.3)';
+          ctx.beginPath();
+          ctx.arc(rip.x, rip.y, rip.radius * 0.92, 0, Math.PI * 2);
+          ctx.strokeStyle = `rgba(190, 235, 255, ${alpha * 0.7})`;
+          ctx.lineWidth = rip.innerWidth * (0.8 + 0.2 * (1 - progress));
+          ctx.stroke();
+
+          // 內圈高光
+          if (rip.radius > 12 && progress < 0.6) {
+            const innerGlow = ctx.createRadialGradient(
+              rip.x - 1, rip.y - 1, 1,
+              rip.x, rip.y, rip.radius * 0.3
+            );
+            innerGlow.addColorStop(0, `rgba(230, 248, 255, ${alpha * 0.2})`);
+            innerGlow.addColorStop(1, `rgba(180, 225, 255, 0)`);
+            ctx.shadowBlur = 0;
+            ctx.fillStyle = innerGlow;
+            ctx.beginPath();
+            ctx.arc(rip.x, rip.y, rip.radius * 0.3, 0, Math.PI * 2);
+            ctx.fill();
+          }
+
+          // 細線波紋
+          if (rip.radius > 20) {
+            ctx.shadowBlur = 8;
+            ctx.shadowColor = 'rgba(140, 210, 255, 0.15)';
+            ctx.beginPath();
+            ctx.arc(rip.x - 2, rip.y - 2, rip.radius * 0.6, 0, Math.PI * 2);
+            ctx.strokeStyle = `rgba(210, 240, 255, ${alpha * 0.15})`;
+            ctx.lineWidth = 1.0;
+            ctx.stroke();
+          }
+        }
+        ctx.shadowBlur = 0;
+        ctx.shadowColor = 'transparent';
+      }
+
+      // ---------- 動畫循環 ----------
+      let lastTime = performance.now() / 1000;
+      function animate(timeSec) {
+        const now = timeSec / 1000;
+        let delta = Math.min(now - lastTime, 0.05);
+        lastTime = now;
+
+        updateRaindrops(delta);
+        updateRipples(delta);
+        drawScene();
+        requestAnimationFrame(animate);
+      }
+
+      // ---------- resize ----------
+      function resizeCanvas() {
+        width = window.innerWidth;
+        height = window.innerHeight;
+        canvas.width = width;
+        canvas.height = height;
+        for (let r of raindrops) {
+          r.x = Math.min(r.x, width);
+          r.y = Math.min(r.y, height + 30);
+        }
+      }
+
+      // ---------- 事件 (點擊漣漪) ----------
+      function handlePointerDown(e) {
+        let clientX, clientY;
+        if (e.touches) {
+          e.preventDefault();
+          const touch = e.touches[0];
+          if (!touch) return;
+          clientX = touch.clientX;
+          clientY = touch.clientY;
+        } else {
+          clientX = e.clientX;
+          clientY = e.clientY;
+        }
+        const rect = canvas.getBoundingClientRect();
+        const x = clientX - rect.left;
+        const y = clientY - rect.top;
+
+        addRipple(x, y, 1.0);
+        for (let i = 0; i < 4; i++) {
+          const offX = (Math.random() - 0.5) * 40;
+          const offY = (Math.random() - 0.5) * 40;
+          addRipple(x + offX, y + offY, 0.6 + Math.random() * 0.5);
+        }
+      }
+
+      canvas.addEventListener('mousedown', handlePointerDown);
+      canvas.addEventListener('touchstart', handlePointerDown, { passive: false });
+
+      // 按鈕互動
+      const btn = document.getElementById('actionBtn');
+      btn.addEventListener('click', function(e) {
+        e.stopPropagation();
+        const rect = btn.getBoundingClientRect();
+        const cx = rect.left + rect.width / 2;
+        const cy = rect.top + rect.height / 2;
+        const canvasRect = canvas.getBoundingClientRect();
+        const x = cx - canvasRect.left;
+        const y = cy - canvasRect.top;
+        for (let i = 0; i < 8; i++) {
+          setTimeout(() => {
+            const offX = (Math.random() - 0.5) * 50;
+            const offY = (Math.random() - 0.5) * 50;
+            addRipple(x + offX, y + offY, 0.8 + Math.random() * 0.5);
+          }, i * 15);
+        }
+        // 示範連結
+        window.location.href = '#';
+      });
+
+      // ---------- 啟動 ----------
+      initRaindrops();
+      resizeCanvas();
+      window.addEventListener('resize', resizeCanvas);
+
+      // 開場漣漪
+      setTimeout(() => {
+        for (let i = 0; i < 8; i++) {
+          const x = width * (0.15 + Math.random() * 0.7);
+          const y = height * (0.15 + Math.random() * 0.6);
+          addRipple(x, y, 0.8);
+        }
+      }, 300);
+
+      // 隨機雨滴漣漪
+      setInterval(() => {
+        if (ripples.length < 22) {
+          const x = Math.random() * width;
+          const y = Math.random() * height * 0.6;
+          addRipple(x, y, 0.5 + Math.random() * 0.4);
+        }
+      }, 2200);
+
+      requestAnimationFrame(animate);
+    })();
+  </script>
+</body>
+</html>      100% { opacity: 0.6; transform: scale(0.98); }
     }
 
     .arrow-icon {

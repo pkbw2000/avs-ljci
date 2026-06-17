@@ -1,109 +1,634 @@
 <!DOCTYPE html>
 <html lang="zh-TW">
 <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
-    <title>暗棋</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="theme-color" content="#2C1810">
+    <title>兒童暗棋</title>
     <style>
+        /* ===== 全域重置 ===== */
         * {
-            box-sizing: border-box;
             margin: 0;
             padding: 0;
-            user-select: none;
+            box-sizing: border-box;
+            touch-action: manipulation;
             -webkit-tap-highlight-color: transparent;
+            user-select: none;
         }
 
-        html, body {
+        html,
+        body {
             width: 100%;
             height: 100%;
             overflow: hidden;
-            position: fixed;
-            top: 0;
-            left: 0;
-            background: #1a0f08;
-            font-family: 'Noto Sans SC', 'PingFang TC', 'Microsoft YaHei', sans-serif;
-            touch-action: manipulation;
+            background: #2C1810;
+            font-family: 'Segoe UI', 'PingFang TC', system-ui, -apple-system, sans-serif;
         }
 
-        .game-container {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
+        /* ===== 主容器 ===== */
+        #app {
+            width: 100vw;
+            height: 100vh;
             height: 100dvh;
+            /* 動態視窗高度 */
             display: flex;
             flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            background: radial-gradient(ellipse at 50% 30%, #3d281a, #1a0f08);
+            background: linear-gradient(145deg, #3D2317 0%, #2C1810 100%);
             padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+            position: relative;
+            overflow: hidden;
         }
 
-        .board-outer {
-            background: linear-gradient(165deg, #c4925a, #e8c088);
-            border-radius: clamp(12px, 3vw, 28px);
-            padding: clamp(8px, 2vw, 24px);
-            box-shadow: 0 20px 60px rgba(0,0,0,0.8), inset 0 1px 4px rgba(255,215,150,0.3);
-            display: flex;
-            flex-direction: column;
-            width: min(94vw, 76vh);
-            max-width: 540px;
-        }
-
-        .header {
+        /* ===== 頂部狀態列 ===== */
+        #status-bar {
+            flex: 0 0 auto;
+            height: clamp(50px, 10vh, 80px);
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding: 0 2px 8px 2px;
-            color: #f7edd9;
-            text-shadow: 0 2px 6px rgba(0,0,0,0.7);
+            padding: 0 clamp(12px, 3vw, 30px);
+            background: rgba(44, 24, 16, 0.85);
+            backdrop-filter: blur(8px);
+            border-bottom: 2px solid rgba(255, 215, 150, 0.2);
+            position: relative;
+            z-index: 10;
+        }
+
+        #turn-indicator {
+            display: flex;
+            align-items: center;
+            gap: clamp(8px, 1.5vw, 16px);
+            font-size: clamp(16px, 2.8vh, 28px);
             font-weight: 700;
+            color: #F5E6D3;
+            text-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
+        }
+
+        .turn-dot {
+            width: clamp(16px, 3vh, 28px);
+            height: clamp(16px, 3vh, 28px);
+            border-radius: 50%;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            transition: all 0.3s ease;
             flex-shrink: 0;
         }
-        .header h1 {
-            font-size: clamp(0.9rem, 3vw, 1.5rem);
-            letter-spacing: 2px;
-            background: linear-gradient(to right, #ffe5b4, #f7d59a);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
+
+        .turn-dot.red {
+            background: radial-gradient(circle at 30% 30%, #FF6B6B, #FF3B30);
+            box-shadow: 0 0 20px rgba(255, 59, 48, 0.5);
         }
-        .turn-indicator {
-            background: rgba(0,0,0,0.4);
-            padding: 4px 14px;
-            border-radius: 30px;
-            font-size: clamp(0.65rem, 2.2vw, 1rem);
-            backdrop-filter: blur(4px);
-            border: 1px solid rgba(255,215,140,0.2);
+
+        .turn-dot.black {
+            background: radial-gradient(circle at 30% 30%, #555, #1C1C1E);
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+        }
+
+        #score-display {
+            display: flex;
+            gap: clamp(12px, 2.5vw, 30px);
+            font-size: clamp(14px, 2.2vh, 22px);
+            font-weight: 600;
+            color: #F5E6D3;
+        }
+
+        .score-item {
             display: flex;
             align-items: center;
             gap: 6px;
-        }
-        .turn-dot {
-            display: inline-block;
-            width: clamp(10px, 1.8vw, 16px);
-            height: clamp(10px, 1.8vw, 16px);
-            border-radius: 50%;
-            background: #e74c3c;
-            box-shadow: 0 0 10px #e74c3c88;
-            transition: 0.25s;
-            flex-shrink: 0;
-        }
-        .turn-dot.black-turn {
-            background: #222;
-            box-shadow: 0 0 10px #88888888;
+            background: rgba(0, 0, 0, 0.3);
+            padding: 4px 14px;
+            border-radius: 20px;
+            backdrop-filter: blur(4px);
         }
 
-        /* ----- 棋盤用 table 布局，最穩定 ----- */
-        .board-wrapper {
-            width: 100%;
-            background: linear-gradient(145deg, #c99f66, #eac68c);
-            border-radius: clamp(6px, 1.5vw, 14px);
-            box-shadow: inset 0 0 0 2px #b3874b, inset 0 0 30px #6f4f2a55;
-            padding: clamp(3px, 0.8vw, 8px);
+        .score-item .num {
+            font-size: clamp(18px, 2.8vh, 30px);
+            font-weight: 800;
+        }
+
+        .score-item.red .num {
+            color: #FF3B30;
+        }
+        .score-item.black .num {
+            color: #E8E8E8;
+        }
+
+        /* ===== 棋盤容器 ===== */
+        #board-wrapper {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: clamp(4px, 1vh, 16px);
+            min-height: 0;
+            /* flex 限制溢出 */
+        }
+
+        #board {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            grid-template-rows: repeat(8, 1fr);
+            width: min(85vw, calc(85vh - 20vh));
+            height: min(85vw, calc(85vh - 20vh));
+            aspect-ratio: 4 / 8;
+            background: #D4A574;
+            border-radius: clamp(8px, 2vw, 20px);
+            padding: clamp(3px, 0.6vw, 8px);
+            gap: clamp(2px, 0.4vw, 5px);
+            box-shadow: 0 8px 40px rgba(0, 0, 0, 0.7), inset 0 2px 4px rgba(255, 215, 150, 0.3);
             position: relative;
         }
+
+        /* ===== 格子 ===== */
+        .cell {
+            background: #C4956A;
+            border-radius: clamp(3px, 0.5vw, 8px);
+            position: relative;
+            cursor: pointer;
+            transition: background 0.15s ease;
+            aspect-ratio: 1 / 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.2);
+        }
+
+        .cell:active {
+            transform: scale(0.96);
+        }
+
+        /* 棋盤線條 (裝飾) */
+        .cell::before {
+            content: '';
+            position: absolute;
+            inset: 2px;
+            border: 1px solid rgba(160, 120, 80, 0.3);
+            border-radius: inherit;
+            pointer-events: none;
+        }
+
+        /* ===== 棋子 ===== */
+        .piece {
+            width: 85%;
+            height: 85%;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: clamp(18px, 4.5vw, 48px);
+            font-weight: 800;
+            position: relative;
+            transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.2s ease;
+            transform-style: preserve-3d;
+            backface-visibility: hidden;
+            will-change: transform;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3), inset 0 -2px 4px rgba(0, 0, 0, 0.2);
+            border: 2px solid rgba(255, 255, 255, 0.15);
+        }
+
+        .piece.flipped {
+            animation: flipIn 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+
+        @keyframes flipIn {
+            0% {
+                transform: rotateY(90deg) scale(0.8);
+            }
+            100% {
+                transform: rotateY(0deg) scale(1);
+            }
+        }
+
+        /* 棋子顏色 */
+        .piece.red {
+            background: radial-gradient(circle at 35% 30%, #FF6B6B, #CC2D2D);
+            color: #FFF5E6;
+            border-color: #FFB088;
+            box-shadow: 0 4px 12px rgba(255, 59, 48, 0.4), inset 0 -2px 4px rgba(0, 0, 0, 0.3);
+        }
+
+        .piece.black {
+            background: radial-gradient(circle at 35% 30%, #5A5A5A, #1A1A1A);
+            color: #F0F0F0;
+            border-color: #888;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5), inset 0 -2px 4px rgba(0, 0, 0, 0.4);
+        }
+
+        .piece.face-down {
+            background: radial-gradient(circle at 35% 30%, #8B7355, #5C4033);
+            color: transparent;
+            border-color: #6B5544;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.4), inset 0 -2px 4px rgba(0, 0, 0, 0.3);
+            background-image: repeating-linear-gradient(45deg,
+                    transparent,
+                    transparent 4px,
+                    rgba(0, 0, 0, 0.05) 4px,
+                    rgba(0, 0, 0, 0.05) 8px);
+        }
+
+        .piece.face-down::after {
+            content: '?';
+            color: rgba(255, 215, 150, 0.2);
+            font-size: clamp(24px, 5vw, 56px);
+            font-weight: 900;
+            text-shadow: none;
+        }
+
+        /* ===== 選中高亮 ===== */
+        .cell.selected .piece {
+            transform: scale(1.08);
+            box-shadow: 0 0 30px rgba(255, 215, 0, 0.6), 0 0 60px rgba(255, 215, 0, 0.3);
+            animation: pulse 0.8s ease-in-out infinite alternate;
+        }
+
+        @keyframes pulse {
+            0% {
+                box-shadow: 0 0 20px rgba(255, 215, 0, 0.4);
+            }
+            100% {
+                box-shadow: 0 0 40px rgba(255, 215, 0, 0.8), 0 0 80px rgba(255, 215, 0, 0.3);
+            }
+        }
+
+        /* ===== 可移動 / 可吃子 提示 ===== */
+        .cell.valid-move::after {
+            content: '';
+            position: absolute;
+            width: 30%;
+            height: 30%;
+            background: radial-gradient(circle, rgba(76, 217, 100, 0.8), rgba(76, 217, 100, 0.2));
+            border-radius: 50%;
+            animation: popIn 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+            pointer-events: none;
+            z-index: 5;
+        }
+
+        .cell.valid-capture::after {
+            content: '✕';
+            position: absolute;
+            font-size: clamp(20px, 5vw, 50px);
+            font-weight: 900;
+            color: rgba(255, 59, 48, 0.7);
+            text-shadow: 0 0 20px rgba(255, 59, 48, 0.5);
+            animation: popIn 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+            pointer-events: none;
+            z-index: 5;
+        }
+
+        @keyframes popIn {
+            0% {
+                transform: scale(0);
+                opacity: 0;
+            }
+            100% {
+                transform: scale(1);
+                opacity: 1;
+            }
+        }
+
+        /* ===== 底部控制列 ===== */
+        #control-bar {
+            flex: 0 0 auto;
+            height: clamp(50px, 10vh, 80px);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: clamp(12px, 3vw, 30px);
+            padding: 0 clamp(12px, 3vw, 30px);
+            background: rgba(44, 24, 16, 0.85);
+            backdrop-filter: blur(8px);
+            border-top: 2px solid rgba(255, 215, 150, 0.2);
+        }
+
+        .btn {
+            padding: clamp(8px, 1.5vh, 16px) clamp(20px, 4vw, 48px);
+            font-size: clamp(16px, 2.6vh, 26px);
+            font-weight: 700;
+            border: none;
+            border-radius: 50px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            touch-action: manipulation;
+            min-height: 44px;
+            min-width: 44px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            color: #F5E6D3;
+            background: linear-gradient(145deg, #6B4F3A, #4D3425);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+            letter-spacing: 0.5px;
+        }
+
+        .btn:active {
+            transform: scale(0.92);
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+        }
+
+        .btn-primary {
+            background: linear-gradient(145deg, #F5A623, #E0911A);
+            box-shadow: 0 4px 16px rgba(245, 166, 35, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.2);
+        }
+
+        .btn-primary:active {
+            background: linear-gradient(145deg, #E0911A, #C47D15);
+        }
+
+        .btn-secondary {
+            background: linear-gradient(145deg, #4A90D9, #357ABD);
+            box-shadow: 0 4px 16px rgba(74, 144, 217, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.2);
+        }
+
+        /* ===== 勝利覆蓋層 ===== */
+        #victory-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.75);
+            backdrop-filter: blur(12px);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            z-index: 1000;
+            padding: 20px;
+            animation: fadeIn 0.5s ease;
+        }
+
+        #victory-overlay.show {
+            display: flex;
+        }
+
+        @keyframes fadeIn {
+            0% {
+                opacity: 0;
+                transform: scale(0.9);
+            }
+            100% {
+                opacity: 1;
+                transform: scale(1);
+            }
+        }
+
+        #victory-box {
+            background: linear-gradient(145deg, #F5E6D3, #E8D5C0);
+            padding: clamp(30px, 6vh, 60px) clamp(30px, 5vw, 60px);
+            border-radius: 30px;
+            text-align: center;
+            max-width: 500px;
+            width: 90%;
+            box-shadow: 0 20px 80px rgba(0, 0, 0, 0.6);
+            animation: bounceIn 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+
+        @keyframes bounceIn {
+            0% {
+                transform: scale(0.5) rotate(-5deg);
+                opacity: 0;
+            }
+            100% {
+                transform: scale(1) rotate(0deg);
+                opacity: 1;
+            }
+        }
+
+        #victory-title {
+            font-size: clamp(32px, 6vh, 60px);
+            font-weight: 900;
+            margin-bottom: 8px;
+        }
+
+        #victory-title.red {
+            color: #FF3B30;
+        }
+        #victory-title.black {
+            color: #1C1C1E;
+        }
+
+        #victory-sub {
+            font-size: clamp(16px, 2.8vh, 28px);
+            color: #5C4033;
+            margin-bottom: 20px;
+        }
+
+        /* ===== 五彩紙屑 Canvas ===== */
+        #confetti-canvas {
+            position: fixed;
+            inset: 0;
+            pointer-events: none;
+            z-index: 999;
+        }
+
+        /* ===== 響應式微調 ===== */
+        @media (max-width: 480px) {
+            #status-bar {
+                padding: 0 8px;
+            }
+            #score-display .score-item {
+                padding: 2px 10px;
+            }
+            .piece {
+                font-size: clamp(14px, 4vw, 24px);
+            }
+        }
+
+        @media (orientation: landscape) and (max-height: 500px) {
+            #board {
+                width: min(70vw, 60vh);
+                height: min(70vw, 60vh);
+            }
+            #status-bar,
+            #control-bar {
+                height: clamp(40px, 8vh, 60px);
+            }
+            #turn-indicator {
+                font-size: clamp(14px, 2.2vh, 20px);
+            }
+            .piece {
+                font-size: clamp(14px, 3.5vw, 30px);
+            }
+        }
+
+        /* ===== 安全區域補償 (iOS) ===== */
+        @supports (padding: max(0px)) {
+            #app {
+                padding-left: max(env(safe-area-inset-left), 8px);
+                padding-right: max(env(safe-area-inset-right), 8px);
+                padding-top: max(env(safe-area-inset-top), 8px);
+                padding-bottom: max(env(safe-area-inset-bottom), 8px);
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- ===== 主應用 ===== -->
+    <div id="app">
+        <!-- 狀態列 -->
+        <div id="status-bar">
+            <div id="turn-indicator">
+                <span class="turn-dot red" id="turn-dot"></span>
+                <span id="turn-text">紅方回合</span>
+            </div>
+            <div id="score-display">
+                <div class="score-item red">
+                    🔴 <span class="num" id="red-count">16</span>
+                </div>
+                <div class="score-item black">
+                    ⚫ <span class="num" id="black-count">16</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- 棋盤 -->
+        <div id="board-wrapper">
+            <div id="board"></div>
+        </div>
+
+        <!-- 控制列 -->
+        <div id="control-bar">
+            <button class="btn btn-primary" id="btn-restart">🔄 重新開始</button>
+            <button class="btn btn-secondary" id="btn-undo">↩️ 悔棋</button>
+        </div>
+    </div>
+
+    <!-- 勝利覆蓋層 -->
+    <div id="victory-overlay">
+        <div id="victory-box">
+            <div id="victory-title">🏆</div>
+            <div id="victory-sub">勝利！</div>
+            <button class="btn btn-primary" id="btn-victory-restart" style="margin: 10px auto 0;">
+                🔄 再玩一局
+            </button>
+        </div>
+    </div>
+
+    <!-- 五彩紙屑 Canvas -->
+    <canvas id="confetti-canvas"></canvas>
+
+    <script>
+        // ============================================================
+        //  兒童暗棋 - 完整遊戲邏輯
+        // ============================================================
+
+        (() => {
+            'use strict';
+
+            // -------- 常數與設定 --------
+            const ROWS = 8;
+            const COLS = 4;
+            const PIECE_TYPES = {
+                KING: '帥',
+                ADVISOR: '仕',
+                ELEPHANT: '相',
+                ROOK: '俥',
+                KNIGHT: '傌',
+                CANNON: '炮',
+                PAWN: '兵'
+            };
+            const BLACK_TYPES = {
+                KING: '將',
+                ADVISOR: '士',
+                ELEPHANT: '象',
+                ROOK: '車',
+                KNIGHT: '馬',
+                CANNON: '砲',
+                PAWN: '卒'
+            };
+
+            // 棋子大小順序 (數字越小越大)
+            const RANK = {
+                '帥': 0,
+                '將': 0,
+                '仕': 1,
+                '士': 1,
+                '相': 2,
+                '象': 2,
+                '俥': 3,
+                '車': 3,
+                '傌': 4,
+                '馬': 4,
+                '炮': 5,
+                '砲': 5,
+                '兵': 6,
+                '卒': 6
+            };
+
+            // 初始化棋子清單 (紅方)
+            const RED_PIECES = [
+                { type: '帥', color: 'red' },
+                { type: '仕', color: 'red' },
+                { type: '仕', color: 'red' },
+                { type: '相', color: 'red' },
+                { type: '相', color: 'red' },
+                { type: '俥', color: 'red' },
+                { type: '俥', color: 'red' },
+                { type: '傌', color: 'red' },
+                { type: '傌', color: 'red' },
+                { type: '炮', color: 'red' },
+                { type: '炮', color: 'red' },
+                { type: '兵', color: 'red' },
+                { type: '兵', color: 'red' },
+                { type: '兵', color: 'red' },
+                { type: '兵', color: 'red' },
+                { type: '兵', color: 'red' }
+            ];
+            const BLACK_PIECES = [
+                { type: '將', color: 'black' },
+                { type: '士', color: 'black' },
+                { type: '士', color: 'black' },
+                { type: '象', color: 'black' },
+                { type: '象', color: 'black' },
+                { type: '車', color: 'black' },
+                { type: '車', color: 'black' },
+                { type: '馬', color: 'black' },
+                { type: '馬', color: 'black' },
+                { type: '砲', color: 'black' },
+                { type: '砲', color: 'black' },
+                { type: '卒', color: 'black' },
+                { type: '卒', color: 'black' },
+                { type: '卒', color: 'black' },
+                { type: '卒', color: 'black' },
+                { type: '卒', color: 'black' }
+            ];
+
+            // -------- 狀態 --------
+            let board = [];
+            let currentTurn = 'red';
+            let selectedPos = null; // { row, col } 或 null
+            let validMoves = []; // [{ row, col, isCapture }]
+            let gameOver = false;
+            let moveHistory = []; // 用於悔棋
+            let isAnimating = false;
+
+            // DOM 引用
+            const boardEl = document.getElementById('board');
+            const turnDot = document.getElementById('turn-dot');
+            const turnText = document.getElementById('turn-text');
+            const redCountEl = document.getElementById('red-count');
+            const blackCountEl = document.getElementById('black-count');
+            const victoryOverlay = document.getElementById('victory-overlay');
+            const victoryTitle = document.getElementById('victory-title');
+            const victorySub = document.getElementById('victory-sub');
+            const confettiCanvas = document.getElementById('confetti-canvas');
+            const ctx = confettiCanvas.getContext('2d');
+
+            // -------- 音效引擎 (Web Audio) --------
+            let audioCtx = null;
+
+            function initAudio() {
+                if (!audioCtx) {
+                    audioCtx = new(window.AudioContext || window.webkitAudioContext)();
+                }
+            }
+
+            function playTone(freq, duration, type = 'sine', volume = 0.15) {
+                try {
+                    initAudio();
+                    const osc = audioCtx.createOs        }
 
         #boardTable {
             width: 100%;

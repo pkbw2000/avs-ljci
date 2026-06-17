@@ -1,0 +1,567 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.5, user-scalable=yes" />
+    <title>暗棋 - 經典象棋翻棋</title>
+    <style>
+        /* ----- 全域重置與字型 ----- */
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            background: #2b1b0e;
+            background-image: radial-gradient(circle at 20% 30%, #4d3220, #1f130a);
+            min-height: 100vh;
+            min-height: 100dvh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-family: 'Noto Sans SC', 'PingFang TC', 'Microsoft YaHei', sans-serif;
+            padding: 12px;
+            margin: 0;
+        }
+
+        /* ----- 主容器：RWD 縮放核心 ----- */
+        .game-container {
+            background: #d4a56a;
+            background: linear-gradient(145deg, #c4925a, #e0b87a);
+            border-radius: max(2.5vw, 16px);
+            padding: clamp(10px, 3vw, 30px);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.7), inset 0 1px 4px rgba(255, 215, 150, 0.4);
+            max-width: 700px;
+            width: 100%;
+            transition: all 0.2s;
+        }
+
+        /* ----- 標題區 ----- */
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 4px 12px 4px;
+            color: #f7edd9;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.6);
+            font-weight: 700;
+            flex-wrap: wrap;
+            gap: 6px 12px;
+        }
+        .header h1 {
+            font-size: clamp(1.2rem, 4.5vw, 2rem);
+            letter-spacing: 2px;
+            background: linear-gradient(to right, #ffe5b4, #f7d59a);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        .turn-indicator {
+            background: rgba(0, 0, 0, 0.35);
+            padding: 6px 18px;
+            border-radius: 40px;
+            font-size: clamp(0.85rem, 2.5vw, 1.2rem);
+            backdrop-filter: blur(4px);
+            border: 1px solid rgba(255, 215, 140, 0.3);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .turn-dot {
+            display: inline-block;
+            width: clamp(12px, 2vw, 18px);
+            height: clamp(12px, 2vw, 18px);
+            border-radius: 50%;
+            background: #e74c3c;
+            box-shadow: 0 0 8px #e74c3c88;
+            transition: 0.25s;
+        }
+        .turn-dot.black-turn {
+            background: #222;
+            box-shadow: 0 0 8px #88888888;
+        }
+
+        /* ----- 棋盤容器：維持 4:8 比例 ----- */
+        .board-wrapper {
+            position: relative;
+            width: 100%;
+            aspect-ratio: 8 / 4; /* 寬:高 = 8:4 對應 8x4 棋盤 */
+            background: #dcb27a;
+            background: linear-gradient(145deg, #c99f66, #eac68c);
+            border-radius: clamp(8px, 1.8vw, 18px);
+            box-shadow: inset 0 0 0 2px #b3874b, inset 0 0 20px #6f4f2a55;
+            padding: clamp(4px, 1.2vw, 14px);
+        }
+
+        /* ----- 棋盤格線 (CSS Grid) ----- */
+        .board-grid {
+            display: grid;
+            grid-template-columns: repeat(8, 1fr);
+            grid-template-rows: repeat(4, 1fr);
+            width: 100%;
+            height: 100%;
+            gap: clamp(2px, 0.6vw, 6px);
+        }
+
+        /* ----- 每個格子 ----- */
+        .cell {
+            background: #dbaa72;
+            background: radial-gradient(circle at 30% 30%, #eec291, #c79154);
+            border-radius: clamp(4px, 1vw, 12px);
+            box-shadow: inset 0 2px 6px rgba(90, 55, 20, 0.3), 0 1px 2px rgba(255, 215, 140, 0.3);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            aspect-ratio: 1 / 1;
+            transition: background 0.15s;
+            cursor: default;
+            position: relative;
+        }
+
+        /* 高亮可選中的格子 (走法提示) */
+        .cell.highlight {
+            background: radial-gradient(circle at 30% 30%, #b8d9a0, #7fb068);
+            box-shadow: inset 0 0 0 2px #f5ffb0, 0 0 16px #b5e68c88;
+            cursor: pointer;
+        }
+        .cell.highlight-capture {
+            background: radial-gradient(circle at 30% 30%, #e6a0a0, #b05a5a);
+            box-shadow: inset 0 0 0 2px #ffb0b0, 0 0 16px #e68c8c88;
+            cursor: pointer;
+        }
+
+        /* ----- 棋子樣式 (圓形 + 立體感) ----- */
+        .piece {
+            width: 88%;
+            height: 88%;
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: clamp(0.9rem, 3.2vw, 2.2rem);
+            font-weight: 800;
+            text-shadow: 0 2px 3px rgba(0, 0, 0, 0.3);
+            transition: all 0.1s ease;
+            box-shadow: 0 4px 0 rgba(0, 0, 0, 0.2), 0 6px 12px rgba(0, 0, 0, 0.3);
+            position: relative;
+            will-change: transform;
+            cursor: pointer;
+            border: 2px solid rgba(255, 255, 255, 0.15);
+            background: #c09a6e; /* fallback */
+            background: radial-gradient(circle at 35% 35%, #f5e3c0, #b8895a);
+            color: #2d1b0a;
+        }
+
+        /* 暗棋 (背面) */
+        .piece.back {
+            background: #3d2a18;
+            background: radial-gradient(circle at 40% 35%, #68543a, #2f1e0e);
+            border: 2px solid #7a623e;
+            box-shadow: 0 4px 0 #1f140a, 0 6px 12px rgba(0, 0, 0, 0.5);
+            color: transparent;
+            font-size: 0;
+        }
+        .piece.back::after {
+            content: "♟";
+            color: #ad8b5a;
+            font-size: clamp(1.2rem, 4vw, 2.6rem);
+            opacity: 0.4;
+            text-shadow: none;
+        }
+
+        /* 紅方棋子 */
+        .piece.red {
+            background: radial-gradient(circle at 35% 30%, #ffb0a0, #b33a2a);
+            border: 2px solid #ffd0b0;
+            color: #fff4e8;
+            text-shadow: 0 2px 6px #4a0a00;
+            box-shadow: 0 4px 0 #631f14, 0 6px 12px rgba(0, 0, 0, 0.4);
+        }
+        /* 黑方棋子 */
+        .piece.black {
+            background: radial-gradient(circle at 35% 30%, #4a4a4a, #1a1a1a);
+            border: 2px solid #888;
+            color: #f0f0f0;
+            text-shadow: 0 2px 6px #000;
+            box-shadow: 0 4px 0 #111, 0 6px 12px rgba(0, 0, 0, 0.5);
+        }
+
+        /* 選取狀態 */
+        .piece.selected {
+            transform: scale(1.05);
+            filter: brightness(1.2) drop-shadow(0 0 14px #ffdd88);
+            border: 3px solid #ffecb0;
+            z-index: 10;
+        }
+
+        /* 可點擊的棋子 (互動感) */
+        .piece.clickable {
+            cursor: pointer;
+        }
+        .piece.clickable:active {
+            transform: scale(0.92);
+        }
+
+        /* ----- 按鈕與狀態列 (RWD) ----- */
+        .status-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            margin-top: clamp(10px, 2.5vw, 22px);
+            gap: 10px 16px;
+            padding: 0 4px;
+        }
+        .status-msg {
+            background: rgba(30, 18, 6, 0.5);
+            padding: 6px 18px;
+            border-radius: 30px;
+            color: #f7e7d0;
+            font-size: clamp(0.8rem, 2.2vw, 1.1rem);
+            backdrop-filter: blur(4px);
+            border: 1px solid #ab8a5e55;
+            flex: 1;
+            min-width: 120px;
+            text-align: center;
+        }
+        .btn-group {
+            display: flex;
+            gap: 8px;
+        }
+        .btn {
+            background: #3d2b18;
+            border: none;
+            border-radius: 40px;
+            padding: 8px 20px;
+            color: #f2dec6;
+            font-weight: 600;
+            font-size: clamp(0.75rem, 2vw, 1rem);
+            box-shadow: 0 4px 0 #1f1308, 0 3px 8px rgba(0, 0, 0, 0.4);
+            cursor: pointer;
+            transition: 0.08s linear;
+            background: linear-gradient(145deg, #5b3f28, #2f1f12);
+            border: 1px solid #8b6d4a;
+            letter-spacing: 1px;
+            white-space: nowrap;
+        }
+        .btn:active {
+            transform: translateY(3px);
+            box-shadow: 0 1px 0 #1f1308;
+        }
+        .btn-primary {
+            background: linear-gradient(145deg, #7f5a38, #4d321e);
+            border-color: #b88f60;
+            color: #ffefda;
+        }
+
+        /* ----- 簡單動畫 (翻牌) ----- */
+        @keyframes flipIn {
+            0% { transform: rotateY(90deg) scale(0.8); opacity: 0.3; }
+            100% { transform: rotateY(0) scale(1); opacity: 1; }
+        }
+        .piece.flip-anim {
+            animation: flipIn 0.2s ease-out;
+        }
+
+        /* ----- 手機極小螢幕微調 (≤ 480px) ----- */
+        @media (max-width: 480px) {
+            .game-container { padding: 8px; }
+            .header h1 { font-size: 1rem; }
+            .turn-indicator { padding: 4px 12px; font-size: 0.75rem; }
+            .btn { padding: 6px 14px; font-size: 0.7rem; }
+            .status-msg { font-size: 0.7rem; padding: 4px 12px; }
+        }
+
+        /* 大型平板/桌面體驗 */
+        @media (min-width: 1024px) {
+            .game-container { padding: 30px 40px; }
+            .cell { border-radius: 16px; }
+            .piece { border-width: 3px; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="game-container">
+    <!-- 標題 + 回合 -->
+    <div class="header">
+        <h1>♟ 暗棋</h1>
+        <div class="turn-indicator">
+            <span id="turnText">紅方回合</span>
+            <span class="turn-dot" id="turnDot"></span>
+        </div>
+    </div>
+
+    <!-- 棋盤 -->
+    <div class="board-wrapper">
+        <div class="board-grid" id="boardGrid"></div>
+    </div>
+
+    <!-- 狀態 + 按鈕 -->
+    <div class="status-bar">
+        <div class="status-msg" id="statusMsg">點擊棋子翻牌或走棋</div>
+        <div class="btn-group">
+            <button class="btn btn-primary" id="restartBtn">↺ 新局</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    (function() {
+        "use strict";
+
+        // ----- 棋子資料 (等級對應) -----
+        // 紅方: 帥(1) 仕(2) 相(3) 俥(4) 傌(5) 炮(6) 兵(7)  (數字越小越大)
+        // 黑方: 將(1) 士(2) 象(3) 車(4) 馬(5) 砲(6) 卒(7)
+        const RED_NAMES = ['', '帥', '仕', '相', '俥', '傌', '炮', '兵'];
+        const BLACK_NAMES = ['', '將', '士', '象', '車', '馬', '砲', '卒'];
+
+        // 等級: 將/帥=1 (最強) ... 兵/卒=7 (最弱)  但兵可吃將(特殊)
+        function canCapture(attackerRank, defenderRank, attackerType) {
+            // attackerType: 'red' or 'black'
+            if (attackerRank === 7 && defenderRank === 1) return true; // 兵/卒 吃 將/帥
+            return attackerRank < defenderRank; // 數字小者大
+        }
+
+        // ----- 棋盤狀態 -----
+        let board = []; // 8x4 flat array [row][col]  row 0~3, col 0~7
+        let turn = 'red'; // 'red' 或 'black'
+        let selectedPos = null; // { row, col } 或 null
+        let highlightCells = []; // 可走/可吃的格
+        let gameOver = false;
+        let moveHistory = [];
+
+        // DOM 參考
+        const gridEl = document.getElementById('boardGrid');
+        const turnText = document.getElementById('turnText');
+        const turnDot = document.getElementById('turnDot');
+        const statusMsg = document.getElementById('statusMsg');
+        const restartBtn = document.getElementById('restartBtn');
+
+        // ----- 初始化 / 重置 -----
+        function initGame() {
+            // 創建 32 棋子陣列: 紅16 + 黑16
+            const pieces = [];
+            // 紅方: 帥1, 仕2, 相2, 俥2, 傌2, 炮2, 兵5
+            pieces.push({ color: 'red', rank: 1, name: '帥' });
+            for (let i = 0; i < 2; i++) pieces.push({ color: 'red', rank: 2, name: '仕' });
+            for (let i = 0; i < 2; i++) pieces.push({ color: 'red', rank: 3, name: '相' });
+            for (let i = 0; i < 2; i++) pieces.push({ color: 'red', rank: 4, name: '俥' });
+            for (let i = 0; i < 2; i++) pieces.push({ color: 'red', rank: 5, name: '傌' });
+            for (let i = 0; i < 2; i++) pieces.push({ color: 'red', rank: 6, name: '炮' });
+            for (let i = 0; i < 5; i++) pieces.push({ color: 'red', rank: 7, name: '兵' });
+
+            // 黑方
+            pieces.push({ color: 'black', rank: 1, name: '將' });
+            for (let i = 0; i < 2; i++) pieces.push({ color: 'black', rank: 2, name: '士' });
+            for (let i = 0; i < 2; i++) pieces.push({ color: 'black', rank: 3, name: '象' });
+            for (let i = 0; i < 2; i++) pieces.push({ color: 'black', rank: 4, name: '車' });
+            for (let i = 0; i < 2; i++) pieces.push({ color: 'black', rank: 5, name: '馬' });
+            for (let i = 0; i < 2; i++) pieces.push({ color: 'black', rank: 6, name: '砲' });
+            for (let i = 0; i < 5; i++) pieces.push({ color: 'black', rank: 7, name: '卒' });
+
+            // 隨機打亂
+            for (let i = pieces.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [pieces[i], pieces[j]] = [pieces[j], pieces[i]];
+            }
+
+            // 填入 4x8
+            board = [];
+            let idx = 0;
+            for (let r = 0; r < 4; r++) {
+                const row = [];
+                for (let c = 0; c < 8; c++) {
+                    const p = pieces[idx++];
+                    row.push({
+                        color: p.color,
+                        rank: p.rank,
+                        name: p.name,
+                        faceUp: false,  // 預設暗棋
+                    });
+                }
+                board.push(row);
+            }
+
+            turn = 'red';
+            selectedPos = null;
+            highlightCells = [];
+            gameOver = false;
+            moveHistory = [];
+            updateUI();
+            statusMsg.innerText = '新遊戲開始！紅方先手';
+        }
+
+        // ----- 輔助: 取得某格棋子 (複製) -----
+        function getPiece(row, col) {
+            if (row < 0 || row > 3 || col < 0 || col > 7) return null;
+            return board[row][col];
+        }
+
+        // ----- 檢查是否為己方棋子 (顏色) -----
+        function isOwnPiece(row, col, color) {
+            const p = getPiece(row, col);
+            if (!p || !p.faceUp) return false;
+            return p.color === color;
+        }
+
+        // ----- 生成走法 (含炮規則) -----
+        function generateMoves(row, col) {
+            const piece = getPiece(row, col);
+            if (!piece || !piece.faceUp) return [];
+            const moves = [];
+            const color = piece.color;
+            const rank = piece.rank;
+            const isPawn = (rank === 6); // 炮/砲
+
+            // 四個方向
+            const dirs = [[-1,0],[1,0],[0,-1],[0,1]];
+            for (const d of dirs) {
+                let nr = row + d[0];
+                let nc = col + d[1];
+                if (nr < 0 || nr > 3 || nc < 0 || nc > 7) continue;
+                const target = getPiece(nr, nc);
+                if (!target) {
+                    // 空格: 可移動 (炮也可以)
+                    moves.push({ row: nr, col: nc, type: 'move' });
+                } else if (target.faceUp && target.color !== color) {
+                    // 有棋子且為對方
+                    if (isPawn) {
+                        // 炮/砲: 必須跳吃 (有炮架)
+                        // 檢查同一方向是否有炮架 (中間恰有一子)
+                        let r = row + d[0];
+                        let c = col + d[1];
+                        let jumpCount = 0;
+                        let foundTarget = false;
+                        while (r >= 0 && r < 4 && c >= 0 && c < 8) {
+                            const mid = getPiece(r, c);
+                            if (mid && mid.faceUp) {
+                                jumpCount++;
+                                if (jumpCount === 1) {
+                                    // 炮架
+                                } else if (jumpCount === 2) {
+                                    // 第二顆棋子必須是目標 (且為對方)
+                                    if (mid.color !== color) {
+                                        moves.push({ row: r, col: c, type: 'capture' });
+                                    }
+                                    break;
+                                }
+                            }
+                            r += d[0];
+                            c += d[1];
+                        }
+                    } else {
+                        // 非炮: 直接吃 (需等級判定)
+                        if (canCapture(rank, target.rank, color)) {
+                            moves.push({ row: nr, col: nc, type: 'capture' });
+                        }
+                    }
+                }
+            }
+            return moves;
+        }
+
+        // ----- 執行一步 -----
+        function makeMove(fromRow, fromCol, toRow, toCol) {
+            const piece = board[fromRow][fromCol];
+            const target = board[toRow][toCol];
+            // 記錄
+            moveHistory.push({ fromRow, fromCol, toRow, toCol, piece, target });
+
+            // 移動 (若target存在即吃掉)
+            board[toRow][toCol] = piece;
+            board[fromRow][fromCol] = { color: null, rank: 0, name: '', faceUp: false };
+
+            // 切換回合
+            turn = (turn === 'red' ? 'black' : 'red');
+            selectedPos = null;
+            highlightCells = [];
+            updateUI();
+
+            // 檢查勝負
+            checkGameOver();
+        }
+
+        // ----- 檢查勝負 (某一方全被吃光) -----
+        function checkGameOver() {
+            let redCount = 0, blackCount = 0;
+            for (let r=0; r<4; r++) {
+                for (let c=0; c<8; c++) {
+                    const p = board[r][c];
+                    if (p && p.faceUp && p.color) {
+                        if (p.color === 'red') redCount++;
+                        else blackCount++;
+                    }
+                }
+            }
+            if (redCount === 0) {
+                gameOver = true;
+                statusMsg.innerText = '🏆 黑方勝利！';
+                return;
+            }
+            if (blackCount === 0) {
+                gameOver = true;
+                statusMsg.innerText = '🏆 紅方勝利！';
+                return;
+            }
+            // 簡單和局判斷 (無走法可走) 略
+        }
+
+        // ----- 點擊處理 (核心) -----
+        function handleCellClick(row, col) {
+            if (gameOver) {
+                statusMsg.innerText = '遊戲已結束，請點擊"新局"';
+                return;
+            }
+
+            const piece = getPiece(row, col);
+
+            // 1. 如果已有選中的棋子 => 嘗試走法
+            if (selectedPos) {
+                // 檢查是否點到highlight區域
+                const isHighlight = highlightCells.some(h => h.row === row && h.col === col);
+                if (isHighlight) {
+                    // 執行走法
+                    makeMove(selectedPos.row, selectedPos.col, row, col);
+                    return;
+                } else {
+                    // 取消選取 (或者重新選取)
+                    selectedPos = null;
+                    highlightCells = [];
+                    updateUI();
+                    // 如果點的是己方明棋，再選取
+                    if (piece && piece.faceUp && piece.color === turn) {
+                        selectedPos = { row, col };
+                        highlightCells = generateMoves(row, col);
+                        updateUI();
+                    }
+                    return;
+                }
+            }
+
+            // 2. 無選取: 點擊翻牌 或 選取己方棋子
+            if (!piece || !piece.faceUp) {
+                // 翻牌 (僅能翻暗棋)
+                if (piece && !piece.faceUp) {
+                    piece.faceUp = true;
+                    // 翻牌動畫 (類別)
+                    updateUI();
+                    // 檢查勝負 (可能翻出最後一子)
+                    checkGameOver();
+                    // 切換回合 (暗棋規則: 翻牌後換手)
+                    turn = (turn === 'red' ? 'black' : 'red');
+                    updateUI();
+                    statusMsg.innerText = `翻牌後 ${turn==='red'?'紅':'黑'}方回合`;
+                }
+                return;
+            }
+
+            // 3. 點擊己方明棋 => 選取
+            if (piece.color === turn) {
+                selectedPos = { row, col };
+                highlightCells = generateMoves(row, col);
+                updateUI();
+          

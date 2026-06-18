@@ -1,0 +1,476 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>競技暗棋</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+            user-select: none;
+            -webkit-user-select: none;
+            -webkit-touch-callout: none;
+        }
+        html, body {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background: #1a1a1a;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+        }
+        .game-container {
+            width: 100%;
+            max-width: min(95vw, calc(95vh * 4 / 8));
+            aspect-ratio: 4 / 8;
+            position: relative;
+            touch-action: manipulation;
+            background: #2c2416;
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.8);
+            overflow: hidden;
+        }
+        canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+            touch-action: manipulation;
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <canvas id="boardCanvas"></canvas>
+    </div>
+
+    <script>
+        (function() {
+            // ==================== 常量與配置 ====================
+            const COLS = 4;
+            const ROWS = 8;
+            const TOTAL_CELLS = 32;
+            const PIECE_RANK = {
+                '將': 9, '帥': 9,
+                '士': 8, '仕': 8,
+                '象': 7, '相': 7,
+                '車': 6, '俥': 6,
+                '馬': 5, '傌': 5,
+                '包': 4, '炮': 4,
+                '卒': 1, '兵': 1
+            };
+            const RED_PIECES = [
+                { name: '帥', rank: 9 }, { name: '仕', rank: 8 }, { name: '仕', rank: 8 },
+                { name: '相', rank: 7 }, { name: '相', rank: 7 },
+                { name: '俥', rank: 6 }, { name: '俥', rank: 6 },
+                { name: '傌', rank: 5 }, { name: '傌', rank: 5 },
+                { name: '炮', rank: 4 }, { name: '炮', rank: 4 },
+                { name: '兵', rank: 1 }, { name: '兵', rank: 1 }, { name: '兵', rank: 1 }, { name: '兵', rank: 1 }, { name: '兵', rank: 1 }
+            ];
+            const BLACK_PIECES = [
+                { name: '將', rank: 9 }, { name: '士', rank: 8 }, { name: '士', rank: 8 },
+                { name: '象', rank: 7 }, { name: '象', rank: 7 },
+                { name: '車', rank: 6 }, { name: '車', rank: 6 },
+                { name: '馬', rank: 5 }, { name: '馬', rank: 5 },
+                { name: '包', rank: 4 }, { name: '包', rank: 4 },
+                { name: '卒', rank: 1 }, { name: '卒', rank: 1 }, { name: '卒', rank: 1 }, { name: '卒', rank: 1 }, { name: '卒', rank: 1 }
+            ];
+
+            // ==================== 狀態管理 ====================
+            const State = {
+                WAITING_FIRST_FLIP: 'WAITING_FIRST_FLIP',
+                WAITING_ACTION: 'WAITING_ACTION',
+                ANIMATING: 'ANIMATING',
+                THINKING: 'THINKING' // 未使用
+            };
+
+            let gameState = State.WAITING_FIRST_FLIP;
+            let board = new Array(TOTAL_CELLS).fill(null);
+            let currentTurn = null; // 'red' | 'black' | null
+            let selectedIndex = -1;
+            let currentAnimation = null; // 當前進行的動畫
+            let animFrameId = null;
+            let audioCtx = null;
+
+            // 棋子物件構造
+            function createPiece(name, color, rank) {
+                return {
+                    name,
+                    color,
+                    rank,
+                    isHidden: true
+                };
+            }
+
+            // Fisher-Yates 洗牌
+            function shuffleArray(arr) {
+                const a = [...arr];
+                for (let i = a.length - 1; i > 0; i--) {
+                    const j = Math.floor(Math.random() * (i + 1));
+                    [a[i], a[j]] = [a[j], a[i]];
+                }
+                return a;
+            }
+
+            function initBoard() {
+                // 建立紅黑各16顆棋子
+                const redPieces = RED_PIECES.map((p, idx) => createPiece(p.name, 'red', p.rank));
+                const blackPieces = BLACK_PIECES.map((p, idx) => createPiece(p.name, 'black', p.rank));
+                const allPieces = shuffleArray([...redPieces, ...blackPieces]);
+                for (let i = 0; i < TOTAL_CELLS; i++) {
+                    board[i] = allPieces[i];
+                }
+                gameState = State.WAITING_FIRST_FLIP;
+                currentTurn = null;
+                selectedIndex = -1;
+                currentAnimation = null;
+            }
+
+            // ==================== 規則檢查 ====================
+            function isAdjacent(srcIdx, dstIdx) {
+                const srcCol = srcIdx % COLS;
+                const srcRow = Math.floor(srcIdx / COLS);
+                const dstCol = dstIdx % COLS;
+                const dstRow = Math.floor(dstIdx / COLS);
+                return (Math.abs(srcCol - dstCol) + Math.abs(srcRow - dstRow)) === 1;
+            }
+
+            function isStraightLine(srcIdx, dstIdx) {
+                const srcCol = srcIdx % COLS;
+                const srcRow = Math.floor(srcIdx / COLS);
+                const dstCol = dstIdx % COLS;
+                const dstRow = Math.floor(dstIdx / COLS);
+                return srcCol === dstCol || srcRow === dstRow;
+            }
+
+            function getDistance(srcIdx, dstIdx) {
+                const srcCol = srcIdx % COLS;
+                const srcRow = Math.floor(srcIdx / COLS);
+                const dstCol = dstIdx % COLS;
+                const dstRow = Math.floor(dstIdx / COLS);
+                return Math.abs(srcCol - dstCol) + Math.abs(srcRow - dstRow);
+            }
+
+            function getMiddleIndex(srcIdx, dstIdx) {
+                const srcCol = srcIdx % COLS;
+                const srcRow = Math.floor(srcIdx / COLS);
+                const dstCol = dstIdx % COLS;
+                const dstRow = Math.floor(dstIdx / COLS);
+                if (!isStraightLine(srcIdx, dstIdx)) return -1;
+                const midCol = (srcCol + dstCol) / 2;
+                const midRow = (srcRow + dstRow) / 2;
+                if (Number.isInteger(midCol) && Number.isInteger(midRow)) {
+                    return midRow * COLS + midCol;
+                }
+                return -1;
+            }
+
+            function canMove(srcIdx, dstIdx, playerColor) {
+                if (srcIdx < 0 || srcIdx >= TOTAL_CELLS || dstIdx < 0 || dstIdx >= TOTAL_CELLS) return false;
+                const srcPiece = board[srcIdx];
+                if (!srcPiece || srcPiece.isHidden || srcPiece.color !== playerColor) return false;
+                if (srcIdx === dstIdx) return false;
+
+                const dstPiece = board[dstIdx];
+
+                // 目標為空格：一般移動
+                if (!dstPiece) {
+                    if (srcPiece.name === '炮' || srcPiece.name === '包') {
+                        // 砲移動只能走相鄰一步
+                        return isAdjacent(srcIdx, dstIdx);
+                    }
+                    return isAdjacent(srcIdx, dstIdx);
+                }
+
+                // 目標為敵方棋子（已翻開）
+                if (dstPiece.isHidden) return false; // 不可吃未翻開棋子
+                if (dstPiece.color === playerColor) return false; // 不可吃自己
+
+                // 特殊規則：砲吃子需隔一子跳躍
+                if (srcPiece.name === '炮' || srcPiece.name === '包') {
+                    if (getDistance(srcIdx, dstIdx) !== 2) return false;
+                    const midIdx = getMiddleIndex(srcIdx, dstIdx);
+                    if (midIdx === -1 || !board[midIdx]) return false; // 中間必須有棋子（任意顏色、任意狀態）
+                    return true;
+                }
+
+                // 特殊規則：兵/卒只能吃將/帥或對方的兵/卒
+                if (srcPiece.name === '兵' || srcPiece.name === '卒') {
+                    const targetName = dstPiece.name;
+                    if (targetName === '將' || targetName === '帥' || targetName === '卒' || targetName === '兵') {
+                        return isAdjacent(srcIdx, dstIdx);
+                    }
+                    return false;
+                }
+
+                // 一般吃子：階級大於等於，且相鄰
+                if (srcPiece.rank >= dstPiece.rank) {
+                    return isAdjacent(srcIdx, dstIdx);
+                }
+                return false;
+            }
+
+            // ==================== 勝利條件檢查 ====================
+            function checkVictory() {
+                let redCount = 0, blackCount = 0;
+                let redGeneralAlive = false, blackGeneralAlive = false;
+                for (let piece of board) {
+                    if (!piece) continue;
+                    if (piece.color === 'red') {
+                        redCount++;
+                        if (piece.name === '帥') redGeneralAlive = true;
+                    } else if (piece.color === 'black') {
+                        blackCount++;
+                        if (piece.name === '將') blackGeneralAlive = true;
+                    }
+                }
+                if (redCount === 0 || !redGeneralAlive) return 'black';
+                if (blackCount === 0 || !blackGeneralAlive) return 'red';
+                return null;
+            }
+
+            // ==================== 音效 (Web Audio API) ====================
+            function initAudio() {
+                if (!audioCtx) {
+                    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                }
+            }
+
+            function playFlipSound() {
+                if (!audioCtx) return;
+                const now = audioCtx.currentTime;
+                // 模擬棋子撞擊聲：兩個振盪器 + 噪聲
+                const osc1 = audioCtx.createOscillator();
+                const osc2 = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc1.type = 'triangle';
+                osc1.frequency.setValueAtTime(800, now);
+                osc1.frequency.exponentialRampToValueAtTime(200, now + 0.1);
+                osc2.type = 'square';
+                osc2.frequency.setValueAtTime(1200, now);
+                osc2.frequency.exponentialRampToValueAtTime(100, now + 0.08);
+                gain.gain.setValueAtTime(0.3, now);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
+                osc1.connect(gain);
+                osc2.connect(gain);
+                gain.connect(audioCtx.destination);
+                osc1.start(now);
+                osc2.start(now);
+                osc1.stop(now + 0.15);
+                osc2.stop(now + 0.15);
+            }
+
+            function playCaptureSound() {
+                if (!audioCtx) return;
+                const now = audioCtx.currentTime;
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(600, now);
+                osc.frequency.exponentialRampToValueAtTime(50, now + 0.2);
+                gain.gain.setValueAtTime(0.4, now);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.25);
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                osc.start(now);
+                osc.stop(now + 0.25);
+            }
+
+            // ==================== 動畫系統 ====================
+            function startAnimation(anim) {
+                currentAnimation = anim;
+                gameState = State.ANIMATING;
+            }
+
+            function clearAnimation() {
+                currentAnimation = null;
+                if (gameState === State.ANIMATING) {
+                    gameState = State.WAITING_ACTION;
+                }
+            }
+
+            // 動畫結束回調，用於更新 board 和狀態
+            function onFlipAnimationEnd(index) {
+                const piece = board[index];
+                if (piece) piece.isHidden = false;
+                clearAnimation();
+                // 首次翻棋決定顏色
+                if (gameState === State.WAITING_ACTION && currentTurn === null) {
+                    // 這種情況不應該發生，因為首次翻棋後會設定顏色
+                }
+                // 檢查勝利
+                const winner = checkVictory();
+                if (winner) {
+                    alert(`${winner === 'red' ? '紅方' : '黑方'} 勝利！`);
+                    initBoard();
+                }
+            }
+
+            function onMoveAnimationEnd(fromIdx, toIdx, isCapture) {
+                const movingPiece = board[fromIdx];
+                if (isCapture) {
+                    board[toIdx] = movingPiece;
+                    board[fromIdx] = null;
+                    playCaptureSound();
+                } else {
+                    board[toIdx] = movingPiece;
+                    board[fromIdx] = null;
+                }
+                clearAnimation();
+                selectedIndex = -1;
+                // 切換回合
+                currentTurn = currentTurn === 'red' ? 'black' : 'red';
+                const winner = checkVictory();
+                if (winner) {
+                    alert(`${winner === 'red' ? '紅方' : '黑方'} 勝利！`);
+                    initBoard();
+                }
+            }
+
+            // ==================== 遊戲邏輯 (點擊處理) ====================
+            function handleCellClick(index) {
+                initAudio(); // 確保 AudioContext 被初始化（需用戶手勢）
+                if (gameState === State.ANIMATING || gameState === State.THINKING) return;
+
+                if (gameState === State.WAITING_FIRST_FLIP) {
+                    // 只能翻未翻開棋子
+                    const piece = board[index];
+                    if (piece && piece.isHidden) {
+                        // 開始翻棋動畫
+                        startAnimation({ type: 'flip', index, startTime: performance.now(), duration: 400 });
+                        // 動畫過程中會呼叫 onFlipAnimationEnd，那裡設定顏色
+                        // 但需要先設定顏色和回合，在動畫結束時處理
+                        // 修改：在動畫開始時就決定顏色，但 isHidden 等動畫結束再改
+                        const flippedColor = piece.color;
+                        // 設定先手：翻棋者獲得該顏色，但回合給對手
+                        if (currentTurn === null) {
+                            // 第一次翻棋
+                            currentTurn = flippedColor === 'red' ? 'black' : 'red'; // 對手先下
+                        }
+                        // 將回調改為在動畫結束時執行
+                        currentAnimation.onEnd = () => {
+                            piece.isHidden = false;
+                            clearAnimation();
+                            const winner = checkVictory();
+                            if (winner) {
+                                alert(`${winner === 'red' ? '紅方' : '黑方'} 勝利！`);
+                                initBoard();
+                            } else {
+                                gameState = State.WAITING_ACTION;
+                            }
+                        };
+                        playFlipSound();
+                    }
+                    return;
+                }
+
+                if (gameState === State.WAITING_ACTION) {
+                    const piece = board[index];
+                    // 情況1: 點擊未翻開棋子 -> 翻棋
+                    if (piece && piece.isHidden) {
+                        startAnimation({ type: 'flip', index, startTime: performance.now(), duration: 400 });
+                        currentAnimation.onEnd = () => {
+                            piece.isHidden = false;
+                            clearAnimation();
+                            // 翻棋後切換回合
+                            currentTurn = currentTurn === 'red' ? 'black' : 'red';
+                            const winner = checkVictory();
+                            if (winner) {
+                                alert(`${winner === 'red' ? '紅方' : '黑方'} 勝利！`);
+                                initBoard();
+                            } else {
+                                gameState = State.WAITING_ACTION;
+                            }
+                        };
+                        playFlipSound();
+                        return;
+                    }
+
+                    // 情況2: 點擊自己的已翻開棋子
+                    if (piece && !piece.isHidden && piece.color === currentTurn) {
+                        if (selectedIndex === index) {
+                            // 取消選中
+                            selectedIndex = -1;
+                        } else {
+                            selectedIndex = index;
+                        }
+                        return;
+                    }
+
+                    // 情況3: 已選中棋子，點擊目標（空格或敵方）
+                    if (selectedIndex !== -1) {
+                        const srcPiece = board[selectedIndex];
+                        if (!srcPiece || srcPiece.isHidden || srcPiece.color !== currentTurn) {
+                            selectedIndex = -1;
+                            return;
+                        }
+                        if (canMove(selectedIndex, index, currentTurn)) {
+                            const dstPiece = board[index];
+                            const isCapture = dstPiece !== null;
+                            // 開始移動動畫
+                            startAnimation({
+                                type: 'move',
+                                fromIndex: selectedIndex,
+                                toIndex: index,
+                                isCapture,
+                                startTime: performance.now(),
+                                duration: 250
+                            });
+                            currentAnimation.onEnd = () => {
+                                onMoveAnimationEnd(selectedIndex, index, isCapture);
+                            };
+                        } else {
+                            // 非法操作：觸發 shake 動畫（針對選中棋子）
+                            if (currentAnimation === null) {
+                                // 建立短暫的 shake 動畫
+                                const shakePieceIdx = selectedIndex;
+                                startAnimation({
+                                    type: 'shake',
+                                    index: shakePieceIdx,
+                                    startTime: performance.now(),
+                                    duration: 400,
+                                    amplitude: 6
+                                });
+                                currentAnimation.onEnd = () => {
+                                    clearAnimation();
+                                };
+                            }
+                        }
+                        return;
+                    }
+
+                    // 情況4: 未選中棋子時點擊敵方或空格，無反應
+                }
+            }
+
+            // ==================== Canvas 繪製 ====================
+            const canvas = document.getElementById('boardCanvas');
+            const ctx = canvas.getContext('2d');
+            let canvasWidth, canvasHeight, cellWidth, cellHeight;
+            let dpr = window.devicePixelRatio || 1;
+
+            function resizeCanvas() {
+                const container = canvas.parentElement;
+                const rect = container.getBoundingClientRect();
+                canvasWidth = rect.width;
+                canvasHeight = rect.height;
+                canvas.width = canvasWidth * dpr;
+                canvas.height = canvasHeight * dpr;
+                canvas.style.width = canvasWidth + 'px';
+                canvas.style.height = canvasHeight + 'px';
+                ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+                cellWidth = canvasWidth / COLS;
+                cellHeight = canvasHeight / ROWS;
+            }
+
+            window.addEventListener('resize', () => {
+                resizeCanvas();
+                drawStaticBoard();
+                if (!animFrameId) {
+                    animFr

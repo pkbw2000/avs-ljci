@@ -34,7 +34,7 @@
       z-index: 0;
       filter: brightness(0.85) saturate(1.1);
     }
-    /* 半透明遮罩，讓按鈕更突出 */
+    /* 半透明遮罩 */
     .overlay-mask {
       position: fixed;
       top: 0;
@@ -57,7 +57,7 @@
       pointer-events: none;
       padding: 0 20px;
     }
-    /* 滑動按鈕本體 — 加長，文字靠左 */
+    /* 滑動按鈕本體 — 加長 */
     .slide-btn {
       pointer-events: auto;
       position: relative;
@@ -80,12 +80,13 @@
     .slide-btn:active {
       box-shadow: 0 6px 24px rgba(0, 0, 0, 0.8);
     }
-    /* 文字區 — 靠左對齊，固定不動 */
+
+    /* --- 文字區：靠左對齊，垂直置中 --- */
     .btn-label {
       position: absolute;
       left: 34px;
-      top: 0;
-      height: 100%;
+      top: 50%;
+      transform: translateY(-50%);
       display: flex;
       align-items: center;
       font-size: 1.5rem;
@@ -96,6 +97,8 @@
       z-index: 2;
       pointer-events: none;
       white-space: nowrap;
+      height: auto;
+      line-height: 1.2;
     }
     .btn-label .blink-text {
       display: inline-block;
@@ -104,6 +107,257 @@
       -webkit-background-clip: text;
       background-clip: text;
       color: transparent;
+      font-weight: 700;
+      text-shadow: 0 0 30px rgba(80, 200, 255, 0.3);
+    }
+    @keyframes blinkPulse {
+      0% { opacity: 0.5; transform: scale(0.96); }
+      50% { opacity: 1; transform: scale(1.08); }
+      100% { opacity: 0.5; transform: scale(0.96); }
+    }
+
+    /* --- 箭頭滑塊：靠左對齊，垂直置中，金色漸層 --- */
+    .arrow-slider {
+      position: absolute;
+      left: 12px;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 52px;
+      height: 52px;
+      border-radius: 50%;
+      background: linear-gradient(145deg, #f9e08a, #d4a53a);
+      box-shadow: 0 4px 16px rgba(212, 165, 58, 0.5), 0 0 0 1px rgba(255, 215, 100, 0.3) inset;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 3;
+      pointer-events: none; /* 拖動由父層處理 */
+      transition: background 0.15s, left 0.1s ease;
+      will-change: left;
+    }
+    .arrow-slider .arrow-icon {
+      font-size: 2.0rem;
+      color: #1e2a3a;
+      filter: drop-shadow(0 2px 4px rgba(0,0,0,0.2));
+      line-height: 1;
+      font-weight: 700;
+      /* 微調置中 */
+      margin-left: 2px;
+      margin-top: 1px;
+    }
+    /* 拖動時箭頭微亮 */
+    .slide-btn.dragging .arrow-slider {
+      background: linear-gradient(145deg, #fce9a0, #dcb54a);
+      box-shadow: 0 4px 20px rgba(212, 165, 58, 0.7);
+    }
+
+    /* 響應式 */
+    @media (max-width: 480px) {
+      .bottom-bar { bottom: 32px; padding: 0 16px; }
+      .slide-btn { height: 64px; max-width: 100%; }
+      .btn-label { left: 24px; font-size: 1.2rem; }
+      .arrow-slider { width: 46px; height: 46px; left: 10px; }
+      .arrow-slider .arrow-icon { font-size: 1.6rem; }
+    }
+    @media (min-width: 768px) {
+      .slide-btn { max-width: 560px; }
+    }
+  </style>
+</head>
+<body>
+  <!-- 背景圖片 -->
+  <div class="bg-image"></div>
+  <div class="overlay-mask"></div>
+
+  <!-- 底部滑動按鈕 -->
+  <div class="bottom-bar">
+    <div class="slide-btn" id="slideBtn">
+      <!-- 固定文字 (靠左，垂直置中) -->
+      <div class="btn-label">
+        <span class="blink-text">報名入口</span>
+      </div>
+      <!-- 滑動箭頭 (金色漸層，垂直置中) -->
+      <div class="arrow-slider" id="arrowSlider">
+        <span class="arrow-icon">→</span>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    (function() {
+      const slideBtn = document.getElementById('slideBtn');
+      const arrowSlider = document.getElementById('arrowSlider');
+
+      // 滑動狀態
+      let isDragging = false;
+      let startX = 0;
+      let currentLeft = 12; // 初始 left (px)
+      const minLeft = 12;
+      const maxLeftOffset = 120; // 最大可滑動距離 (px)
+
+      // 取得按鈕寬度動態計算最大 left
+      function getMaxLeft() {
+        const btnRect = slideBtn.getBoundingClientRect();
+        const sliderWidth = arrowSlider.getBoundingClientRect().width;
+        // 最大 left = 按鈕寬度 - 滑塊寬度 - 右邊距(12px)
+        const maxLeft = btnRect.width - sliderWidth - 12;
+        return Math.min(maxLeft, minLeft + maxLeftOffset);
+      }
+
+      // 更新箭頭位置 (直接操作 left)
+      function updateArrowPosition(leftPos) {
+        const maxLeft = getMaxLeft();
+        let clamped = Math.min(Math.max(leftPos, minLeft), maxLeft);
+        arrowSlider.style.left = clamped + 'px';
+        currentLeft = clamped;
+        return clamped;
+      }
+
+      // 重置箭頭到起始位置 (帶動畫)
+      function resetArrow() {
+        arrowSlider.style.transition = 'left 0.45s cubic-bezier(0.2, 0.9, 0.4, 1)';
+        updateArrowPosition(minLeft);
+        setTimeout(() => {
+          arrowSlider.style.transition = '';
+        }, 500);
+        slideBtn.classList.remove('dragging');
+      }
+
+      // 觸發進入 (滑動完成)
+      function triggerEntry() {
+        // 短暫震動反饋
+        slideBtn.style.transform = 'scale(0.96)';
+        setTimeout(() => {
+          slideBtn.style.transform = '';
+        }, 150);
+        // 跳轉至暫時網址
+        window.location.href = 'https://example.com'; // 替換為您的暫時網址
+      }
+
+      // ----- 滑鼠事件 -----
+      slideBtn.addEventListener('mousedown', function(e) {
+        if (e.button !== 0) return;
+        const rect = slideBtn.getBoundingClientRect();
+        startX = e.clientX;
+        // 讀取當前 left 數值
+        const computedLeft = parseFloat(window.getComputedStyle(arrowSlider).left) || minLeft;
+        currentLeft = computedLeft;
+        isDragging = true;
+        slideBtn.classList.add('dragging');
+        arrowSlider.style.transition = 'none';
+        e.preventDefault();
+      });
+
+      window.addEventListener('mousemove', function(e) {
+        if (!isDragging) return;
+        const deltaX = e.clientX - startX;
+        let newLeft = currentLeft + deltaX;
+        const maxLeft = getMaxLeft();
+        newLeft = Math.min(Math.max(newLeft, minLeft), maxLeft);
+        arrowSlider.style.left = newLeft + 'px';
+        // 判斷是否滑到最右 (觸發)
+        if (newLeft >= maxLeft - 2) {
+          isDragging = false;
+          slideBtn.classList.remove('dragging');
+          arrowSlider.style.transition = '';
+          triggerEntry();
+        }
+        e.preventDefault();
+      });
+
+      window.addEventListener('mouseup', function(e) {
+        if (isDragging) {
+          isDragging = false;
+          slideBtn.classList.remove('dragging');
+          arrowSlider.style.transition = '';
+          const maxLeft = getMaxLeft();
+          const currentLeftVal = parseFloat(arrowSlider.style.left) || minLeft;
+          const progress = (currentLeftVal - minLeft) / (maxLeft - minLeft);
+          if (progress > 0.55) {
+            triggerEntry();
+          } else {
+            resetArrow();
+          }
+        }
+      });
+
+      // ----- 觸控事件 (手機) -----
+      slideBtn.addEventListener('touchstart', function(e) {
+        const touch = e.touches[0];
+        if (!touch) return;
+        startX = touch.clientX;
+        const computedLeft = parseFloat(window.getComputedStyle(arrowSlider).left) || minLeft;
+        currentLeft = computedLeft;
+        isDragging = true;
+        slideBtn.classList.add('dragging');
+        arrowSlider.style.transition = 'none';
+        e.preventDefault();
+      }, { passive: false });
+
+      slideBtn.addEventListener('touchmove', function(e) {
+        if (!isDragging) return;
+        const touch = e.touches[0];
+        if (!touch) return;
+        const deltaX = touch.clientX - startX;
+        let newLeft = currentLeft + deltaX;
+        const maxLeft = getMaxLeft();
+        newLeft = Math.min(Math.max(newLeft, minLeft), maxLeft);
+        arrowSlider.style.left = newLeft + 'px';
+        if (newLeft >= maxLeft - 2) {
+          isDragging = false;
+          slideBtn.classList.remove('dragging');
+          arrowSlider.style.transition = '';
+          triggerEntry();
+        }
+        e.preventDefault();
+      }, { passive: false });
+
+      slideBtn.addEventListener('touchend', function(e) {
+        if (isDragging) {
+          isDragging = false;
+          slideBtn.classList.remove('dragging');
+          arrowSlider.style.transition = '';
+          const maxLeft = getMaxLeft();
+          const currentLeftVal = parseFloat(arrowSlider.style.left) || minLeft;
+          const progress = (currentLeftVal - minLeft) / (maxLeft - minLeft);
+          if (progress > 0.55) {
+            triggerEntry();
+          } else {
+            resetArrow();
+          }
+        }
+      }, { passive: false });
+
+      // 避免點擊按鈕時觸發其他行為
+      slideBtn.addEventListener('click', function(e) {
+        const currentLeftVal = parseFloat(arrowSlider.style.left) || minLeft;
+        if (currentLeftVal < minLeft + 5) {
+          slideBtn.style.transform = 'scale(0.97)';
+          setTimeout(() => { slideBtn.style.transform = ''; }, 150);
+        }
+      });
+
+      // 視窗大小變更時，確保箭頭位置合理
+      window.addEventListener('resize', function() {
+        const currentLeftVal = parseFloat(arrowSlider.style.left) || minLeft;
+        const maxLeft = getMaxLeft();
+        if (currentLeftVal > maxLeft) {
+          arrowSlider.style.transition = 'left 0.3s ease';
+          updateArrowPosition(maxLeft);
+          setTimeout(() => { arrowSlider.style.transition = ''; }, 350);
+        }
+      });
+
+      // 初始化箭頭位置
+      arrowSlider.style.left = minLeft + 'px';
+      currentLeft = minLeft;
+
+      // 重置函數對外
+      window.resetSlideButton = resetArrow;
+    })();
+  </script>
+</body>
+</html>      color: transparent;
       font-weight: 700;
       text-shadow: 0 0 30px rgba(80, 200, 255, 0.3);
     }

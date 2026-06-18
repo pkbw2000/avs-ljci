@@ -57,7 +57,7 @@
       pointer-events: none;
       padding: 0 20px;
     }
-    /* 滑動按鈕本體 — 加長 */
+    /* 滑動按鈕本體 */
     .slide-btn {
       pointer-events: auto;
       position: relative;
@@ -81,7 +81,7 @@
       box-shadow: 0 6px 24px rgba(0, 0, 0, 0.8);
     }
 
-    /* --- 文字區：靠左對齊，垂直置中 --- */
+    /* --- 文字區：靠左，垂直置中，金色優化 --- */
     .btn-label {
       position: absolute;
       left: 34px;
@@ -89,21 +89,265 @@
       transform: translateY(-50%);
       display: flex;
       align-items: center;
+      justify-content: flex-start;
       font-size: 1.5rem;
-      font-weight: 600;
-      letter-spacing: 2px;
-      color: #f0f9ff;
-      text-shadow: 0 2px 12px rgba(0, 10, 30, 0.5);
+      font-weight: 700;
+      letter-spacing: 3px;
       z-index: 2;
       pointer-events: none;
       white-space: nowrap;
       height: auto;
       line-height: 1.2;
+      /* 確保文字不與箭頭重疊 */
+      padding-right: 70px;
     }
-    .btn-label .blink-text {
+    /* 金色漸層 + 閃動 + 陰影 */
+    .btn-label .golden-text {
       display: inline-block;
-      animation: blinkPulse 1.8s ease-in-out infinite;
-      background: linear-gradient(135deg, #b8e4ff, #7fc9ff);
+      background: linear-gradient(135deg, #f9e08a 0%, #d4a53a 50%, #f6d87a 100%);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+      font-weight: 700;
+      text-shadow: 0 0 20px rgba(212, 165, 58, 0.3), 0 2px 8px rgba(0, 0, 0, 0.3);
+      animation: goldenPulse 2.0s ease-in-out infinite;
+      letter-spacing: 4px;
+    }
+    @keyframes goldenPulse {
+      0% { opacity: 0.7; transform: scale(0.98); filter: drop-shadow(0 0 8px rgba(212, 165, 58, 0.2)); }
+      50% { opacity: 1; transform: scale(1.04); filter: drop-shadow(0 0 20px rgba(212, 165, 58, 0.6)); }
+      100% { opacity: 0.7; transform: scale(0.98); filter: drop-shadow(0 0 8px rgba(212, 165, 58, 0.2)); }
+    }
+
+    /* --- 箭頭滑塊：金色漸層，垂直置中 --- */
+    .arrow-slider {
+      position: absolute;
+      left: 12px;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 52px;
+      height: 52px;
+      border-radius: 50%;
+      background: linear-gradient(145deg, #f9e08a, #d4a53a);
+      box-shadow: 0 4px 16px rgba(212, 165, 58, 0.5), 0 0 0 1px rgba(255, 215, 100, 0.3) inset;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 3;
+      pointer-events: none;
+      transition: background 0.15s, left 0.1s ease;
+      will-change: left;
+    }
+    .arrow-slider .arrow-icon {
+      font-size: 2.0rem;
+      color: #1e2a3a;
+      filter: drop-shadow(0 2px 4px rgba(0,0,0,0.2));
+      line-height: 1;
+      font-weight: 700;
+      margin-left: 2px;
+      margin-top: 1px;
+    }
+    /* 拖動時箭頭微亮 */
+    .slide-btn.dragging .arrow-slider {
+      background: linear-gradient(145deg, #fce9a0, #dcb54a);
+      box-shadow: 0 4px 20px rgba(212, 165, 58, 0.7);
+    }
+
+    /* 響應式 */
+    @media (max-width: 480px) {
+      .bottom-bar { bottom: 32px; padding: 0 16px; }
+      .slide-btn { height: 64px; max-width: 100%; }
+      .btn-label { left: 24px; font-size: 1.2rem; padding-right: 60px; }
+      .btn-label .golden-text { letter-spacing: 2px; }
+      .arrow-slider { width: 46px; height: 46px; left: 10px; }
+      .arrow-slider .arrow-icon { font-size: 1.6rem; }
+    }
+    @media (min-width: 768px) {
+      .slide-btn { max-width: 560px; }
+    }
+  </style>
+</head>
+<body>
+  <!-- 背景圖片 -->
+  <div class="bg-image"></div>
+  <div class="overlay-mask"></div>
+
+  <!-- 底部滑動按鈕 -->
+  <div class="bottom-bar">
+    <div class="slide-btn" id="slideBtn">
+      <!-- 固定文字 (靠左，垂直置中) -->
+      <div class="btn-label">
+        <span class="golden-text">報名入口</span>
+      </div>
+      <!-- 滑動箭頭 -->
+      <div class="arrow-slider" id="arrowSlider">
+        <span class="arrow-icon">→</span>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    (function() {
+      const slideBtn = document.getElementById('slideBtn');
+      const arrowSlider = document.getElementById('arrowSlider');
+
+      let isDragging = false;
+      let startX = 0;
+      let currentLeft = 12;
+      const minLeft = 12;
+      const maxLeftOffset = 120;
+
+      function getMaxLeft() {
+        const btnRect = slideBtn.getBoundingClientRect();
+        const sliderWidth = arrowSlider.getBoundingClientRect().width;
+        const maxLeft = btnRect.width - sliderWidth - 12;
+        return Math.min(maxLeft, minLeft + maxLeftOffset);
+      }
+
+      function updateArrowPosition(leftPos) {
+        const maxLeft = getMaxLeft();
+        let clamped = Math.min(Math.max(leftPos, minLeft), maxLeft);
+        arrowSlider.style.left = clamped + 'px';
+        currentLeft = clamped;
+        return clamped;
+      }
+
+      function resetArrow() {
+        arrowSlider.style.transition = 'left 0.45s cubic-bezier(0.2, 0.9, 0.4, 1)';
+        updateArrowPosition(minLeft);
+        setTimeout(() => {
+          arrowSlider.style.transition = '';
+        }, 500);
+        slideBtn.classList.remove('dragging');
+      }
+
+      // 更新為您指定的目標網址
+      function triggerEntry() {
+        slideBtn.style.transform = 'scale(0.96)';
+        setTimeout(() => {
+          slideBtn.style.transform = '';
+        }, 150);
+        window.location.href = 'https://sites.google.com/view/avs-lj';
+      }
+
+      // ----- 滑鼠事件 -----
+      slideBtn.addEventListener('mousedown', function(e) {
+        if (e.button !== 0) return;
+        startX = e.clientX;
+        const computedLeft = parseFloat(window.getComputedStyle(arrowSlider).left) || minLeft;
+        currentLeft = computedLeft;
+        isDragging = true;
+        slideBtn.classList.add('dragging');
+        arrowSlider.style.transition = 'none';
+        e.preventDefault();
+      });
+
+      window.addEventListener('mousemove', function(e) {
+        if (!isDragging) return;
+        const deltaX = e.clientX - startX;
+        let newLeft = currentLeft + deltaX;
+        const maxLeft = getMaxLeft();
+        newLeft = Math.min(Math.max(newLeft, minLeft), maxLeft);
+        arrowSlider.style.left = newLeft + 'px';
+        if (newLeft >= maxLeft - 2) {
+          isDragging = false;
+          slideBtn.classList.remove('dragging');
+          arrowSlider.style.transition = '';
+          triggerEntry();
+        }
+        e.preventDefault();
+      });
+
+      window.addEventListener('mouseup', function(e) {
+        if (isDragging) {
+          isDragging = false;
+          slideBtn.classList.remove('dragging');
+          arrowSlider.style.transition = '';
+          const maxLeft = getMaxLeft();
+          const currentLeftVal = parseFloat(arrowSlider.style.left) || minLeft;
+          const progress = (currentLeftVal - minLeft) / (maxLeft - minLeft);
+          if (progress > 0.55) {
+            triggerEntry();
+          } else {
+            resetArrow();
+          }
+        }
+      });
+
+      // ----- 觸控事件 -----
+      slideBtn.addEventListener('touchstart', function(e) {
+        const touch = e.touches[0];
+        if (!touch) return;
+        startX = touch.clientX;
+        const computedLeft = parseFloat(window.getComputedStyle(arrowSlider).left) || minLeft;
+        currentLeft = computedLeft;
+        isDragging = true;
+        slideBtn.classList.add('dragging');
+        arrowSlider.style.transition = 'none';
+        e.preventDefault();
+      }, { passive: false });
+
+      slideBtn.addEventListener('touchmove', function(e) {
+        if (!isDragging) return;
+        const touch = e.touches[0];
+        if (!touch) return;
+        const deltaX = touch.clientX - startX;
+        let newLeft = currentLeft + deltaX;
+        const maxLeft = getMaxLeft();
+        newLeft = Math.min(Math.max(newLeft, minLeft), maxLeft);
+        arrowSlider.style.left = newLeft + 'px';
+        if (newLeft >= maxLeft - 2) {
+          isDragging = false;
+          slideBtn.classList.remove('dragging');
+          arrowSlider.style.transition = '';
+          triggerEntry();
+        }
+        e.preventDefault();
+      }, { passive: false });
+
+      slideBtn.addEventListener('touchend', function(e) {
+        if (isDragging) {
+          isDragging = false;
+          slideBtn.classList.remove('dragging');
+          arrowSlider.style.transition = '';
+          const maxLeft = getMaxLeft();
+          const currentLeftVal = parseFloat(arrowSlider.style.left) || minLeft;
+          const progress = (currentLeftVal - minLeft) / (maxLeft - minLeft);
+          if (progress > 0.55) {
+            triggerEntry();
+          } else {
+            resetArrow();
+          }
+        }
+      }, { passive: false });
+
+      // 點擊按鈕時若箭頭在起點，給予輕微回饋
+      slideBtn.addEventListener('click', function(e) {
+        const currentLeftVal = parseFloat(arrowSlider.style.left) || minLeft;
+        if (currentLeftVal < minLeft + 5) {
+          slideBtn.style.transform = 'scale(0.97)';
+          setTimeout(() => { slideBtn.style.transform = ''; }, 150);
+        }
+      });
+
+      // 視窗大小變更時，確保箭頭位置合理
+      window.addEventListener('resize', function() {
+        const currentLeftVal = parseFloat(arrowSlider.style.left) || minLeft;
+        const maxLeft = getMaxLeft();
+        if (currentLeftVal > maxLeft) {
+          arrowSlider.style.transition = 'left 0.3s ease';
+          updateArrowPosition(maxLeft);
+          setTimeout(() => { arrowSlider.style.transition = ''; }, 350);
+        }
+      });
+
+      // 初始化箭頭位置
+      arrowSlider.style.left = minLeft + 'px';
+      currentLeft = minLeft;
+    })();
+  </script>
+</body>
+</html>      background: linear-gradient(135deg, #b8e4ff, #7fc9ff);
       -webkit-background-clip: text;
       background-clip: text;
       color: transparent;

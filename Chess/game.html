@@ -5,52 +5,32 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
     <title>暗棋 · 極簡</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <style>
-        /* 基础重置 */
-        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-        html, body {
-            margin: 0; padding: 0;
-            width: 100%; height: 100%;
-            overflow: hidden;
-            background: #1a120e;
-            font-family: 'Inter', system-ui, sans-serif;
-            touch-action: manipulation;
-        }
-
-        /* 根容器：默认竖屏，横屏时旋转 */
-        #root {
-            width: 100%;
-            height: 100%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            background: radial-gradient(ellipse at 50% 30%, #2d1e14, #120c08);
-            transition: transform 0.3s ease;
-            transform-origin: center center;
-        }
-
-        /* 横屏时旋转 - 关键修正 */
-        @media (orientation: landscape) {
-            #root {
-                transform: rotate(90deg);
-                width: 100vh;    /* 横屏时宽度 = 视口高度 */
-                height: 100vw;   /* 高度 = 视口宽度 */
-                position: fixed;
-                top: 50%;
-                left: 50%;
-                margin-top: -50vw;  /* 向上偏移半个视口宽度 */
-                margin-left: -50vh; /* 向左偏移半个视口高度 */
-                background: #1a120e;
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        wood: { 50: '#f7efe6', 100: '#ede0d0', 200: '#dcc4aa', 300: '#c9a884', 400: '#b88f66', 500: '#a57850', 600: '#8a6240', 700: '#6f4d30', 800: '#543a22', 900: '#3a2818', 950: '#241810' },
+                        brand: { red: '#c0392b', redLight: '#e74c3c', redDark: '#922b21', black: '#2c2c2c', blackLight: '#4a4a4a' }
+                    },
+                    fontFamily: { sans: ['Inter', 'system-ui', 'sans-serif'] },
+                    boxShadow: {
+                        glass: '0 8px 32px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.06)',
+                        piece: '0 4px 0 rgba(0,0,0,0.25), 0 8px 24px rgba(0,0,0,0.35)',
+                        'inner-glow': 'inset 0 2px 12px rgba(255,215,140,0.15)',
+                    }
+                }
             }
-            /* 强制隐藏滚动条 */
-            body { overflow: hidden; }
         }
+    </script>
+    <style>
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        html, body { margin: 0; padding: 0; height: 100%; overflow: hidden; font-family: 'Inter', system-ui, sans-serif; background: #1a120e; touch-action: manipulation; }
+        #root { height: 100%; display: flex; align-items: center; justify-content: center; background: radial-gradient(ellipse at 50% 30%, #2d1e14, #120c08); }
 
-        /* 高亮样式 */
         .cell-highlight-move { box-shadow: inset 0 0 0 2px rgba(120,200,120,0.6), 0 0 24px rgba(120,200,120,0.2); }
         .cell-highlight-capture { box-shadow: inset 0 0 0 2px rgba(230,120,120,0.6), 0 0 24px rgba(230,120,120,0.2); }
 
-        /* 暗棋背面花纹 */
         .piece-back-pattern::after {
             content: "♟";
             position: absolute;
@@ -62,7 +42,25 @@
             pointer-events: none;
         }
 
-        /* 棋盘背景 */
+        @media (orientation: landscape) and (max-height: 480px) {
+            .landscape-hint { display: flex !important; }
+        }
+        .landscape-hint {
+            display: none;
+            position: fixed;
+            inset: 0;
+            z-index: 999;
+            background: rgba(10,8,6,0.94);
+            backdrop-filter: blur(12px);
+            align-items: center;
+            justify-content: center;
+            color: #e8ddd0;
+            font-size: clamp(1rem,4vw,1.8rem);
+            flex-direction: column;
+            gap: 12px;
+        }
+        .landscape-hint span { font-size: 2.4rem; opacity: 0.5; }
+
         .cell-bg {
             background: radial-gradient(circle at 30% 30%, rgba(200,170,130,0.25), rgba(140,110,80,0.15));
         }
@@ -70,7 +68,6 @@
             gap: clamp(2px, 0.6vw, 6px);
         }
 
-        /* 胜利遮罩 */
         .victory-overlay {
             position: absolute;
             inset: 0;
@@ -96,55 +93,13 @@
             font-size: clamp(0.8rem, 2vw, 1.2rem);
             color: rgba(255,255,255,0.6);
         }
-
-        /* 横屏时的旋转提示（可选） */
-        .landscape-hint {
-            display: none;
-            position: fixed;
-            inset: 0;
-            z-index: 9999;
-            background: rgba(10,8,6,0.92);
-            backdrop-filter: blur(12px);
-            align-items: center;
-            justify-content: center;
-            color: #e8ddd0;
-            font-size: clamp(1rem,4vw,1.8rem);
-            flex-direction: column;
-            gap: 12px;
-            pointer-events: none;
-        }
-        .landscape-hint span {
-            font-size: 2.4rem;
-            opacity: 0.5;
-            animation: rotate 2s linear infinite;
-        }
-        @keyframes rotate {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-        @media (orientation: landscape) {
-            .landscape-hint {
-                display: flex !important;
-            }
-        }
-
-        /* 棋盘容器最大宽度 */
-        .board-wrapper {
-            width: 100%;
-            max-width: 520px;
-            margin: 0 auto;
-        }
     </style>
 </head>
 <body>
     <div id="root"></div>
-    <div class="landscape-hint">
-        <span>↻</span>
-        <p>請轉為直立</p>
-    </div>
+    <div class="landscape-hint"><span>↻</span><p>請轉為直立</p></div>
 
     <script type="module">
-        // ----- 导入 React, ReactDOM, Framer Motion, htm -----
         import React, { useState, useEffect, useCallback, useRef, memo } from 'https://cdn.jsdelivr.net/npm/react@18.2.0/+esm';
         import ReactDOM from 'https://cdn.jsdelivr.net/npm/react-dom@18.2.0/+esm';
         import { motion, AnimatePresence } from 'https://cdn.jsdelivr.net/npm/framer-motion@10.16.4/+esm';
@@ -315,7 +270,6 @@
             const [winner, setWinner] = useState(null);
             const [statusMsg, setStatusMsg] = useState('點擊任意暗棋翻牌決定先手');
 
-            // 尝试锁定竖屏
             useEffect(() => {
                 try {
                     if (screen.orientation && screen.orientation.lock) {
@@ -324,7 +278,6 @@
                 } catch (e) {}
             }, []);
 
-            // 胜利判定（不要求将帅已翻开）
             const checkWinCondition = useCallback((newBoard) => {
                 let redGeneral = false, blackGeneral = false;
                 for (let r = 0; r < 4; r++) {
@@ -455,7 +408,6 @@
                 setGameOver(false);
                 setWinner(null);
                 setStatusMsg('點擊任意暗棋翻牌決定先手');
-                console.log('新局棋盘棋子总数:', newBoard.flat().filter(p => p !== null).length, '（应为32）');
             }, []);
 
             const renderBoard = () => {
@@ -487,7 +439,7 @@
 
             return html`
                 <div className="w-full h-full flex items-center justify-center p-3 sm:p-4">
-                    <div className="w-full max-w-[520px] flex flex-col board-wrapper">
+                    <div className="w-full max-w-[520px] flex flex-col">
                         <div className="flex items-center justify-between mb-2 sm:mb-3 px-1">
                             <span className="text-wood-300/80 text-xs sm:text-sm font-medium tracking-wider">♟ 暗棋</span>
                             <div className="flex items-center gap-2 text-xs sm:text-sm text-wood-300/70">

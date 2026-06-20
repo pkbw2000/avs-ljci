@@ -1,18 +1,14 @@
-const CACHE_NAME = 'dark-chess-pwa-v1';
+const CACHE_NAME = 'dark-chess-pwa-v2'; // 升級快取標籤
 const ASSETS = [
   './game.html',
   './manifest.json',
   'https://cdn.tailwindcss.com',
-  'https://cdn.jsdelivr.net/npm/react@18.2.0/+esm',
-  'https://cdn.jsdelivr.net/npm/react-dom@18.2.0/+esm',
-  'https://cdn.jsdelivr.net/npm/framer-motion@10.16.4/+esm',
-  'https://cdn.jsdelivr.net/npm/htm@3.1.1/+esm',
-  'https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/265f.png',
-  'https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/128x128/265f.png',
-  'https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/512x512/265f.png'
+  'https://esm.sh/react@18.2.0',
+  'https://esm.sh/react-dom@18.2.0',
+  'https://esm.sh/framer-motion@10.16.4',
+  'https://esm.sh/htm@3.1.1'
 ];
 
-// 安裝階段：將核心資源全部寫入 Cache 中
 self.addEventListener('install', e => {
   e.waitUntil(
     caches.open(CACHE_NAME).then(cache => {
@@ -21,7 +17,7 @@ self.addEventListener('install', e => {
   );
 });
 
-// 激活階段：清理舊版本的快取快照
+// 強制激活新快取，清除乾淨上一版的快取衝突殘留
 self.addEventListener('activate', e => {
   e.waitUntil(
     caches.keys().then(keys => {
@@ -36,14 +32,11 @@ self.addEventListener('activate', e => {
   );
 });
 
-// 攔截請求：優先讀取本機 Cache 資源，實現秒開與斷網容錯
+// 網絡優先與本機快取備用流
 self.addEventListener('fetch', e => {
   e.respondWith(
-    caches.match(e.request).then(cachedResponse => {
-      if (cachedResponse) {
-        return cachedResponse;
-      }
-      return fetch(e.request);
+    fetch(e.request).catch(() => {
+      return caches.match(e.request);
     })
   );
 });

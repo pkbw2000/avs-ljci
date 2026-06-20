@@ -4,8 +4,6 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
     <title>暗棋 · 極簡</title>
-
-    <!-- Tailwind CSS (Play CDN) -->
     <script src="https://cdn.tailwindcss.com">
     </script>
     <script>
@@ -26,50 +24,20 @@
                             900: '#3a2818',
                             950: '#241810',
                         },
-                        brand: {
-                            red: '#c0392b',
-                            redLight: '#e74c3c',
-                            redDark: '#922b21',
-                            black: '#2c2c2c',
-                            blackLight: '#4a4a4a',
-                        }
+                        brand: { red: '#c0392b', redLight: '#e74c3c', redDark: '#922b21', black: '#2c2c2c',
+                        blackLight: '#4a4a4a' }
                     },
-                    fontFamily: {
-                        sans: ['Inter', 'system-ui', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'sans-serif'],
-                    },
+                    fontFamily: { sans: ['Inter', 'system-ui', 'sans-serif'] },
                     boxShadow: {
-                        'glass': '0 8px 32px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.06)',
-                        'piece': '0 4px 0 rgba(0,0,0,0.25), 0 8px 24px rgba(0,0,0,0.35)',
-                        'piece-hover': '0 6px 0 rgba(0,0,0,0.2), 0 12px 36px rgba(0,0,0,0.4)',
+                        glass: '0 8px 32px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.06)',
+                        piece: '0 4px 0 rgba(0,0,0,0.25), 0 8px 24px rgba(0,0,0,0.35)',
                         'inner-glow': 'inset 0 2px 12px rgba(255,215,140,0.15)',
-                    },
-                    animation: {
-                        'pulse-glow': 'pulse-glow 1.8s ease-in-out infinite',
-                    },
-                    keyframes: {
-                        'pulse-glow': {
-                            '0%, 100%': { boxShadow: '0 0 12px rgba(255,215,140,0.2)' },
-                            '50%': { boxShadow: '0 0 28px rgba(255,215,140,0.5)' },
-                        }
                     }
                 }
             }
         }
     </script>
-
-    <!-- Import Map for React + Framer Motion -->
-    <script type="importmap">
-        {
-            "imports": {
-                "react": "https://esm.sh/react@18.2.0",
-                "react-dom": "https://esm.sh/react-dom@18.2.0",
-                "framer-motion": "https://esm.sh/framer-motion@10.16.4"
-            }
-        }
-    </script>
-
     <style>
-        /* 全域樣式微調 */
         * {
             box-sizing: border-box;
             -webkit-tap-highlight-color: transparent;
@@ -91,19 +59,381 @@
             justify-content: center;
             background: radial-gradient(ellipse at 50% 30%, #2d1e14, #120c08);
         }
-
-        /* 自定義 scrollbar 隱藏 (不用) */
-        ::-webkit-scrollbar {
-            width: 0;
-            height: 0;
-        }
-
-        /* 棋盤格子的輔助樣式 — 其餘由 Tailwind 與 Framer 控制 */
         .cell-highlight-move {
             box-shadow: inset 0 0 0 2px rgba(120, 200, 120, 0.6), 0 0 24px rgba(120, 200, 120, 0.2);
         }
         .cell-highlight-capture {
             box-shadow: inset 0 0 0 2px rgba(230, 120, 120, 0.6), 0 0 24px rgba(230, 120, 120, 0.2);
+        }
+        .piece-back-pattern::after {
+            content: "♟";
+            position: absolute;
+            font-size: clamp(1rem, 3.4vw, 2.2rem);
+            color: rgba(180, 150, 100, 0.3);
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            pointer-events: none;
+        }
+        @media (orientation: landscape) and (max-height: 480px) {
+            .landscape-hint {
+                display: flex !important;
+            }
+        }
+        .landscape-hint {
+            display: none;
+            position: fixed;
+            inset: 0;
+            z-index: 999;
+            background: rgba(10, 8, 6, 0.94);
+            backdrop-filter: blur(12px);
+            align-items: center;
+            justify-content: center;
+            color: #e8ddd0;
+            font-size: clamp(1rem, 4vw, 1.8rem);
+            flex-direction: column;
+            gap: 12px;
+        }
+        .landscape-hint span {
+            font-size: 2.4rem;
+            opacity: 0.5;
+        }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+    <div class="landscape-hint"><span>↻</span><p>請轉為直立</p></div>
+
+    <!-- 直接使用 ES Module 导入，避免 importmap 兼容性问题 -->
+    <script type="module">
+        // ----- 导入 React, ReactDOM, Framer Motion (使用可靠的 CDN) -----
+        import React from 'https://cdn.jsdelivr.net/npm/react@18.2.0/+esm';
+        import ReactDOM from 'https://cdn.jsdelivr.net/npm/react-dom@18.2.0/+esm';
+        import { motion, AnimatePresence, LayoutGroup } from 'https://cdn.jsdelivr.net/npm/framer-motion@10.16.4/+esm';
+
+        // 如果加载失败，捕获错误并显示提示
+        if (typeof React === 'undefined') {
+            document.getElementById('root').innerHTML =
+                '<div style="color:#e8ddd0;padding:2rem;text-align:center;">⚠️ 加载失败，请检查网络或刷新页面</div>';
+            throw new Error('React 加载失败');
+        }
+
+        // ----- 工具函数 (与之前保持一致) -----
+        const NAMES = { red: ['', '帥', '仕', '相', '俥', '傌', '炮', '兵'], black: ['', '將', '士', '象', '車', '馬', '砲',
+                '卒'
+            ] };
+
+        function getPieceName(color, rank) { return NAMES[color]?.[rank] || '?'; }
+
+        function canCapture(attackerRank, defenderRank) {
+            if (attackerRank === 7) return defenderRank === 1;
+            return attackerRank < defenderRank;
+        }
+
+        function createInitialBoard() {
+            const pieces = [];
+            pieces.push({ id: 'r1', color: 'red', rank: 1 });
+            for (let i = 0; i < 2; i++) pieces.push({ id: `r2-${i}`, color: 'red', rank: 2 });
+            for (let i = 0; i < 2; i++) pieces.push({ id: `r3-${i}`, color: 'red', rank: 3 });
+            for (let i = 0; i < 2; i++) pieces.push({ id: `r4-${i}`, color: 'red', rank: 4 });
+            for (let i = 0; i < 2; i++) pieces.push({ id: `r5-${i}`, color: 'red', rank: 5 });
+            for (let i = 0; i < 2; i++) pieces.push({ id: `r6-${i}`, color: 'red', rank: 6 });
+            for (let i = 0; i < 5; i++) pieces.push({ id: `r7-${i}`, color: 'red', rank: 7 });
+            pieces.push({ id: 'b1', color: 'black', rank: 1 });
+            for (let i = 0; i < 2; i++) pieces.push({ id: `b2-${i}`, color: 'black', rank: 2 });
+            for (let i = 0; i < 2; i++) pieces.push({ id: `b3-${i}`, color: 'black', rank: 3 });
+            for (let i = 0; i < 2; i++) pieces.push({ id: `b4-${i}`, color: 'black', rank: 4 });
+            for (let i = 0; i < 2; i++) pieces.push({ id: `b5-${i}`, color: 'black', rank: 5 });
+            for (let i = 0; i < 2; i++) pieces.push({ id: `b6-${i}`, color: 'black', rank: 6 });
+            for (let i = 0; i < 5; i++) pieces.push({ id: `b7-${i}`, color: 'black', rank: 7 });
+            for (let i = pieces.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [pieces[i], pieces[j]] = [pieces[j], pieces[i]];
+            }
+            const board = [];
+            let idx = 0;
+            for (let r = 0; r < 4; r++) {
+                const row = [];
+                for (let c = 0; c < 8; c++) {
+                    const p = pieces[idx++];
+                    row.push({ ...p, faceUp: false });
+                }
+                board.push(row);
+            }
+            return board;
+        }
+
+        function generateMoves(board, row, col) {
+            const piece = board[row]?.[col];
+            if (!piece || !piece.faceUp) return [];
+            const moves = [];
+            const color = piece.color;
+            const rank = piece.rank;
+            const isCannon = rank === 6;
+            const dirs = [
+                [-1, 0],
+                [1, 0],
+                [0, -1],
+                [0, 1]
+            ];
+            for (const [dr, dc] of dirs) {
+                if (!isCannon) {
+                    const nr = row + dr,
+                        nc = col + dc;
+                    if (nr < 0 || nr > 3 || nc < 0 || nc > 7) continue;
+                    const target = board[nr]?.[nc];
+                    if (!target) moves.push({ row: nr, col: nc, type: 'move' });
+                    else if (target.faceUp && target.color !== color && canCapture(rank, target.rank))
+                        moves.push({ row: nr, col: nc, type: 'capture' });
+                } else {
+                    let blockCount = 0;
+                    let tr = row + dr,
+                        tc = col + dc;
+                    while (tr >= 0 && tr <= 3 && tc >= 0 && tc <= 7) {
+                        const target = board[tr]?.[tc];
+                        if (!target) { if (blockCount === 0) moves.push({ row: tr, col: tc, type: 'move' }); } else if (
+                            target.faceUp) {
+                            if (blockCount === 0) blockCount++;
+                            else if (blockCount === 1) {
+                                if (target.color !== color) moves.push({ row: tr, col: tc, type: 'capture' });
+                                break;
+                            } else break;
+                        }
+                        tr += dr;
+                        tc += dc;
+                    }
+                }
+            }
+            return moves;
+        }
+
+        function checkTotalEliminate(board) {
+            let redAlive = false,
+                blackAlive = false;
+            for (let r = 0; r < 4; r++)
+                for (let c = 0; c < 8; c++) {
+                    const p = board[r]?.[c];
+                    if (p && p.faceUp) p.color === 'red' ? redAlive = true : blackAlive = true;
+                }
+            return { redAlive, blackAlive };
+        }
+
+        function cloneBoard(board) { return board.map(row => row.map(cell => cell ? { ...cell } : null)); }
+
+        // ----- React 组件 -----
+        const Piece = React.memo(({ piece, isSelected, onClick, layoutId }) => {
+            if (!piece) return null;
+            const { color, rank, faceUp } = piece;
+            const isRed = color === 'red';
+            const name = faceUp ? getPieceName(color, rank) : '';
+            const isBack = !faceUp;
+
+            return ( <
+                motion.div layoutId = { layoutId }
+                className = {
+                    `relative w-full h-full rounded-full flex items-center justify-center
+                text-base sm:text-lg md:text-xl lg:text-2xl font-extrabold
+                transition-shadow duration-150
+                ${isBack ? 'piece-back-pattern' : ''}
+                ${isSelected ? 'ring-2 ring-amber-300/70 ring-offset-1 ring-offset-wood-600/30' : ''}
+                cursor-pointer touch-manipulation
+                ${isBack
+                    ? 'bg-gradient-to-br from-wood-700/80 to-wood-900/90 border border-wood-600/40 shadow-piece'
+                    : isRed
+                        ? 'bg-gradient-to-br from-red-400 to-red-700 border border-red-300/50 text-white shadow-piece'
+                        : 'bg-gradient-to-br from-stone-500 to-stone-800 border border-stone-400/40 text-white shadow-piece'
+                }` }
+                style = {
+                    {
+                        fontSize: faceUp ? 'clamp(0.75rem, 2.6vw, 1.7rem)' : '0',
+                        color: faceUp ? (isRed ? '#fff8f0' : '#f0f0f0') : 'transparent',
+                        textShadow: faceUp ? (isRed ? '0 2px 8px rgba(80,0,0,0.5)' : '0 2px 8px rgba(0,0,0,0.6)') :
+                            'none',
+                    }
+                }
+                initial = { isBack ? { rotateY: 90, scale: 0.85 } : { scale: 0.85 } }
+                animate = { isBack ? { rotateY: 0, scale: 1 } : { scale: 1 } }
+                transition = { { type: 'spring', stiffness: 350, damping: 28, mass: 0.6 } }
+                whileHover = { { scale: 1.04, y: -2 } }
+                whileTap = { { scale: 0.94, y: 1 } }
+                onClick = { onClick } >
+                { faceUp ? name : '' } <
+                /motion.div>
+            );
+        });
+
+        const Cell = React.memo(({ row, col, piece, isHighlight, highlightType, isSelected, onCellClick, layoutId,
+                index }) => {
+            const handleClick = () => onCellClick(row, col);
+            let highlightClass = '';
+            if (isHighlight) highlightClass = highlightType === 'capture' ? 'cell-highlight-capture' :
+            'cell-highlight-move';
+            return ( <
+                motion.div className = {
+                    `relative aspect-square rounded-md
+                bg-gradient-to-br from-wood-300/60 to-wood-400/50
+                border border-wood-500/25
+                flex items-center justify-center
+                transition-colors duration-150
+                ${highlightClass}
+                ${piece ? 'cursor-pointer' : 'cursor-default'}` }
+                initial = { { opacity: 0, scale: 0.92 } }
+                animate = { { opacity: 1, scale: 1 } }
+                transition = { { delay: index * 0.012, type: 'spring', stiffness: 400, damping: 30 } }
+                whileHover = { { scale: piece ? 1.02 : 1 } }
+                onClick = { handleClick } >
+                {
+                    piece && ( <
+                        Piece piece = { piece }
+                        isSelected = { isSelected }
+                        onClick = { handleClick }
+                        layoutId = { layoutId }
+                        />
+                    )
+                } <
+                /motion.div>
+            );
+        });
+
+        // ----- 主 App -----
+        function App() {
+            const [board, setBoard] = React.useState(() => createInitialBoard());
+            const [turn, setTurn] = React.useState('red');
+            const [selectedPos, setSelectedPos] = React.useState(null);
+            const [highlightCells, setHighlightCells] = React.useState([]);
+            const [gameOver, setGameOver] = React.useState(false);
+            const [statusMsg, setStatusMsg] = React.useState('點擊暗棋翻牌 · 紅方先手');
+            const boardRef = React.useRef(board);
+
+            React.useEffect(() => { boardRef.current = board; }, [board]);
+
+            const checkWinCondition = React.useCallback((newBoard, movedColor) => {
+                let redGeneral = false,
+                    blackGeneral = false;
+                for (let r = 0; r < 4; r++)
+                    for (let c = 0; c < 8; c++) {
+                        const p = newBoard[r]?.[c];
+                        if (p && p.faceUp && p.rank === 1) {
+                            if (p.color === 'red') redGeneral = true;
+                            else blackGeneral = true;
+                        }
+                    }
+                if (!redGeneral) { setGameOver(true);
+                    setStatusMsg('🏆 黑方勝利！吃掉紅方主帥'); return true; }
+                if (!blackGeneral) { setGameOver(true);
+                    setStatusMsg('🏆 紅方勝利！吃掉黑方主帥'); return true; }
+                const { redAlive, blackAlive } = checkTotalEliminate(newBoard);
+                if (!redAlive) { setGameOver(true);
+                    setStatusMsg('🏆 黑方勝利！全殲所有紅棋'); return true; }
+                if (!blackAlive) { setGameOver(true);
+                    setStatusMsg('🏆 紅方勝利！全殲所有黑棋'); return true; }
+                return false;
+            }, []);
+
+            const executeMove = React.useCallback((fromRow, fromCol, toRow, toCol) => {
+                if (gameOver) return;
+                const newBoard = cloneBoard(board);
+                const attacker = newBoard[fromRow][fromCol];
+                newBoard[toRow][toCol] = attacker;
+                newBoard[fromRow][fromCol] = null;
+                if (checkWinCondition(newBoard, attacker.color)) {
+                    setBoard(newBoard);
+                    setSelectedPos(null);
+                    setHighlightCells([]);
+                    return;
+                }
+                const nextTurn = turn === 'red' ? 'black' : 'red';
+                setBoard(newBoard);
+                setTurn(nextTurn);
+                setSelectedPos(null);
+                setHighlightCells([]);
+                setStatusMsg(`${nextTurn === 'red' ? '紅' : '黑'}方回合`);
+            }, [board, turn, gameOver, checkWinCondition]);
+
+            const handleCellClick = React.useCallback((row, col) => {
+                if (gameOver) { setStatusMsg('遊戲已結束，請按「新局」重新開始'); return; }
+                const piece = board[row]?.[col];
+                if (selectedPos) {
+                    const hit = highlightCells.find(h => h.row === row && h.col === col);
+                    if (hit) { executeMove(selectedPos.row, selectedPos.col, row, col); return; }
+                    setSelectedPos(null);
+                    setHighlightCells([]);
+                    if (piece && piece.faceUp && piece.color === turn) {
+                        const moves = generateMoves(board, row, col);
+                        setSelectedPos({ row, col });
+                        setHighlightCells(moves);
+                        setStatusMsg(`已選取 ${getPieceName(piece.color, piece.rank)}`);
+                    } else setStatusMsg(`${turn === 'red' ? '紅' : '黑'}方回合`);
+                    return;
+                }
+                if (!piece) { setStatusMsg('此處無棋子'); return; }
+                if (!piece.faceUp) {
+                    const newBoard = cloneBoard(board);
+                    newBoard[row][col] = { ...piece, faceUp: true };
+                    setBoard(newBoard);
+                    const nextTurn = turn === 'red' ? 'black' : 'red';
+                    setTurn(nextTurn);
+                    setStatusMsg(`${nextTurn === 'red' ? '紅' : '黑'}方回合`);
+                    return;
+                }
+                if (piece.color === turn) {
+                    const moves = generateMoves(board, row, col);
+                    setSelectedPos({ row, col });
+                    setHighlightCells(moves);
+                    setStatusMsg(`已選取 ${getPieceName(piece.color, piece.rank)}`);
+                } else setStatusMsg(`現在輪到${turn === 'red' ? '紅' : '黑'}方操作`);
+            }, [board, turn, gameOver, selectedPos, highlightCells, executeMove]);
+
+            const handleRestart = React.useCallback(() => {
+                setBoard(createInitialBoard());
+                setTurn('red');
+                setSelectedPos(null);
+                setHighlightCells([]);
+                setGameOver(false);
+                setStatusMsg('點擊暗棋翻牌 · 紅方先手');
+            }, []);
+
+            const turnLabel = turn === 'red' ? '紅方' : '黑方';
+            const turnColor = turn === 'red' ? 'bg-red-500' : 'bg-stone-600';
+
+            const renderBoard = () => {
+                const cells = [];
+                for (let r = 0; r < 4; r++)
+                    for (let c = 0; c < 8; c++) {
+                        const piece = board[r]?.[c];
+                        const isHighlight = highlightCells.some(h => h.row === r && h.col === c);
+                        const highlightType = highlightCells.find(h => h.row === r && h.col === c)?.type || 'move';
+                        const isSelected = selectedPos && selectedPos.row === r && selectedPos.col === c;
+                        const layoutId = piece ? `piece-${piece.id}` : null;
+                        cells.push( <
+                            Cell key = { `${r}-${c}` }
+                            row = { r }
+                            col = { c }
+                            piece = { piece }
+                            isHighlight = { isHighlight }
+                            highlightType = { highlightType }
+                            isSelected = { isSelected }
+                            onCellClick = { handleCellClick }
+                            layoutId = { layoutId }
+                            index = { r * 8 + c }
+                            />
+                        );
+                    }
+                return cells;
+            };
+
+            return ( <
+                    div className = "w-full h-full flex items-center justify-center p-3 sm:p-4" >
+                    <
+                    div className = "w-full max-w-[520px] flex flex-col" >
+                    <
+                    div className = "flex items-center justify-between mb-2 sm:mb-3 px-1" >
+                    <
+                    span className = "text-wood-300/80 text-xs sm:text-sm font-medium tracking-wider" > ♟ 暗棋 < /span> <
+                    div className = "flex items-center gap-2 text-xs sm:text-sm text-wood-300/70" >
+                    <
+                    span > { turnLabel } < /span> <
+                    div className = { `w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full ${turnColor} t            box-shadow: inset 0 0 0 2px rgba(230, 120, 120, 0.6), 0 0 24px rgba(230, 120, 120, 0.2);
         }
 
         /* 暗棋背面花紋 */

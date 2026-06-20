@@ -42,7 +42,7 @@
             pointer-events: none;
         }
 
-        @media (orientation: landscape) and (max-height: 480px) {
+        @media (orientation: landscape) and (max-height: 600px) {
             .landscape-hint { display: flex !important; }
         }
         .landscape-hint {
@@ -119,8 +119,10 @@
             return attackerRank <= defenderRank;
         }
 
+        // 创建完整棋盘（32颗棋子随机排列，全部 faceUp: false）
         function createInitialBoard() {
             const pieces = [];
+            // 红方16颗
             pieces.push({ id: 'r1', color: 'red', rank: 1 });
             for (let i = 0; i < 2; i++) pieces.push({ id: `r2-${i}`, color: 'red', rank: 2 });
             for (let i = 0; i < 2; i++) pieces.push({ id: `r3-${i}`, color: 'red', rank: 3 });
@@ -128,6 +130,7 @@
             for (let i = 0; i < 2; i++) pieces.push({ id: `r5-${i}`, color: 'red', rank: 5 });
             for (let i = 0; i < 2; i++) pieces.push({ id: `r6-${i}`, color: 'red', rank: 6 });
             for (let i = 0; i < 5; i++) pieces.push({ id: `r7-${i}`, color: 'red', rank: 7 });
+            // 黑方16颗
             pieces.push({ id: 'b1', color: 'black', rank: 1 });
             for (let i = 0; i < 2; i++) pieces.push({ id: `b2-${i}`, color: 'black', rank: 2 });
             for (let i = 0; i < 2; i++) pieces.push({ id: `b3-${i}`, color: 'black', rank: 3 });
@@ -136,6 +139,7 @@
             for (let i = 0; i < 2; i++) pieces.push({ id: `b6-${i}`, color: 'black', rank: 6 });
             for (let i = 0; i < 5; i++) pieces.push({ id: `b7-${i}`, color: 'black', rank: 7 });
 
+            // 洗牌
             for (let i = pieces.length - 1; i > 0; i--) {
                 const j = Math.floor(Math.random() * (i + 1));
                 [pieces[i], pieces[j]] = [pieces[j], pieces[i]];
@@ -153,21 +157,25 @@
             return board;
         }
 
+        // ----- 核心：生成合法走法 -----
         function generateMoves(board, row, col) {
             const piece = board[row]?.[col];
             if (!piece || !piece.faceUp) return [];
             const moves = [];
             const color = piece.color;
             const rank = piece.rank;
-            const isCannon = rank === 6;
+            const isCannon = rank === 6; // 炮/砲
             const dirs = [[-1,0],[1,0],[0,-1],[0,1]];
 
             for (const [dr, dc] of dirs) {
                 if (isCannon) {
+                    // 炮：移动只能走相邻一格
                     const nr = row + dr, nc = col + dc;
                     if (nr >= 0 && nr <= 3 && nc >= 0 && nc <= 7 && !board[nr][nc]) {
                         moves.push({ row: nr, col: nc, type: 'move' });
                     }
+                    // 炮：吃子需隔一个棋子（炮架），炮架可以是任意棋子（不论是否翻开）
+                    // 从炮出发，沿方向扫描，找到第一个棋子作为炮架，继续找第二个棋子作为目标
                     let tr = row + dr, tc = col + dc;
                     let blockFound = false;
                     while (tr >= 0 && tr <= 3 && tc >= 0 && tc <= 7) {
@@ -177,16 +185,20 @@
                             continue;
                         }
                         if (!blockFound) {
+                            // 第一个棋子（炮架），无论是否翻开
                             blockFound = true;
                             tr += dr; tc += dc;
                             continue;
                         }
+                        // 第二个棋子，必须是敌方且已翻开
                         if (target.faceUp && target.color !== color) {
                             moves.push({ row: tr, col: tc, type: 'capture' });
                         }
+                        // 不管是否能吃，找到第二个棋子后停止
                         break;
                     }
                 } else {
+                    // 非炮：只能走相邻一格
                     const nr = row + dr, nc = col + dc;
                     if (nr < 0 || nr > 3 || nc < 0 || nc > 7) continue;
                     const target = board[nr][nc];
@@ -216,7 +228,7 @@
             return board.map(row => row.map(cell => cell ? { ...cell } : null));
         }
 
-        // ---- 子组件 ----
+        // ---- 子组件（不使用 LayoutGroup 和 layoutId，使用固定 key） ----
         const Piece = memo(({ piece, isSelected, onClick }) => {
             if (!piece) return null;
             const { color, rank, faceUp } = piece;
@@ -270,6 +282,7 @@
             const [winner, setWinner] = useState(null);
             const [statusMsg, setStatusMsg] = useState('點擊任意暗棋翻牌決定先手');
 
+            // 强制竖屏
             useEffect(() => {
                 try {
                     if (screen.orientation && screen.orientation.lock) {
@@ -278,12 +291,13 @@
                 } catch (e) {}
             }, []);
 
+            // 胜利判定
             const checkWinCondition = useCallback((newBoard) => {
                 let redGeneral = false, blackGeneral = false;
                 for (let r = 0; r < 4; r++) {
                     for (let c = 0; c < 8; c++) {
                         const p = newBoard[r][c];
-                        if (p && p.rank === 1) {
+                        if (p && p.faceUp && p.rank === 1) {
                             if (p.color === 'red') redGeneral = true;
                             else blackGeneral = true;
                         }
@@ -313,6 +327,7 @@
                 return false;
             }, []);
 
+            // 执行移动
             const executeMove = useCallback((fromRow, fromCol, toRow, toCol) => {
                 if (gameOver) return;
                 const newBoard = cloneBoard(board);
@@ -333,6 +348,7 @@
                 setStatusMsg(`${nextTurn === 'red' ? '紅' : '黑'}方回合`);
             }, [board, currentTurn, gameOver, checkWinCondition]);
 
+            // 点击格子
             const handleCellClick = useCallback((row, col) => {
                 if (gameOver) {
                     setStatusMsg('遊戲已結束，請按「新局」重新開始');
@@ -340,6 +356,7 @@
                 }
                 const piece = board[row][col];
 
+                // 先手未决定
                 if (currentTurn === null) {
                     if (piece && !piece.faceUp) {
                         const newBoard = cloneBoard(board);
@@ -356,6 +373,7 @@
                     return;
                 }
 
+                // 已有选中棋子
                 if (selectedPos) {
                     const hit = highlightCells.find(h => h.row === row && h.col === col);
                     if (hit) {
@@ -375,6 +393,7 @@
                     return;
                 }
 
+                // 无选中棋子
                 if (!piece) {
                     setStatusMsg('此處無棋子');
                     return;
@@ -398,6 +417,7 @@
                 }
             }, [board, currentTurn, gameOver, selectedPos, highlightCells, executeMove]);
 
+            // 【核心修复】新局：强制生成全新棋盘，并打印日志
             const handleRestart = useCallback(() => {
                 const newBoard = createInitialBoard();
                 setBoard(newBoard);
@@ -408,8 +428,13 @@
                 setGameOver(false);
                 setWinner(null);
                 setStatusMsg('點擊任意暗棋翻牌決定先手');
+                // 调试：输出棋子总数
+                const total = newBoard.flat().filter(p => p !== null).length;
+                console.log('新局棋盘棋子总数:', total, '（应为32）');
+                if (total !== 32) console.warn('棋子数量异常！');
             }, []);
 
+            // 渲染棋盘
             const renderBoard = () => {
                 const cells = [];
                 for (let r = 0; r < 4; r++) {
@@ -418,6 +443,7 @@
                         const isHighlight = highlightCells.some(h => h.row === r && h.col === c);
                         const highlightType = highlightCells.find(h => h.row === r && h.col === c)?.type || 'move';
                         const isSelected = selectedPos && selectedPos.row === r && selectedPos.col === c;
+                        // 每个格子使用固定 key，棋子没有 layoutId
                         cells.push(html`<${Cell} key=${`cell-${r}-${c}`} row=${r} col=${c} piece=${piece} isHighlight=${isHighlight} highlightType=${highlightType} isSelected=${isSelected} onCellClick=${handleCellClick} index=${r*8+c} />`);
                     }
                 }

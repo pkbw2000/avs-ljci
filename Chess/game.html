@@ -3,13 +3,7 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
-    <meta name="apple-mobile-web-app-capable" content="yes" />
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-    <meta name="theme-color" content="#1a120e" />
-    <title>暗棋 · 極簡 PWA</title>
-    <link rel="manifest" href="./manifest.json" />
-    <link rel="apple-touch-icon" href="https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/265f.png" />
-    
+    <title>暗棋 · 極簡</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
         tailwind.config = {
@@ -30,13 +24,8 @@
         }
     </script>
     <style>
-        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; outline: none; }
-        html, body { 
-            margin: 0; padding: 0; height: 100%; overflow: hidden; 
-            font-family: 'Inter', system-ui, sans-serif; background: #1a120e; 
-            touch-action: none; /* 全面阻斷 iOS PWA 瀏覽器視窗彈性橡皮筋回彈 */
-            -webkit-user-select: none; user-select: none;
-        }
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        html, body { margin: 0; padding: 0; height: 100%; overflow: hidden; font-family: 'Inter', system-ui, sans-serif; background: #1a120e; touch-action: manipulation; }
         #root { height: 100%; display: flex; align-items: center; justify-content: center; background: radial-gradient(ellipse at 50% 30%, #2d1e14, #120c08); }
 
         .cell-highlight-move { box-shadow: inset 0 0 0 2px rgba(120,200,120,0.6), 0 0 24px rgba(120,200,120,0.2); }
@@ -91,11 +80,10 @@
     <div id="root"></div>
 
     <script type="module">
-        // 採用支援跨平台的官方 ESM 靜態導入口，確保庫加載順序
-        import React, { useState, useEffect, useCallback, useRef, memo } from 'https://esm.sh/react@18.2.0';
-        import ReactDOM from 'https://esm.sh/react-dom@18.2.0';
-        import { motion, AnimatePresence } from 'https://esm.sh/framer-motion@10.16.4';
-        import htm from 'https://esm.sh/htm@3.1.1';
+        import React, { useState, useEffect, useCallback, useRef, memo } from 'https://cdn.jsdelivr.net/npm/react@18.2.0/+esm';
+        import ReactDOM from 'https://cdn.jsdelivr.net/npm/react-dom@18.2.0/+esm';
+        import { motion, AnimatePresence } from 'https://cdn.jsdelivr.net/npm/framer-motion@10.16.4/+esm';
+        import htm from 'https://cdn.jsdelivr.net/npm/htm@3.1.1/+esm';
 
         const html = htm.bind(React.createElement);
 
@@ -103,7 +91,324 @@
         const NAMES = { red: ['', '帥', '仕', '相', '俥', '傌', '炮', '兵'], black: ['', '將', '士', '象', '車', '馬', '砲', '卒'] };
         function getPieceName(color, rank) { return NAMES[color]?.[rank] || '?'; }
 
+        // 吃棋階級判定規則
         function canCapture(attackerRank, defenderRank) {
+            if (attackerRank === 1 && defenderRank === 7) return false;
+            if (attackerRank === 7) {
+                return defenderRank === 1 || defenderRank === 7;
+            }
+            return attackerRank <= defenderRank;
+        }
+
+        function createInitialBoard() {
+            const pieces = [];
+            pieces.push({ id: 'r1', color: 'red', rank: 1 });
+            for (let i = 0; i < 2; i++) pieces.push({ id: `r2-${i}`, color: 'red', rank: 2 });
+            for (let i = 0; i < 2; i++) pieces.push({ id: `r3-${i}`, color: 'red', rank: 3 });
+            for (let i = 0; i < 2; i++) pieces.push({ id: `r4-${i}`, color: 'red', rank: 4 });
+            for (let i = 0; i < 2; i++) pieces.push({ id: `r5-${i}`, color: 'red', rank: 5 });
+            for (let i = 0; i < 2; i++) pieces.push({ id: `r6-${i}`, color: 'red', rank: 6 });
+            for (let i = 0; i < 5; i++) pieces.push({ id: `r7-${i}`, color: 'red', rank: 7 });
+            pieces.push({ id: 'b1', color: 'black', rank: 1 });
+            for (let i = 0; i < 2; i++) pieces.push({ id: `b2-${i}`, color: 'black', rank: 2 });
+            for (let i = 0; i < 2; i++) pieces.push({ id: `b3-${i}`, color: 'black', rank: 3 });
+            for (let i = 0; i < 2; i++) pieces.push({ id: `b4-${i}`, color: 'black', rank: 4 });
+            for (let i = 0; i < 2; i++) pieces.push({ id: `b5-${i}`, color: 'black', rank: 5 });
+            for (let i = 0; i < 2; i++) pieces.push({ id: `b6-${i}`, color: 'black', rank: 6 });
+            for (let i = 0; i < 5; i++) pieces.push({ id: `b7-${i}`, color: 'black', rank: 7 });
+
+            for (let i = pieces.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [pieces[i], pieces[j]] = [pieces[j], pieces[i]];
+            }
+
+            const board = [];
+            let idx = 0;
+            for (let r = 0; r < 4; r++) {
+                const row = [];
+                for (let c = 0; c < 8; c++) {
+                    row.push({ ...pieces[idx++], faceUp: false });
+                }
+                board.push(row);
+            }
+            return board;
+        }
+
+        function generateMoves(board, row, col) {
+            const piece = board[row]?.[col];
+            if (!piece || !piece.faceUp) return [];
+            const moves = [];
+            const color = piece.color;
+            const rank = piece.rank;
+            const isCannon = rank === 6;
+            const dirs = [[-1,0],[1,0],[0,-1],[0,1]];
+
+            for (const [dr, dc] of dirs) {
+                if (isCannon) {
+                    const nr = row + dr, nc = col + dc;
+                    if (nr >= 0 && nr <= 3 && nc >= 0 && nc <= 7 && !board[nr][nc]) {
+                        moves.push({ row: nr, col: nc, type: 'move' });
+                    }
+                    let tr = row + dr, tc = col + dc;
+                    let blockFound = false;
+                    while (tr >= 0 && tr <= 3 && tc >= 0 && tc <= 7) {
+                        const target = board[tr][tc];
+                        if (!target) {
+                            tr += dr; tc += dc;
+                            continue;
+                        }
+                        if (!blockFound) {
+                            blockFound = true;
+                            tr += dr; tc += dc;
+                            continue;
+                        }
+                        if (target.faceUp && target.color !== color) {
+                            moves.push({ row: tr, col: tc, type: 'capture' });
+                        }
+                        break;
+                    }
+                } else {
+                    const nr = row + dr, nc = col + dc;
+                    if (nr < 0 || nr > 3 || nc < 0 || nc > 7) continue;
+                    const target = board[nr][nc];
+                    if (!target) {
+                        moves.push({ row: nr, col: nc, type: 'move' });
+                    } else if (target.faceUp && target.color !== color && canCapture(rank, target.rank)) {
+                        moves.push({ row: nr, col: nc, type: 'capture' });
+                    }
+                }
+            }
+            return moves;
+        }
+
+        function checkTotalEliminate(board) {
+            let redCount = 0, blackCount = 0;
+            for (let r = 0; r < 4; r++) {
+                for (let c = 0; c < 8; c++) {
+                    if (board[r][c]) {
+                        if (board[r][c].color === 'red') redCount++; else blackCount++;
+                    }
+                }
+            }
+            return { redAlive: redCount > 0, blackAlive: blackCount > 0 };
+        }
+
+        function cloneBoard(board) {
+            return board.map(row => row.map(cell => cell ? { ...cell } : null));
+        }
+
+        // ---- 子組件 ----
+        const Piece = memo(({ piece, isSelected, onClick }) => {
+            if (!piece) return null;
+            const { color, rank, faceUp } = piece;
+            const isRed = color === 'red';
+            const name = faceUp ? getPieceName(color, rank) : '';
+            const isBack = !faceUp;
+            const className = `relative w-full h-full rounded-full flex items-center justify-center font-extrabold transition-shadow duration-150 ${isBack ? 'piece-back-pattern' : ''} ${isSelected ? 'ring-4 ring-amber-400 ring-offset-2 ring-offset-wood-900/40' : ''} cursor-pointer touch-manipulation ${isBack ? 'bg-gradient-to-br from-wood-700/90 to-wood-900/95 border border-wood-600/40 shadow-piece' : isRed ? 'bg-gradient-to-br from-red-400 to-red-700 border border-red-300/50 text-white shadow-piece' : 'bg-gradient-to-br from-stone-500 to-stone-800 border border-stone-400/40 text-white shadow-piece'}`;
+            const style = {
+                fontSize: faceUp ? 'clamp(1.1rem, 5.5vw, 2.2rem)' : '0',
+                color: faceUp ? (isRed ? '#fff8f0' : '#f0f0f0') : 'transparent',
+                textShadow: faceUp ? (isRed ? '0 2px 8px rgba(80,0,0,0.5)' : '0 2px 8px rgba(0,0,0,0.6)') : 'none',
+            };
+            return html`
+                <${motion.div} className=${className} style=${style}
+                    initial=${{ scale: 0.85 }}
+                    animate=${{ scale: 1 }}
+                    transition=${{ type: 'spring', stiffness: 350, damping: 28, mass: 0.6 }}
+                    whileTap=${{ scale: 0.94 }}
+                    onClick=${onClick}>
+                    ${faceUp ? name : ''}
+                <//>
+            `;
+        });
+
+        const Cell = memo(({ row, col, piece, isHighlight, highlightType, isSelected, onCellClick, index }) => {
+            const handleClick = () => onCellClick(row, col);
+            let highlightClass = '';
+            if (isHighlight) highlightClass = highlightType === 'capture' ? 'cell-highlight-capture' : 'cell-highlight-move';
+            const className = `relative aspect-square rounded-xl cell-bg border border-wood-500/30 flex items-center justify-center transition-colors duration-150 ${highlightClass} ${piece ? 'cursor-pointer' : 'cursor-default'}`;
+            return html`
+                <${motion.div} className=${className}
+                    initial=${{ opacity: 0, scale: 0.92 }}
+                    animate=${{ opacity: 1, scale: 1 }}
+                    transition=${{ delay: index * 0.006, type: 'spring', stiffness: 400, damping: 30 }}
+                    onClick=${handleClick}>
+                    ${piece && html`<${Piece} piece=${piece} isSelected=${isSelected} onClick=${handleClick} />`}
+                <//>
+            `;
+        });
+
+        // ---- 主 App ----
+        function App() {
+            const [board, setBoard] = useState(() => createInitialBoard());
+            const [currentTurn, setCurrentTurn] = useState(null);
+            const [playerColor, setPlayerColor] = useState(null);
+            const [selectedPos, setSelectedPos] = useState(null);
+            const [highlightCells, setHighlightCells] = useState([]);
+            const [gameOver, setGameOver] = useState(false);
+            const [winner, setWinner] = useState(null);
+            const [gameMode, setGameMode] = useState('pvp');
+            const [aiColor, setAiColor] = useState(null);
+
+            const hasValidMoves = useCallback((boardState, targetColor) => {
+                let hasUnrevealed = false;
+                let totalPossibleMoves = 0;
+
+                for (let r = 0; r < 4; r++) {
+                    for (let c = 0; c < 8; c++) {
+                        const p = boardState[r][c];
+                        if (!p) continue;
+                        if (!p.faceUp) {
+                            hasUnrevealed = true;
+                            continue;
+                        }
+                        if (p.color === targetColor) {
+                            const moves = generateMoves(boardState, r, c);
+                            totalPossibleMoves += moves.length;
+                        }
+                    }
+                }
+                return hasUnrevealed || totalPossibleMoves > 0;
+            }, []);
+
+            const checkWinCondition = useCallback((newBoard, nextTurn) => {
+                let redGeneral = false, blackGeneral = false;
+                for (let r = 0; r < 4; r++) {
+                    for (let c = 0; c < 8; c++) {
+                        const p = newBoard[r][c];
+                        if (p && p.rank === 1) {
+                            if (p.color === 'red') redGeneral = true;
+                            else blackGeneral = true;
+                        }
+                    }
+                }
+                if (!redGeneral) { setGameOver(true); setWinner('black'); return true; }
+                if (!blackGeneral) { setGameOver(true); setWinner('red'); return true; }
+                
+                const { redAlive, blackAlive } = checkTotalEliminate(newBoard);
+                if (!redAlive) { setGameOver(true); setWinner('black'); return true; }
+                if (!blackAlive) { setGameOver(true); setWinner('red'); return true; }
+
+                if (nextTurn && !hasValidMoves(newBoard, nextTurn)) {
+                    const opponent = nextTurn === 'red' ? 'black' : 'red';
+                    setGameOver(true);
+                    setWinner(opponent);
+                    return true;
+                }
+
+                return false;
+            }, [hasValidMoves]);
+
+            const executeMove = useCallback((fromRow, fromCol, toRow, toCol) => {
+                if (gameOver) return;
+                const newBoard = cloneBoard(board);
+                const attacker = newBoard[fromRow][fromCol];
+                newBoard[toRow][toCol] = attacker;
+                newBoard[fromRow][fromCol] = null;
+                
+                const nextTurn = currentTurn === 'red' ? 'black' : 'red';
+                
+                if (checkWinCondition(newBoard, nextTurn)) {
+                    setBoard(newBoard);
+                    setSelectedPos(null);
+                    setHighlightCells([]);
+                    return;
+                }
+                
+                setBoard(newBoard);
+                setCurrentTurn(nextTurn);
+                setSelectedPos(null);
+                setHighlightCells([]);
+            }, [board, currentTurn, gameOver, checkWinCondition]);
+
+            // AI 自動決策與護帥逃生模組
+            useEffect(() => {
+                if (gameOver || gameMode !== 'ai' || currentTurn === null || !aiColor || currentTurn !== aiColor) return;
+
+                const timer = setTimeout(() => {
+                    let generalPos = null;
+                    const enemyThreats = []; // 正在威脅我方主帥的敵子列表
+                    const availableCaptures = [];
+                    const availableMoves = [];
+                    const unrevealedPieces = [];
+
+                    // 1. 尋找我方主帥位置與收集盤面基本行動資訊
+                    for (let r = 0; r < 4; r++) {
+                        for (let c = 0; c < 8; c++) {
+                            const p = board[r][c];
+                            if (!p) continue;
+                            if (!p.faceUp) {
+                                unrevealedPieces.push({ row: r, col: c });
+                                continue;
+                            }
+                            if (p.color === aiColor) {
+                                if (p.rank === 1) generalPos = { row: r, col: c };
+                                
+                                const moves = generateMoves(board, r, c);
+                                moves.forEach(m => {
+                                    if (m.type === 'capture') {
+                                        availableCaptures.push({ from: { row: r, col: c }, to: m });
+                                    } else {
+                                        availableMoves.push({ from: { row: r, col: c }, to: m });
+                                    }
+                                });
+                            }
+                        }
+                    }
+
+                    // 2. 檢測我方主帥是否身處險境
+                    if (generalPos) {
+                        for (let r = 0; r < 4; r++) {
+                            for (let c = 0; c < 8; c++) {
+                                const p = board[r][c];
+                                if (p && p.faceUp && p.color !== aiColor) {
+                                    const eMoves = generateMoves(board, r, c);
+                                    const canHitGeneral = eMoves.some(m => m.row === generalPos.row && m.col === generalPos.col && m.type === 'capture');
+                                    if (canHitGeneral) {
+                                        enemyThreats.push({ row: r, col: c, rank: p.rank });
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    // 3. 【最高防禦指令】主帥遇襲時的緊急逃生決策
+                    if (enemyThreats.length > 0 && generalPos) {
+                        // 解法 A：檢查是否有棋子能反擊直接吃掉威脅主帥的敵子（擒賊先擒王）
+                        const counterCaptures = availableCaptures.filter(cap => 
+                            enemyThreats.some(threat => cap.to.row === threat.row && cap.to.col === threat.col)
+                        );
+                        if (counterCaptures.length > 0) {
+                            const choice = counterCaptures[Math.floor(Math.random() * counterCaptures.length)];
+                            executeMove(choice.from.row, choice.from.col, choice.to.row, choice.to.col);
+                            return;
+                        }
+
+                        // 解法 B：主帥親自移形換位（逃跑）
+                        const generalMoves = generateMoves(board, generalPos.row, generalPos.col);
+                        const safeGeneralMoves = [];
+
+                        generalMoves.forEach(gm => {
+                            // 模擬走位後的全新盤面
+                            const simBoard = cloneBoard(board);
+                            simBoard[gm.row][gm.col] = simBoard[generalPos.row][generalPos.col];
+                            simBoard[generalPos.row][generalPos.col] = null;
+
+                            // 檢查走過去後是否仍會被任何敵棋攻擊
+                            let stillThreatened = false;
+                            for (let r = 0; r < 4; r++) {
+                                for (let c = 0; c < 8; c++) {
+                                    const p = simBoard[r][c];
+                                    if (p && p.faceUp && p.color !== aiColor) {
+                                        const eMoves = generateMoves(simBoard, r, c);
+                                        if (eMoves.some(m => m.row === gm.row && m.col === gm.col && m.type === 'capture')) {
+                                            stillThreatened = true;
+                                        }
+                                    }
+                                }
+                            }
+                            if (!stillThreatened) {
+                                safeGener        function canCapture(attackerRank, defenderRank) {
             if (attackerRank === 1 && defenderRank === 7) return false;
             if (attackerRank === 7) {
                 return defenderRank === 1 || defenderRank === 7;

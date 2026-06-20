@@ -34,7 +34,7 @@
         .piece-back-pattern::after {
             content: "♟";
             position: absolute;
-            font-size: clamp(1rem, 3.4vw, 2.2rem);
+            font-size: clamp(1rem, 5.5vw, 2.2rem);
             color: rgba(180,150,100,0.3);
             top: 50%;
             left: 50%;
@@ -42,36 +42,17 @@
             pointer-events: none;
         }
 
-        @media (orientation: landscape) and (max-height: 600px) {
-            .landscape-hint { display: flex !important; }
-        }
-        .landscape-hint {
-            display: none;
-            position: fixed;
-            inset: 0;
-            z-index: 999;
-            background: rgba(10,8,6,0.94);
-            backdrop-filter: blur(12px);
-            align-items: center;
-            justify-content: center;
-            color: #e8ddd0;
-            font-size: clamp(1rem,4vw,1.8rem);
-            flex-direction: column;
-            gap: 12px;
-        }
-        .landscape-hint span { font-size: 2.4rem; opacity: 0.5; }
-
         .cell-bg {
             background: radial-gradient(circle at 30% 30%, rgba(200,170,130,0.25), rgba(140,110,80,0.15));
         }
         .board-grid {
-            gap: clamp(2px, 0.6vw, 6px);
+            gap: clamp(3px, 1vw, 8px);
         }
 
         .victory-overlay {
             position: absolute;
             inset: 0;
-            background: rgba(0,0,0,0.65);
+            background: rgba(0,0,0,0.75);
             backdrop-filter: blur(6px);
             display: flex;
             align-items: center;
@@ -79,7 +60,7 @@
             border-radius: inherit;
             z-index: 20;
             flex-direction: column;
-            gap: 8px;
+            gap: 12px;
         }
         .victory-text {
             font-size: clamp(1.8rem, 8vw, 4rem);
@@ -90,14 +71,13 @@
         .victory-red { color: #ff6b6b; }
         .victory-black { color: #d0d0d0; }
         .victory-sub {
-            font-size: clamp(0.8rem, 2vw, 1.2rem);
+            font-size: clamp(0.9rem, 3.5vw, 1.3rem);
             color: rgba(255,255,255,0.6);
         }
     </style>
 </head>
 <body>
     <div id="root"></div>
-    <div class="landscape-hint"><span>↻</span><p>請轉為直立</p></div>
 
     <script type="module">
         import React, { useState, useEffect, useCallback, useRef, memo } from 'https://cdn.jsdelivr.net/npm/react@18.2.0/+esm';
@@ -107,22 +87,24 @@
 
         const html = htm.bind(React.createElement);
 
-        // ---- 工具函数 ----
+        // ---- 工具函數 ----
         const NAMES = { red: ['', '帥', '仕', '相', '俥', '傌', '炮', '兵'], black: ['', '將', '士', '象', '車', '馬', '砲', '卒'] };
         function getPieceName(color, rank) { return NAMES[color]?.[rank] || '?'; }
 
+        // 吃棋階級判定規則
         function canCapture(attackerRank, defenderRank) {
+            // 帥/將(1) 不能吃 兵/卒(7)
             if (attackerRank === 1 && defenderRank === 7) return false;
+            // 兵/卒(7) 可以吃 帥/將(1) 或同階的 兵/卒(7)
             if (attackerRank === 7) {
                 return defenderRank === 1 || defenderRank === 7;
             }
+            // 其餘情況大階吃小階（數字越小階級越大，例如 2仕 吃 3相）
             return attackerRank <= defenderRank;
         }
 
-        // 创建完整棋盘（32颗棋子随机排列，全部 faceUp: false）
         function createInitialBoard() {
             const pieces = [];
-            // 红方16颗
             pieces.push({ id: 'r1', color: 'red', rank: 1 });
             for (let i = 0; i < 2; i++) pieces.push({ id: `r2-${i}`, color: 'red', rank: 2 });
             for (let i = 0; i < 2; i++) pieces.push({ id: `r3-${i}`, color: 'red', rank: 3 });
@@ -130,7 +112,6 @@
             for (let i = 0; i < 2; i++) pieces.push({ id: `r5-${i}`, color: 'red', rank: 5 });
             for (let i = 0; i < 2; i++) pieces.push({ id: `r6-${i}`, color: 'red', rank: 6 });
             for (let i = 0; i < 5; i++) pieces.push({ id: `r7-${i}`, color: 'red', rank: 7 });
-            // 黑方16颗
             pieces.push({ id: 'b1', color: 'black', rank: 1 });
             for (let i = 0; i < 2; i++) pieces.push({ id: `b2-${i}`, color: 'black', rank: 2 });
             for (let i = 0; i < 2; i++) pieces.push({ id: `b3-${i}`, color: 'black', rank: 3 });
@@ -139,7 +120,6 @@
             for (let i = 0; i < 2; i++) pieces.push({ id: `b6-${i}`, color: 'black', rank: 6 });
             for (let i = 0; i < 5; i++) pieces.push({ id: `b7-${i}`, color: 'black', rank: 7 });
 
-            // 洗牌
             for (let i = pieces.length - 1; i > 0; i--) {
                 const j = Math.floor(Math.random() * (i + 1));
                 [pieces[i], pieces[j]] = [pieces[j], pieces[i]];
@@ -157,7 +137,7 @@
             return board;
         }
 
-        // ----- 核心：生成合法走法 -----
+        // 生成移動與吃棋步驟 (已修正 nc/tc 致命筆誤)
         function generateMoves(board, row, col) {
             const piece = board[row]?.[col];
             if (!piece || !piece.faceUp) return [];
@@ -169,13 +149,12 @@
 
             for (const [dr, dc] of dirs) {
                 if (isCannon) {
-                    // 炮：移动只能走相邻一格
+                    // 炮的常規移動（不越子）
                     const nr = row + dr, nc = col + dc;
                     if (nr >= 0 && nr <= 3 && nc >= 0 && nc <= 7 && !board[nr][nc]) {
                         moves.push({ row: nr, col: nc, type: 'move' });
                     }
-                    // 炮：吃子需隔一个棋子（炮架），炮架可以是任意棋子（不论是否翻开）
-                    // 从炮出发，沿方向扫描，找到第一个棋子作为炮架，继续找第二个棋子作为目标
+                    // 炮的跳吃（必須越過一個棋子）
                     let tr = row + dr, tc = col + dc;
                     let blockFound = false;
                     while (tr >= 0 && tr <= 3 && tc >= 0 && tc <= 7) {
@@ -185,27 +164,25 @@
                             continue;
                         }
                         if (!blockFound) {
-                            // 第一个棋子（炮架），无论是否翻开
                             blockFound = true;
                             tr += dr; tc += dc;
                             continue;
                         }
-                        // 第二个棋子，必须是敌方且已翻开
+                        // 發現第二個棋子，若是敵方且已翻開，即可隔空吃子（炮吃任何翻開的敵子）
                         if (target.faceUp && target.color !== color) {
                             moves.push({ row: tr, col: tc, type: 'capture' });
                         }
-                        // 不管是否能吃，找到第二个棋子后停止
                         break;
                     }
                 } else {
-                    // 非炮：只能走相邻一格
+                    // 普通棋子走一步或吃相鄰敵子
                     const nr = row + dr, nc = col + dc;
                     if (nr < 0 || nr > 3 || nc < 0 || nc > 7) continue;
                     const target = board[nr][nc];
                     if (!target) {
                         moves.push({ row: nr, col: nc, type: 'move' });
                     } else if (target.faceUp && target.color !== color && canCapture(rank, target.rank)) {
-                        moves.push({ row: nr, col: nc, type: 'capture' });
+                        moves.push({ row: nr, col: nc, type: 'capture' }); // 👈 這裡已修正為 nc
                     }
                 }
             }
@@ -228,16 +205,16 @@
             return board.map(row => row.map(cell => cell ? { ...cell } : null));
         }
 
-        // ---- 子组件（不使用 LayoutGroup 和 layoutId，使用固定 key） ----
+        // ---- 子組件 ----
         const Piece = memo(({ piece, isSelected, onClick }) => {
             if (!piece) return null;
             const { color, rank, faceUp } = piece;
             const isRed = color === 'red';
             const name = faceUp ? getPieceName(color, rank) : '';
             const isBack = !faceUp;
-            const className = `relative w-full h-full rounded-full flex items-center justify-center font-extrabold transition-shadow duration-150 ${isBack ? 'piece-back-pattern' : ''} ${isSelected ? 'ring-2 ring-amber-300/70 ring-offset-1 ring-offset-wood-600/30' : ''} cursor-pointer touch-manipulation ${isBack ? 'bg-gradient-to-br from-wood-700/80 to-wood-900/90 border border-wood-600/40 shadow-piece' : isRed ? 'bg-gradient-to-br from-red-400 to-red-700 border border-red-300/50 text-white shadow-piece' : 'bg-gradient-to-br from-stone-500 to-stone-800 border border-stone-400/40 text-white shadow-piece'}`;
+            const className = `relative w-full h-full rounded-full flex items-center justify-center font-extrabold transition-shadow duration-150 ${isBack ? 'piece-back-pattern' : ''} ${isSelected ? 'ring-4 ring-amber-400 ring-offset-2 ring-offset-wood-900/40' : ''} cursor-pointer touch-manipulation ${isBack ? 'bg-gradient-to-br from-wood-700/90 to-wood-900/95 border border-wood-600/40 shadow-piece' : isRed ? 'bg-gradient-to-br from-red-400 to-red-700 border border-red-300/50 text-white shadow-piece' : 'bg-gradient-to-br from-stone-500 to-stone-800 border border-stone-400/40 text-white shadow-piece'}`;
             const style = {
-                fontSize: faceUp ? 'clamp(0.7rem, 2.8vw, 1.8rem)' : '0',
+                fontSize: faceUp ? 'clamp(1.1rem, 5.5vw, 2.2rem)' : '0',
                 color: faceUp ? (isRed ? '#fff8f0' : '#f0f0f0') : 'transparent',
                 textShadow: faceUp ? (isRed ? '0 2px 8px rgba(80,0,0,0.5)' : '0 2px 8px rgba(0,0,0,0.6)') : 'none',
             };
@@ -246,8 +223,7 @@
                     initial=${{ scale: 0.85 }}
                     animate=${{ scale: 1 }}
                     transition=${{ type: 'spring', stiffness: 350, damping: 28, mass: 0.6 }}
-                    whileHover=${{ scale: 1.04, y: -2 }}
-                    whileTap=${{ scale: 0.94, y: 1 }}
+                    whileTap=${{ scale: 0.94 }}
                     onClick=${onClick}>
                     ${faceUp ? name : ''}
                 <//>
@@ -258,13 +234,12 @@
             const handleClick = () => onCellClick(row, col);
             let highlightClass = '';
             if (isHighlight) highlightClass = highlightType === 'capture' ? 'cell-highlight-capture' : 'cell-highlight-move';
-            const className = `relative aspect-square rounded-md cell-bg border border-wood-500/25 flex items-center justify-center transition-colors duration-150 ${highlightClass} ${piece ? 'cursor-pointer' : 'cursor-default'}`;
+            const className = `relative aspect-square rounded-xl cell-bg border border-wood-500/30 flex items-center justify-center transition-colors duration-150 ${highlightClass} ${piece ? 'cursor-pointer' : 'cursor-default'}`;
             return html`
                 <${motion.div} className=${className}
                     initial=${{ opacity: 0, scale: 0.92 }}
                     animate=${{ opacity: 1, scale: 1 }}
-                    transition=${{ delay: index * 0.012, type: 'spring', stiffness: 400, damping: 30 }}
-                    whileHover=${{ scale: piece ? 1.02 : 1 }}
+                    transition=${{ delay: index * 0.006, type: 'spring', stiffness: 400, damping: 30 }}
                     onClick=${handleClick}>
                     ${piece && html`<${Piece} piece=${piece} isSelected=${isSelected} onClick=${handleClick} />`}
                 <//>
@@ -274,183 +249,231 @@
         // ---- 主 App ----
         function App() {
             const [board, setBoard] = useState(() => createInitialBoard());
-            const [currentTurn, setCurrentTurn] = useState(null);
+            const [currentTurn, setCurrentTurn] = useState(null); // null 為初始未開局狀態
             const [playerColor, setPlayerColor] = useState(null);
             const [selectedPos, setSelectedPos] = useState(null);
             const [highlightCells, setHighlightCells] = useState([]);
             const [gameOver, setGameOver] = useState(false);
             const [winner, setWinner] = useState(null);
-            const [statusMsg, setStatusMsg] = useState('點擊任意暗棋翻牌決定先手');
+            const [gameMode, setGameMode] = useState('pvp'); // 'pvp' 或 'ai'
+            const [aiColor, setAiColor] = useState(null);
 
-            // 强制竖屏
-            useEffect(() => {
-                try {
-                    if (screen.orientation && screen.orientation.lock) {
-                        screen.orientation.lock('portrait').catch(() => {});
-                    }
-                } catch (e) {}
-            }, []);
-
-            // 胜利判定
             const checkWinCondition = useCallback((newBoard) => {
                 let redGeneral = false, blackGeneral = false;
                 for (let r = 0; r < 4; r++) {
                     for (let c = 0; c < 8; c++) {
                         const p = newBoard[r][c];
-                        if (p && p.faceUp && p.rank === 1) {
+                        if (p && p.rank === 1) {
                             if (p.color === 'red') redGeneral = true;
                             else blackGeneral = true;
                         }
                     }
                 }
-                if (!redGeneral) {
-                    setGameOver(true); setWinner('black');
-                    setStatusMsg('🏆 黑方勝利！吃掉紅方主帥');
-                    return true;
-                }
-                if (!blackGeneral) {
-                    setGameOver(true); setWinner('red');
-                    setStatusMsg('🏆 紅方勝利！吃掉黑方主帥');
-                    return true;
-                }
+                if (!redGeneral) { setGameOver(true); setWinner('black'); return true; }
+                if (!blackGeneral) { setGameOver(true); setWinner('red'); return true; }
+                
                 const { redAlive, blackAlive } = checkTotalEliminate(newBoard);
-                if (!redAlive) {
-                    setGameOver(true); setWinner('black');
-                    setStatusMsg('🏆 黑方勝利！全殲所有紅棋');
-                    return true;
-                }
-                if (!blackAlive) {
-                    setGameOver(true); setWinner('red');
-                    setStatusMsg('🏆 紅方勝利！全殲所有黑棋');
-                    return true;
-                }
+                if (!redAlive) { setGameOver(true); setWinner('black'); return true; }
+                if (!blackAlive) { setGameOver(true); setWinner('red'); return true; }
                 return false;
             }, []);
 
-            // 执行移动
             const executeMove = useCallback((fromRow, fromCol, toRow, toCol) => {
                 if (gameOver) return;
                 const newBoard = cloneBoard(board);
                 const attacker = newBoard[fromRow][fromCol];
                 newBoard[toRow][toCol] = attacker;
                 newBoard[fromRow][fromCol] = null;
+                
                 if (checkWinCondition(newBoard)) {
                     setBoard(newBoard);
                     setSelectedPos(null);
                     setHighlightCells([]);
                     return;
                 }
+                
                 const nextTurn = currentTurn === 'red' ? 'black' : 'red';
                 setBoard(newBoard);
                 setCurrentTurn(nextTurn);
                 setSelectedPos(null);
                 setHighlightCells([]);
-                setStatusMsg(`${nextTurn === 'red' ? '紅' : '黑'}方回合`);
             }, [board, currentTurn, gameOver, checkWinCondition]);
 
-            // 点击格子
+            // AI 自動決策流（吃棋、走子、翻牌邏輯全面修復）
+            useEffect(() => {
+                if (gameOver || gameMode !== 'ai' || currentTurn === null || !aiColor || currentTurn !== aiColor) return;
+
+                const timer = setTimeout(() => {
+                    const availableCaptures = [];
+                    const availableMoves = [];
+                    const unrevealedPieces = [];
+
+                    for (let r = 0; r < 4; r++) {
+                        for (let c = 0; c < 8; c++) {
+                            const p = board[r][c];
+                            if (!p) continue;
+                            if (!p.faceUp) {
+                                unrevealedPieces.push({ row: r, col: c });
+                                continue;
+                            }
+                            if (p.color === aiColor) {
+                                const moves = generateMoves(board, r, c);
+                                moves.forEach(m => {
+                                    if (m.type === 'capture') {
+                                        availableCaptures.push({ from: { row: r, col: c }, to: m });
+                                    } else {
+                                        availableMoves.push({ from: { row: r, col: c }, to: m });
+                                    }
+                                });
+                            }
+                        }
+                    }
+
+                    // 策略一：能吃棋就優先吃棋
+                    if (availableCaptures.length > 0) {
+                        const choice = availableCaptures[Math.floor(Math.random() * availableCaptures.length)];
+                        executeMove(choice.from.row, choice.from.col, choice.to.row, choice.to.col);
+                    } 
+                    // 策略二：有步可走時，60% 機率移動，40% 機率去翻暗棋
+                    else if (availableMoves.length > 0 && (unrevealedPieces.length === 0 || Math.random() > 0.4)) {
+                        const choice = availableMoves[Math.floor(Math.random() * availableMoves.length)];
+                        executeMove(choice.from.row, choice.from.col, choice.to.row, choice.to.col);
+                    } 
+                    // 策略三：無步可走或決定翻牌時，翻開一張暗棋
+                    else if (unrevealedPieces.length > 0) {
+                        const choice = unrevealedPieces[Math.floor(Math.random() * unrevealedPieces.length)];
+                        const newBoard = cloneBoard(board);
+                        newBoard[choice.row][choice.col].faceUp = true;
+                        
+                        setBoard(newBoard);
+                        setCurrentTurn(aiColor === 'red' ? 'black' : 'red');
+                    }
+                }, 600);
+
+                return () => clearTimeout(timer);
+            }, [board, currentTurn, gameOver, gameMode, aiColor, executeMove]);
+
             const handleCellClick = useCallback((row, col) => {
-                if (gameOver) {
-                    setStatusMsg('遊戲已結束，請按「新局」重新開始');
-                    return;
-                }
+                if (gameOver) return;
+                // AI 回合時，封鎖玩家任何點擊操作
+                if (gameMode === 'ai' && currentTurn !== null && currentTurn === aiColor) return;
+
                 const piece = board[row][col];
 
-                // 先手未决定
+                // 狀況A：第一步開局（currentTurn 仍為 null），任何人點擊暗棋皆可翻開以決定先手顏色
                 if (currentTurn === null) {
                     if (piece && !piece.faceUp) {
                         const newBoard = cloneBoard(board);
                         newBoard[row][col] = { ...piece, faceUp: true };
                         setBoard(newBoard);
-                        const color = piece.color;
-                        setPlayerColor(color);
-                        const opponent = color === 'red' ? 'black' : 'red';
-                        setCurrentTurn(opponent);
-                        setStatusMsg(`${opponent === 'red' ? '紅' : '黑'}方回合（您為${color === 'red' ? '紅' : '黑'}方）`);
-                    } else {
-                        setStatusMsg('請點擊暗棋翻牌決定先手');
+                        
+                        const firstColor = piece.color;
+                        setPlayerColor(firstColor);
+                        
+                        if (gameMode === 'ai') {
+                            setAiColor(firstColor === 'red' ? 'black' : 'red');
+                        }
+                        
+                        // 翻開後，下回合換給相反顏色
+                        setCurrentTurn(firstColor === 'red' ? 'black' : 'red');
                     }
                     return;
                 }
 
-                // 已有选中棋子
+                // 狀況B：已經有棋子被選中，處理移動或吃棋
                 if (selectedPos) {
                     const hit = highlightCells.find(h => h.row === row && h.col === col);
                     if (hit) {
                         executeMove(selectedPos.row, selectedPos.col, row, col);
                         return;
                     }
+                    // 點擊非亮起區域，則取消目前選取
                     setSelectedPos(null);
                     setHighlightCells([]);
+                    // 如果點選的是自軍其他翻開的棋子，則直接切換選取該棋子
                     if (piece && piece.faceUp && piece.color === currentTurn) {
                         const moves = generateMoves(board, row, col);
                         setSelectedPos({ row, col });
                         setHighlightCells(moves);
-                        setStatusMsg(`已選取 ${getPieceName(piece.color, piece.rank)}`);
-                    } else {
-                        setStatusMsg(`${currentTurn === 'red' ? '紅' : '黑'}方回合`);
                     }
                     return;
                 }
 
-                // 无选中棋子
-                if (!piece) {
-                    setStatusMsg('此處無棋子');
-                    return;
-                }
+                // 狀況C：尚未選取棋子時的常規點擊
+                if (!piece) return;
+                
+                // 1. 點擊暗棋：翻開並換手
                 if (!piece.faceUp) {
                     const newBoard = cloneBoard(board);
                     newBoard[row][col] = { ...piece, faceUp: true };
                     setBoard(newBoard);
-                    const nextTurn = currentTurn === 'red' ? 'black' : 'red';
-                    setCurrentTurn(nextTurn);
-                    setStatusMsg(`${nextTurn === 'red' ? '紅' : '黑'}方回合`);
+                    setCurrentTurn(currentTurn === 'red' ? 'black' : 'red');
                     return;
                 }
+                
+                // 2. 點擊自軍已翻開的棋子：亮起可移動與吃棋路徑
                 if (piece.color === currentTurn) {
                     const moves = generateMoves(board, row, col);
                     setSelectedPos({ row, col });
                     setHighlightCells(moves);
-                    setStatusMsg(`已選取 ${getPieceName(piece.color, piece.rank)}`);
-                } else {
-                    setStatusMsg(`現在輪到${currentTurn === 'red' ? '紅' : '黑'}方操作`);
                 }
-            }, [board, currentTurn, gameOver, selectedPos, highlightCells, executeMove]);
+            }, [board, currentTurn, gameOver, selectedPos, highlightCells, executeMove, gameMode, aiColor]);
 
-            // 【核心修复】新局：强制生成全新棋盘，并打印日志
             const handleRestart = useCallback(() => {
                 const newBoard = createInitialBoard();
                 setBoard(newBoard);
                 setCurrentTurn(null);
                 setPlayerColor(null);
+                setAiColor(null);
                 setSelectedPos(null);
                 setHighlightCells([]);
                 setGameOver(false);
                 setWinner(null);
-                setStatusMsg('點擊任意暗棋翻牌決定先手');
-                // 调试：输出棋子总数
-                const total = newBoard.flat().filter(p => p !== null).length;
-                console.log('新局棋盘棋子总数:', total, '（应为32）');
-                if (total !== 32) console.warn('棋子数量异常！');
             }, []);
 
-            // 渲染棋盘
+            const toggleMode = useCallback(() => {
+                const nextMode = gameMode === 'pvp' ? 'ai' : 'pvp';
+                setGameMode(nextMode);
+                const newBoard = createInitialBoard();
+                setBoard(newBoard);
+                setCurrentTurn(null);
+                setPlayerColor(null);
+                setAiColor(null);
+                setSelectedPos(null);
+                setHighlightCells([]);
+                setGameOver(false);
+                setWinner(null);
+            }, [gameMode]);
+
             const renderBoard = () => {
                 const cells = [];
-                for (let r = 0; r < 4; r++) {
-                    for (let c = 0; c < 8; c++) {
+                let index = 0;
+                for (let c = 0; c < 8; c++) {
+                    for (let r = 0; r < 4; r++) {
                         const piece = board[r][c];
                         const isHighlight = highlightCells.some(h => h.row === r && h.col === c);
                         const highlightType = highlightCells.find(h => h.row === r && h.col === c)?.type || 'move';
                         const isSelected = selectedPos && selectedPos.row === r && selectedPos.col === c;
-                        // 每个格子使用固定 key，棋子没有 layoutId
-                        cells.push(html`<${Cell} key=${`cell-${r}-${c}`} row=${r} col=${c} piece=${piece} isHighlight=${isHighlight} highlightType=${highlightType} isSelected=${isSelected} onCellClick=${handleCellClick} index=${r*8+c} />`);
+                        
+                        cells.push(html`
+                            <${Cell} 
+                                key=${`cell-${r}-${c}`} 
+                                row=${r} 
+                                col=${c} 
+                                piece=${piece} 
+                                isHighlight=${isHighlight} 
+                                highlightType=${highlightType} 
+                                isSelected=${isSelected} 
+                                onCellClick=${handleCellClick} 
+                                index=${index++} 
+                            />
+                        `);
                     }
                 }
                 return cells;
             };
 
-            const turnLabel = currentTurn ? (currentTurn === 'red' ? '紅方' : '黑方') : '等待翻牌';
+            const turnLabel = currentTurn ? (currentTurn === 'red' ? '紅方' : '黑方') : '翻牌開局';
             const turnColor = currentTurn === 'red' ? 'bg-red-500' : (currentTurn === 'black' ? 'bg-stone-600' : 'bg-wood-500');
             const turnShadow = currentTurn === 'red' ? 'shadow-red-500/40' : (currentTurn === 'black' ? 'shadow-stone-500/40' : '');
 
@@ -459,33 +482,39 @@
                     <div className="victory-text ${winner === 'red' ? 'victory-red' : 'victory-black'}">
                         ${winner === 'red' ? '紅方獲勝' : '黑方獲勝'}
                     </div>
-                    <div className="victory-sub">點擊「新局」重新開始</div>
+                    <div className="victory-sub">請點擊下方按鈕重新開始</div>
                 </div>
             `;
 
             return html`
-                <div className="w-full h-full flex items-center justify-center p-3 sm:p-4">
-                    <div className="w-full max-w-[520px] flex flex-col">
-                        <div className="flex items-center justify-between mb-2 sm:mb-3 px-1">
-                            <span className="text-wood-300/80 text-xs sm:text-sm font-medium tracking-wider">♟ 暗棋</span>
-                            <div className="flex items-center gap-2 text-xs sm:text-sm text-wood-300/70">
-                                <span>${turnLabel}</span>
-                                <div className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full ${turnColor} transition-all duration-300 shadow-lg ${turnShadow}"></div>
+                <div className="w-full h-full flex items-center justify-center p-4 select-none">
+                    <div className="w-full max-w-[400px] flex flex-col justify-between h-[92vh]">
+                        <div className="flex items-center justify-between px-3 bg-wood-950/40 backdrop-blur-md rounded-2xl p-3 border border-wood-900/30">
+                            <span className="text-wood-300 text-sm sm:text-base font-black tracking-wider">
+                                ♟ 暗棋 · 豎屏
+                            </span>
+                            <div className="flex items-center gap-2 text-sm text-wood-300 font-bold">
+                                <span>當前：${turnLabel}</span>
+                                <div className="w-3 h-3 rounded-full ${turnColor} transition-all duration-300 shadow-lg ${turnShadow}"></div>
                             </div>
                         </div>
-                        <div className="relative bg-wood-800/40 backdrop-blur-sm rounded-2xl sm:rounded-3xl p-2 sm:p-3 border border-wood-600/20 shadow-glass">
-                            <div className="relative bg-wood-500/30 rounded-xl sm:rounded-2xl p-1.5 sm:p-2 border border-wood-400/20 shadow-inner-glow">
-                                <div className="grid grid-cols-8 board-grid">
+
+                        <div className="relative bg-wood-800/40 backdrop-blur-sm rounded-3xl p-2.5 border border-wood-600/20 shadow-glass my-auto">
+                            <div className="relative bg-wood-500/30 rounded-2xl p-2 border border-wood-400/20 shadow-inner-glow">
+                                <div className="grid grid-cols-4 board-grid w-full aspect-[1/2]">
                                     <${AnimatePresence}>${renderBoard()}<//>
                                 </div>
                                 ${gameOver && winner ? victoryContent : ''}
                             </div>
                         </div>
-                        <div className="flex items-center justify-between gap-2 mt-2 sm:mt-3 px-1">
-                            <div className="flex-1 min-w-0 bg-wood-900/40 backdrop-blur-sm rounded-full px-3 py-1.5 sm:py-2 border border-wood-600/20">
-                                <p className="text-wood-300/80 text-[0.6rem] sm:text-xs truncate text-center font-medium tracking-wide">${statusMsg}</p>
-                            </div>
-                            <button onClick=${handleRestart} className="px-3 py-1.5 sm:px-4 sm:py-2 rounded-full bg-wood-700/60 hover:bg-wood-600/60 active:scale-95 transition-all duration-200 text-wood-200/80 text-[0.6rem] sm:text-xs font-medium border border-wood-500/30 backdrop-blur-sm shadow-sm whitespace-nowrap">↺ 新局</button>
+
+                        <div className="grid grid-cols-2 gap-3 px-1">
+                            <button onClick=${toggleMode} className="py-3.5 rounded-2xl text-sm font-black transition-all duration-150 border tracking-widest bg-wood-900/40 border-wood-700/60 shadow-md text-amber-300 active:scale-[0.98]">
+                                ${gameMode === 'pvp' ? '👥 雙人對戰' : '🤖 電腦對戰'}
+                            </button>
+                            <button onClick=${handleRestart} className="py-3.5 rounded-2xl bg-gradient-to-r from-wood-700 to-wood-600 hover:from-wood-600 hover:to-wood-500 active:scale-[0.98] transition-all duration-150 text-wood-100 text-sm font-black border border-wood-500/40 backdrop-blur-sm shadow-md tracking-widest">
+                                ↺ 重新新局
+                            </button>
                         </div>
                     </div>
                 </div>

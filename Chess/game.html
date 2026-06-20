@@ -93,13 +93,10 @@
 
         // 吃棋階級判定規則
         function canCapture(attackerRank, defenderRank) {
-            // 帥/將(1) 不能吃 兵/卒(7)
             if (attackerRank === 1 && defenderRank === 7) return false;
-            // 兵/卒(7) 可以吃 帥/將(1) 或同階的 兵/卒(7)
             if (attackerRank === 7) {
                 return defenderRank === 1 || defenderRank === 7;
             }
-            // 其餘情況大階吃小階（數字越小階級越大，例如 2仕 吃 3相）
             return attackerRank <= defenderRank;
         }
 
@@ -137,24 +134,21 @@
             return board;
         }
 
-        // 生成移動與吃棋步驟 (已修正 nc/tc 致命筆誤)
         function generateMoves(board, row, col) {
             const piece = board[row]?.[col];
             if (!piece || !piece.faceUp) return [];
             const moves = [];
             const color = piece.color;
             const rank = piece.rank;
-            const isCannon = rank === 6; // 炮/砲
+            const isCannon = rank === 6;
             const dirs = [[-1,0],[1,0],[0,-1],[0,1]];
 
             for (const [dr, dc] of dirs) {
                 if (isCannon) {
-                    // 炮的常規移動（不越子）
                     const nr = row + dr, nc = col + dc;
                     if (nr >= 0 && nr <= 3 && nc >= 0 && nc <= 7 && !board[nr][nc]) {
                         moves.push({ row: nr, col: nc, type: 'move' });
                     }
-                    // 炮的跳吃（必須越過一個棋子）
                     let tr = row + dr, tc = col + dc;
                     let blockFound = false;
                     while (tr >= 0 && tr <= 3 && tc >= 0 && tc <= 7) {
@@ -168,21 +162,19 @@
                             tr += dr; tc += dc;
                             continue;
                         }
-                        // 發現第二個棋子，若是敵方且已翻開，即可隔空吃子（炮吃任何翻開的敵子）
                         if (target.faceUp && target.color !== color) {
                             moves.push({ row: tr, col: tc, type: 'capture' });
                         }
                         break;
                     }
                 } else {
-                    // 普通棋子走一步或吃相鄰敵子
                     const nr = row + dr, nc = col + dc;
                     if (nr < 0 || nr > 3 || nc < 0 || nc > 7) continue;
                     const target = board[nr][nc];
                     if (!target) {
                         moves.push({ row: nr, col: nc, type: 'move' });
                     } else if (target.faceUp && target.color !== color && canCapture(rank, target.rank)) {
-                        moves.push({ row: nr, col: nc, type: 'capture' }); // 👈 這裡已修正為 nc
+                        moves.push({ row: nr, col: nc, type: 'capture' });
                     }
                 }
             }
@@ -203,25 +195,6 @@
 
         function cloneBoard(board) {
             return board.map(row => row.map(cell => cell ? { ...cell } : null));
-        }
-
-        // 模擬未來判定：測試特定座標在該擬真盤面上，是否會被敵方翻開的棋子吃掉
-        function isCellThreatened(board, row, col, defenderColor, defenderRank) {
-            const enemyColor = defenderColor === 'red' ? 'black' : 'red';
-            for (let r = 0; r < 4; r++) {
-                for (let c = 0; c < 8; c++) {
-                    const p = board[r][c];
-                    if (p && p.faceUp && p.color === enemyColor) {
-                        const enemyMoves = generateMoves(board, r, c);
-                        const canAttack = enemyMoves.some(m => m.row === row && m.col === col && m.type === 'capture');
-                        if (canAttack) {
-                            if (p.rank === 6) return true; // 炮遠程跳吃威脅
-                            if (canCapture(p.rank, defenderRank)) return true; // 一般大吃小威脅（包括卒吃帥）
-                        }
-                    }
-                }
-            }
-            return false;
         }
 
         // ---- 子組件 ----
@@ -268,16 +241,37 @@
         // ---- 主 App ----
         function App() {
             const [board, setBoard] = useState(() => createInitialBoard());
-            const [currentTurn, setCurrentTurn] = useState(null); // null 為初始未開局狀態
+            const [currentTurn, setCurrentTurn] = useState(null);
             const [playerColor, setPlayerColor] = useState(null);
             const [selectedPos, setSelectedPos] = useState(null);
             const [highlightCells, setHighlightCells] = useState([]);
             const [gameOver, setGameOver] = useState(false);
             const [winner, setWinner] = useState(null);
-            const [gameMode, setGameMode] = useState('pvp'); // 'pvp' 或 'ai'
+            const [gameMode, setGameMode] = useState('pvp');
             const [aiColor, setAiColor] = useState(null);
 
-            const checkWinCondition = useCallback((newBoard) => {
+            const hasValidMoves = useCallback((boardState, targetColor) => {
+                let hasUnrevealed = false;
+                let totalPossibleMoves = 0;
+
+                for (let r = 0; r < 4; r++) {
+                    for (let c = 0; c < 8; c++) {
+                        const p = boardState[r][c];
+                        if (!p) continue;
+                        if (!p.faceUp) {
+                            hasUnrevealed = true;
+                            continue;
+                        }
+                        if (p.color === targetColor) {
+                            const moves = generateMoves(boardState, r, c);
+                            totalPossibleMoves += moves.length;
+                        }
+                    }
+                }
+                return hasUnrevealed || totalPossibleMoves > 0;
+            }, []);
+
+            const checkWinCondition = useCallback((newBoard, nextTurn) => {
                 let redGeneral = false, blackGeneral = false;
                 for (let r = 0; r < 4; r++) {
                     for (let c = 0; c < 8; c++) {
@@ -294,8 +288,16 @@
                 const { redAlive, blackAlive } = checkTotalEliminate(newBoard);
                 if (!redAlive) { setGameOver(true); setWinner('black'); return true; }
                 if (!blackAlive) { setGameOver(true); setWinner('red'); return true; }
+
+                if (nextTurn && !hasValidMoves(newBoard, nextTurn)) {
+                    const opponent = nextTurn === 'red' ? 'black' : 'red';
+                    setGameOver(true);
+                    setWinner(opponent);
+                    return true;
+                }
+
                 return false;
-            }, []);
+            }, [hasValidMoves]);
 
             const executeMove = useCallback((fromRow, fromCol, toRow, toCol) => {
                 if (gameOver) return;
@@ -304,31 +306,33 @@
                 newBoard[toRow][toCol] = attacker;
                 newBoard[fromRow][fromCol] = null;
                 
-                if (checkWinCondition(newBoard)) {
+                const nextTurn = currentTurn === 'red' ? 'black' : 'red';
+                
+                if (checkWinCondition(newBoard, nextTurn)) {
                     setBoard(newBoard);
                     setSelectedPos(null);
                     setHighlightCells([]);
                     return;
                 }
                 
-                const nextTurn = currentTurn === 'red' ? 'black' : 'red';
                 setBoard(newBoard);
                 setCurrentTurn(nextTurn);
                 setSelectedPos(null);
                 setHighlightCells([]);
             }, [board, currentTurn, gameOver, checkWinCondition]);
 
-            // AI 自動決策流（吃棋、安全走棋、避免送死翻牌邏輯全面修復）
+            // AI 自動決策與護帥逃生模組
             useEffect(() => {
                 if (gameOver || gameMode !== 'ai' || currentTurn === null || !aiColor || currentTurn !== aiColor) return;
 
                 const timer = setTimeout(() => {
+                    let generalPos = null;
+                    const enemyThreats = []; // 正在威脅我方主帥的敵子列表
                     const availableCaptures = [];
-                    const safeMoves = [];
-                    const unsafeMoves = [];
+                    const availableMoves = [];
                     const unrevealedPieces = [];
 
-                    // 1. 掃描盤面上所有可行移動與暗棋位置
+                    // 1. 尋找我方主帥位置與收集盤面基本行動資訊
                     for (let r = 0; r < 4; r++) {
                         for (let c = 0; c < 8; c++) {
                             const p = board[r][c];
@@ -338,66 +342,118 @@
                                 continue;
                             }
                             if (p.color === aiColor) {
+                                if (p.rank === 1) generalPos = { row: r, col: c };
+                                
                                 const moves = generateMoves(board, r, c);
                                 moves.forEach(m => {
                                     if (m.type === 'capture') {
-                                        availableCaptures.push({ from: { row: r, col: c }, to: m, rank: p.rank });
+                                        availableCaptures.push({ from: { row: r, col: c }, to: m });
                                     } else {
-                                        // 模擬前方走位，判定是否會遭到送死威脅
-                                        const nextBoardSimulation = cloneBoard(board);
-                                        nextBoardSimulation[m.row][m.col] = { ...p };
-                                        nextBoardSimulation[r][c] = null;
-
-                                        if (isCellThreatened(nextBoardSimulation, m.row, m.col, aiColor, p.rank)) {
-                                            unsafeMoves.push({ from: { row: r, col: c }, to: m, rank: p.rank });
-                                        } else {
-                                            safeMoves.push({ from: { row: r, col: c }, to: m, rank: p.rank });
-                                        }
+                                        availableMoves.push({ from: { row: r, col: c }, to: m });
                                     }
                                 });
                             }
                         }
                     }
 
-                    // 2. 智慧防自殺權重樹決策
-                    // 策略一：能吃棋就優先吃棋（最高優先級）
+                    // 2. 檢測我方主帥是否身處險境
+                    if (generalPos) {
+                        for (let r = 0; r < 4; r++) {
+                            for (let c = 0; c < 8; c++) {
+                                const p = board[r][c];
+                                if (p && p.faceUp && p.color !== aiColor) {
+                                    const eMoves = generateMoves(board, r, c);
+                                    const canHitGeneral = eMoves.some(m => m.row === generalPos.row && m.col === generalPos.col && m.type === 'capture');
+                                    if (canHitGeneral) {
+                                        enemyThreats.push({ row: r, col: c, rank: p.rank });
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    // 3. 【最高防禦指令】主帥遇襲時的緊急逃生決策
+                    if (enemyThreats.length > 0 && generalPos) {
+                        // 解法 A：檢查是否有棋子能反擊直接吃掉威脅主帥的敵子（擒賊先擒王）
+                        const counterCaptures = availableCaptures.filter(cap => 
+                            enemyThreats.some(threat => cap.to.row === threat.row && cap.to.col === threat.col)
+                        );
+                        if (counterCaptures.length > 0) {
+                            const choice = counterCaptures[Math.floor(Math.random() * counterCaptures.length)];
+                            executeMove(choice.from.row, choice.from.col, choice.to.row, choice.to.col);
+                            return;
+                        }
+
+                        // 解法 B：主帥親自移形換位（逃跑）
+                        const generalMoves = generateMoves(board, generalPos.row, generalPos.col);
+                        const safeGeneralMoves = [];
+
+                        generalMoves.forEach(gm => {
+                            // 模擬走位後的全新盤面
+                            const simBoard = cloneBoard(board);
+                            simBoard[gm.row][gm.col] = simBoard[generalPos.row][generalPos.col];
+                            simBoard[generalPos.row][generalPos.col] = null;
+
+                            // 檢查走過去後是否仍會被任何敵棋攻擊
+                            let stillThreatened = false;
+                            for (let r = 0; r < 4; r++) {
+                                for (let c = 0; c < 8; c++) {
+                                    const p = simBoard[r][c];
+                                    if (p && p.faceUp && p.color !== aiColor) {
+                                        const eMoves = generateMoves(simBoard, r, c);
+                                        if (eMoves.some(m => m.row === gm.row && m.col === gm.col && m.type === 'capture')) {
+                                            stillThreatened = true;
+                                        }
+                                    }
+                                }
+                            }
+                            if (!stillThreatened) {
+                                safeGeneralMoves.push(gm);
+                            }
+                        });
+
+                        // 如果有安全路徑，立刻挪動主帥逃跑！
+                        if (safeGeneralMoves.length > 0) {
+                            const choice = safeGeneralMoves[Math.floor(Math.random() * safeGeneralMoves.length)];
+                            executeMove(generalPos.row, generalPos.col, choice.row, choice.col);
+                            return;
+                        }
+                    }
+
+                    // 4. 常規智慧權重決策流（若主帥安全，或主帥已被困死無法自救時執行）
                     if (availableCaptures.length > 0) {
                         const choice = availableCaptures[Math.floor(Math.random() * availableCaptures.length)];
                         executeMove(choice.from.row, choice.from.col, choice.to.row, choice.to.col);
                     } 
-                    // 策略二：無子可吃時，優先選擇走「不會送死」的安全路徑
-                    else if (safeMoves.length > 0 && (unrevealedPieces.length === 0 || Math.random() > 0.4)) {
-                        const choice = safeMoves[Math.floor(Math.random() * safeMoves.length)];
+                    else if (availableMoves.length > 0 && (unrevealedPieces.length === 0 || Math.random() > 0.4)) {
+                        const choice = availableMoves[Math.floor(Math.random() * availableMoves.length)];
                         executeMove(choice.from.row, choice.from.col, choice.to.row, choice.to.col);
                     } 
-                    // 策略三：如果沒有絕對安全的格子可走，或者隨機權重觸發，則主動翻一張暗棋（避免無效送分）
                     else if (unrevealedPieces.length > 0) {
                         const choice = unrevealedPieces[Math.floor(Math.random() * unrevealedPieces.length)];
                         const newBoard = cloneBoard(board);
                         newBoard[choice.row][choice.col].faceUp = true;
                         
+                        const nextTurn = aiColor === 'red' ? 'black' : 'red';
+                        if (checkWinCondition(newBoard, nextTurn)) {
+                            setBoard(newBoard);
+                            return;
+                        }
+
                         setBoard(newBoard);
-                        setCurrentTurn(aiColor === 'red' ? 'black' : 'red');
-                    }
-                    // 策略四：逼不得已（無暗棋、所有步法均會送死），才執行不安全移動，但會保護高階主帥，丟棄低階棋子
-                    else if (unsafeMoves.length > 0) {
-                        unsafeMoves.sort((a, b) => b.rank - a.rank); // 數字越大階級越低，讓低階棋子（如兵卒）替帥承擔風險
-                        const choice = unsafeMoves[0];
-                        executeMove(choice.from.row, choice.from.col, choice.to.row, choice.to.col);
+                        setCurrentTurn(nextTurn);
                     }
                 }, 600);
 
                 return () => clearTimeout(timer);
-            }, [board, currentTurn, gameOver, gameMode, aiColor, executeMove]);
+            }, [board, currentTurn, gameOver, gameMode, aiColor, executeMove, checkWinCondition]);
 
             const handleCellClick = useCallback((row, col) => {
                 if (gameOver) return;
-                // AI 回合時，封鎖玩家任何點擊操作
                 if (gameMode === 'ai' && currentTurn !== null && currentTurn === aiColor) return;
 
                 const piece = board[row][col];
 
-                // 狀況A：第一步開局（currentTurn 仍為 null），任何人點擊暗棋皆可翻開以決定先手顏色
                 if (currentTurn === null) {
                     if (piece && !piece.faceUp) {
                         const newBoard = cloneBoard(board);
@@ -411,23 +467,19 @@
                             setAiColor(firstColor === 'red' ? 'black' : 'red');
                         }
                         
-                        // 翻開後，下回合換給相反顏色
                         setCurrentTurn(firstColor === 'red' ? 'black' : 'red');
                     }
                     return;
                 }
 
-                // 狀況B：已經有棋子被選中，處理移動或吃棋
                 if (selectedPos) {
                     const hit = highlightCells.find(h => h.row === row && h.col === col);
                     if (hit) {
                         executeMove(selectedPos.row, selectedPos.col, row, col);
                         return;
                     }
-                    // 點擊非亮起區域，則取消目前選取
                     setSelectedPos(null);
                     setHighlightCells([]);
-                    // 如果點選的是自軍其他翻開的棋子，則直接切換選取該棋子
                     if (piece && piece.faceUp && piece.color === currentTurn) {
                         const moves = generateMoves(board, row, col);
                         setSelectedPos({ row, col });
@@ -436,25 +488,29 @@
                     return;
                 }
 
-                // 狀況C：尚未選取棋子時的常規點擊
                 if (!piece) return;
                 
-                // 1. 點擊暗棋：翻開並換手
                 if (!piece.faceUp) {
                     const newBoard = cloneBoard(board);
                     newBoard[row][col] = { ...piece, faceUp: true };
+                    
+                    const nextTurn = currentTurn === 'red' ? 'black' : 'red';
+                    if (checkWinCondition(newBoard, nextTurn)) {
+                        setBoard(newBoard);
+                        return;
+                    }
+
                     setBoard(newBoard);
-                    setCurrentTurn(currentTurn === 'red' ? 'black' : 'red');
+                    setCurrentTurn(nextTurn);
                     return;
                 }
                 
-                // 2. 點擊自軍已翻開的棋子：亮起可移動與吃棋路徑
                 if (piece.color === currentTurn) {
                     const moves = generateMoves(board, row, col);
                     setSelectedPos({ row, col });
                     setHighlightCells(moves);
                 }
-            }, [board, currentTurn, gameOver, selectedPos, highlightCells, executeMove, gameMode, aiColor]);
+            }, [board, currentTurn, gameOver, selectedPos, highlightCells, executeMove, gameMode, aiColor, checkWinCondition]);
 
             const handleRestart = useCallback(() => {
                 const newBoard = createInitialBoard();
@@ -519,6 +575,7 @@
                     <div className="victory-text ${winner === 'red' ? 'victory-red' : 'victory-black'}">
                         ${winner === 'red' ? '紅方獲勝' : '黑方獲勝'}
                     </div>
+                    <div className="victory-sub">因對方已無棋可走（困斃）或被全殲</div>
                     <div className="victory-sub">請點擊下方按鈕重新開始</div>
                 </div>
             `;

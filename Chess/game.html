@@ -98,6 +98,57 @@
 
         const html = htm.bind(React.createElement);
 
+        // ---- 禪風音效解耦控制模組 (SoundManager) ----
+        const SOUNDS = {
+            uiClick: 'https://assets.mixkit.co/active_storage/sfx/2568/2568-84.wav',
+            pieceFlip: 'https://assets.mixkit.co/active_storage/sfx/1110/1110-84.wav',
+            pieceMove: 'https://assets.mixkit.co/active_storage/sfx/1111/1111-84.wav',
+            pieceCapture: 'https://assets.mixkit.co/active_storage/sfx/1653/1653-84.wav',
+            generalThreat: 'https://assets.mixkit.co/active_storage/sfx/923/923-84.wav',
+            gameWin: 'https://assets.mixkit.co/active_storage/sfx/2019/2019-84.wav',
+            bgm: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3'
+        };
+
+        class SoundController {
+            constructor() {
+                this.bgmAudio = null;
+                this.isInitialized = false;
+                this.muted = false;
+            }
+            init() {
+                if (this.isInitialized) return;
+                // 初始化 BGM
+                this.bgmAudio = new Audio(SOUNDS.bgm);
+                this.bgmAudio.loop = true;
+                this.bgmAudio.volume = 0.15; // 舒服的低音量禪意墊音
+                this.isInitialized = true;
+                this.playBGM();
+            }
+            playSFX(type, customVolume = 0.6) {
+                if (this.muted) return;
+                if (!this.isInitialized) this.init();
+                try {
+                    const audio = new Audio(SOUNDS[type]);
+                    audio.volume = customVolume;
+                    audio.play().catch(() => {});
+                } catch (e) { console.log("音效播放失敗", e); }
+            }
+            playBGM() {
+                if (this.muted || !this.bgmAudio) return;
+                this.bgmAudio.play().catch(() => {});
+            }
+            stopBGM() {
+                if (this.bgmAudio) this.bgmAudio.pause();
+            }
+            toggleMute() {
+                this.muted = !this.muted;
+                if (this.muted) this.stopBGM();
+                else this.playBGM();
+                return this.muted;
+            }
+        }
+        const SoundManager = new SoundController();
+
         // ---- 工具函數 ----
         const NAMES = { red: ['', '帥', '仕', '相', '俥', '傌', '炮', '兵'], black: ['', '將', '士', '象', '車', '馬', '砲', '卒'] };
         function getPieceName(color, rank) { return NAMES[color]?.[rank] || '?'; }
@@ -232,7 +283,6 @@
         });
 
         const Cell = memo(({ row, col, piece, isHighlight, highlightType, isSelected, onCellClick, index }) => {
-            // 移動端防多指誤觸與點擊穿透優化
             const handleClick = (e) => {
                 e.preventDefault();
                 onCellClick(row, col);
@@ -263,8 +313,8 @@
             const [winner, setWinner] = useState(null);
             const [gameMode, setGameMode] = useState('pvp');
             const [aiColor, setAiColor] = useState(null);
+            const [isMuted, setIsMuted] = useState(false);
 
-            // 雙方移動空間動態探測模組（困斃判定核心解法）
             const hasValidMoves = useCallback((boardState, targetColor) => {
                 let hasUnrevealed = false;
                 let totalPossibleMoves = 0;
@@ -297,18 +347,18 @@
                         }
                     }
                 }
-                if (!redGeneral) { setGameOver(true); setWinner('black'); return true; }
-                if (!blackGeneral) { setGameOver(true); setWinner('red'); return true; }
+                if (!redGeneral) { setGameOver(true); setWinner('black'); SoundManager.playSFX('gameWin'); return true; }
+                if (!blackGeneral) { setGameOver(true); setWinner('red'); SoundManager.playSFX('gameWin'); return true; }
                 
                 const { redAlive, blackAlive } = checkTotalEliminate(newBoard);
-                if (!redAlive) { setGameOver(true); setWinner('black'); return true; }
-                if (!blackAlive) { setGameOver(true); setWinner('red'); return true; }
+                if (!redAlive) { setGameOver(true); setWinner('black'); SoundManager.playSFX('gameWin'); return true; }
+                if (!blackAlive) { setGameOver(true); setWinner('red'); SoundManager.playSFX('gameWin'); return true; }
 
-                // 困斃判定點：檢測將要執行的下一次回合玩家，是否已經無棋可走
                 if (nextTurn && !hasValidMoves(newBoard, nextTurn)) {
                     const opponent = nextTurn === 'red' ? 'black' : 'red';
                     setGameOver(true);
                     setWinner(opponent);
+                    SoundManager.playSFX('gameWin');
                     return true;
                 }
 
@@ -319,6 +369,15 @@
                 if (gameOver) return;
                 const newBoard = cloneBoard(board);
                 const attacker = newBoard[fromRow][fromCol];
+                
+                // 判定是否為吃子動作
+                const isCaptureAction = !!newBoard[toRow][toCol];
+                if (isCaptureAction) {
+                    SoundManager.playSFX('pieceCapture');
+                } else {
+                    SoundManager.playSFX('pieceMove');
+                }
+
                 newBoard[toRow][toCol] = attacker;
                 newBoard[fromRow][fromCol] = null;
                 
@@ -348,7 +407,6 @@
                     const availableMoves = [];
                     const unrevealedPieces = [];
 
-                    // 1. 基礎盤面數據掃描與收集
                     for (let r = 0; r < 4; r++) {
                         for (let c = 0; c < 8; c++) {
                             const p = board[r][c];
@@ -372,7 +430,6 @@
                         }
                     }
 
-                    // 2. 險境分析：檢查敵軍是否瞄準我方老將
                     if (generalPos) {
                         for (let r = 0; r < 4; r++) {
                             for (let c = 0; c < 8; c++) {
@@ -388,9 +445,10 @@
                         }
                     }
 
-                    // 3. 【最高防禦核心】主帥避險反擊流
                     if (enemyThreats.length > 0 && generalPos) {
-                        // 優先級 A：圍魏救趙 —— 看能否直接消滅帶來威脅的敵子
+                        // 觸發老將受驚/威脅提示音效
+                        SoundManager.playSFX('generalThreat', 0.8);
+
                         const counterCaptures = availableCaptures.filter(cap => 
                             enemyThreats.some(threat => cap.to.row === threat.row && cap.to.col === threat.col)
                         );
@@ -400,7 +458,6 @@
                             return;
                         }
 
-                        // 優先級 B：三十六計 —— 老將親自尋求安全格子逃跑
                         const generalMoves = generateMoves(board, generalPos.row, generalPos.col);
                         const safeGeneralMoves = [];
 
@@ -424,7 +481,6 @@
                             if (!stillThreatened) safeGeneralMoves.push(gm);
                         });
 
-                        // 只要有安全的退路，老將絕不呆立等死
                         if (safeGeneralMoves.length > 0) {
                             const choice = safeGeneralMoves[Math.floor(Math.random() * safeGeneralMoves.length)];
                             executeMove(generalPos.row, generalPos.col, choice.row, choice.col);
@@ -432,7 +488,6 @@
                         }
                     }
 
-                    // 4. 無生命威脅時的常規智慧決策流
                     if (availableCaptures.length > 0) {
                         const choice = availableCaptures[Math.floor(Math.random() * availableCaptures.length)];
                         executeMove(choice.from.row, choice.from.col, choice.to.row, choice.to.col);
@@ -446,6 +501,7 @@
                         const newBoard = cloneBoard(board);
                         newBoard[choice.row][choice.col].faceUp = true;
                         
+                        SoundManager.playSFX('pieceFlip');
                         const nextTurn = aiColor === 'red' ? 'black' : 'red';
                         if (checkWinCondition(newBoard, nextTurn)) {
                             setBoard(newBoard);
@@ -462,6 +518,10 @@
 
             const handleCellClick = useCallback((row, col) => {
                 if (gameOver) return;
+                
+                // 首次與網頁互動時初始化並解鎖 AudioContext 流 (解鎖 iOS/Android 瀏覽器發聲限制)
+                SoundManager.init();
+
                 if (gameMode === 'ai' && currentTurn !== null && currentTurn === aiColor) return;
 
                 const piece = board[row][col];
@@ -470,6 +530,8 @@
                     if (piece && !piece.faceUp) {
                         const newBoard = cloneBoard(board);
                         newBoard[row][col] = { ...piece, faceUp: true };
+                        
+                        SoundManager.playSFX('pieceFlip');
                         setBoard(newBoard);
                         
                         const firstColor = piece.color;
@@ -493,6 +555,7 @@
                     setSelectedPos(null);
                     setHighlightCells([]);
                     if (piece && piece.faceUp && piece.color === currentTurn) {
+                        SoundManager.playSFX('uiClick', 0.4);
                         const moves = generateMoves(board, row, col);
                         setSelectedPos({ row, col });
                         setHighlightCells(moves);
@@ -506,6 +569,7 @@
                     const newBoard = cloneBoard(board);
                     newBoard[row][col] = { ...piece, faceUp: true };
                     
+                    SoundManager.playSFX('pieceFlip');
                     const nextTurn = currentTurn === 'red' ? 'black' : 'red';
                     if (checkWinCondition(newBoard, nextTurn)) {
                         setBoard(newBoard);
@@ -518,6 +582,7 @@
                 }
                 
                 if (piece.color === currentTurn) {
+                    SoundManager.playSFX('uiClick', 0.4);
                     const moves = generateMoves(board, row, col);
                     setSelectedPos({ row, col });
                     setHighlightCells(moves);
@@ -525,6 +590,7 @@
             }, [board, currentTurn, gameOver, selectedPos, highlightCells, executeMove, gameMode, aiColor, checkWinCondition]);
 
             const handleRestart = () => {
+                SoundManager.playSFX('uiClick');
                 const newBoard = createInitialBoard();
                 setBoard(newBoard);
                 setCurrentTurn(null);
@@ -537,9 +603,15 @@
             };
 
             const toggleMode = () => {
+                SoundManager.playSFX('uiClick');
                 const nextMode = gameMode === 'pvp' ? 'ai' : 'pvp';
                 setGameMode(nextMode);
                 handleRestart();
+            };
+
+            const toggleMute = () => {
+                const muted = SoundManager.toggleMute();
+                setIsMuted(muted);
             };
 
             const renderBoard = () => {
@@ -590,9 +662,14 @@
                 <div className="w-full h-full flex items-center justify-center p-4 select-none">
                     <div className="w-full max-w-[400px] flex flex-col justify-between h-[92vh]">
                         <div className="flex items-center justify-between px-3 bg-wood-950/40 backdrop-blur-md rounded-2xl p-3 border border-wood-900/30">
-                            <span className="text-wood-300 text-sm sm:text-base font-black tracking-wider">
-                                ♟ 暗棋 · PWA極簡
-                            </span>
+                            <div className="flex items-center gap-2">
+                                <span className="text-wood-300 text-sm sm:text-base font-black tracking-wider">
+                                    ♟ 暗棋 · PWA極簡
+                                </span>
+                                <button onClick=${toggleMute} className="text-amber-400 text-sm p-1 ml-1 hover:scale-110 active:scale-95 transition-transform">
+                                    ${isMuted ? '🔇' : '🔊'}
+                                </button>
+                            </div>
                             <div className="flex items-center gap-2 text-sm text-wood-300 font-bold">
                                 <span>當前：${turnLabel}</span>
                                 <div className="w-3 h-3 rounded-full ${turnColor} transition-all duration-300 shadow-lg ${turnShadow}"></div>
@@ -624,7 +701,6 @@
         const root = ReactDOM.createRoot(document.getElementById('root'));
         root.render(html`<${React.StrictMode}><${App} /><//>`);
 
-        // PWA 註冊 Service Worker 流
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
                 navigator.serviceWorker.register('./sw.js')

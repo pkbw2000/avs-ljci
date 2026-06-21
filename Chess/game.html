@@ -46,7 +46,7 @@
             background: radial-gradient(circle at 30% 30%, rgba(200,170,130,0.25), rgba(140,110,80,0.15));
         }
         .board-grid {
-            gap: clamp(3px, 1vw, 8px);
+            gap: clamp(2px, 0.8vw, 6px);
         }
 
         .victory-overlay {
@@ -80,7 +80,7 @@
     <div id="root"></div>
 
     <script type="module">
-        import React, { useState, useEffect, useCallback, useRef, memo } from 'https://cdn.jsdelivr.net/npm/react@18.2.0/+esm';
+        import React, { useState, useEffect, useCallback, useRef, memo, useMemo } from 'https://cdn.jsdelivr.net/npm/react@18.2.0/+esm';
         import ReactDOM from 'https://cdn.jsdelivr.net/npm/react-dom@18.2.0/+esm';
         import { motion, AnimatePresence } from 'https://cdn.jsdelivr.net/npm/framer-motion@10.16.4/+esm';
         import htm from 'https://cdn.jsdelivr.net/npm/htm@3.1.1/+esm';
@@ -91,12 +91,17 @@
         const NAMES = { red: ['', '帥', '仕', '相', '俥', '傌', '炮', '兵'], black: ['', '將', '士', '象', '車', '馬', '砲', '卒'] };
         function getPieceName(color, rank) { return NAMES[color]?.[rank] || '?'; }
 
-        // 吃棋階級判定規則
-        function canCapture(attackerRank, defenderRank) {
-            if (attackerRank === 1 && defenderRank === 7) return false;
-            if (attackerRank === 7) {
-                return defenderRank === 1 || defenderRank === 7;
+        // 修正後的吃子規則：紅兵(紅7)只能吃黑將(黑1)或黑卒(黑7)；黑卒只能吃紅帥(紅1)或紅兵(紅7)
+        function canCapture(attackerColor, attackerRank, defenderColor, defenderRank) {
+            // 若為紅兵
+            if (attackerColor === 'red' && attackerRank === 7) {
+                return (defenderColor === 'black' && (defenderRank === 1 || defenderRank === 7));
             }
+            // 若為黑卒
+            if (attackerColor === 'black' && attackerRank === 7) {
+                return (defenderColor === 'red' && (defenderRank === 1 || defenderRank === 7));
+            }
+            // 其餘情況：大階吃小階（rank數字越小階級越高）
             return attackerRank <= defenderRank;
         }
 
@@ -104,6 +109,313 @@
             const pieces = [];
             pieces.push({ id: 'r1', color: 'red', rank: 1 });
             for (let i = 0; i < 2; i++) pieces.push({ id: `r2-${i}`, color: 'red', rank: 2 });
+            for (let i = 0; i < 2; i++) pieces.push({ id: `r3-${i}`, color: 'red', rank: 3 });
+            for (let i = 0; i < 2; i++) pieces.push({ id: `r4-${i}`, color: 'red', rank: 4 });
+            for (let i = 0; i < 2; i++) pieces.push({ id: `r5-${i}`, color: 'red', rank: 5 });
+            for (let i = 0; i < 2; i++) pieces.push({ id: `r6-${i}`, color: 'red', rank: 6 });
+            for (let i = 0; i < 5; i++) pieces.push({ id: `r7-${i}`, color: 'red', rank: 7 });
+            pieces.push({ id: 'b1', color: 'black', rank: 1 });
+            for (let i = 0; i < 2; i++) pieces.push({ id: `b2-${i}`, color: 'black', rank: 2 });
+            for (let i = 0; i < 2; i++) pieces.push({ id: `b3-${i}`, color: 'black', rank: 3 });
+            for (let i = 0; i < 2; i++) pieces.push({ id: `b4-${i}`, color: 'black', rank: 4 });
+            for (let i = 0; i < 2; i++) pieces.push({ id: `b5-${i}`, color: 'black', rank: 5 });
+            for (let i = 0; i < 2; i++) pieces.push({ id: `b6-${i}`, color: 'black', rank: 6 });
+            for (let i = 0; i < 5; i++) pieces.push({ id: `b7-${i}`, color: 'black', rank: 7 });
+
+            for (let i = pieces.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [pieces[i], pieces[j]] = [pieces[j], pieces[i]];
+            }
+
+            const board = [];
+            let idx = 0;
+            for (let r = 0; r < 4; r++) {
+                const row = [];
+                for (let c = 0; c < 8; c++) {
+                    row.push({ ...pieces[idx++], faceUp: false });
+                }
+                board.push(row);
+            }
+            return board;
+        }
+
+        // 修正炮移動（可走任意遠）、修正兵吃子呼叫
+        function generateMoves(board, row, col) {
+            const piece = board[row]?.[col];
+            if (!piece || !piece.faceUp) return [];
+            const moves = [];
+            const color = piece.color;
+            const rank = piece.rank;
+            const isCannon = rank === 6;
+            const dirs = [[-1,0],[1,0],[0,-1],[0,1]];
+
+            for (const [dr, dc] of dirs) {
+                if (isCannon) {
+                    // 1. 炮的移動（無越子）
+                    let tr = row + dr, tc = col + dc;
+                    while (tr >= 0 && tr <= 3 && tc >= 0 && tc <= 7) {
+                        const target = board[tr][tc];
+                        if (target) break;
+                        moves.push({ row: tr, col: tc, type: 'move' });
+                        tr += dr; tc += dc;
+                    }
+                    // 2. 炮的跳吃
+                    tr = row + dr; tc = col + dc;
+                    let blockFound = false;
+                    while (tr >= 0 && tr <= 3 && tc >= 0 && tc <= 7) {
+                        const target = board[tr][tc];
+                        if (!target) {
+                            tr += dr; tc += dc;
+                            continue;
+                        }
+                        if (!blockFound) {
+                            blockFound = true;
+                            tr += dr; tc += dc;
+                            continue;
+                        }
+                        if (target.faceUp && target.color !== color) {
+                            moves.push({ row: tr, col: tc, type: 'capture' });
+                        }
+                        break;
+                    }
+                } else {
+                    // 普通棋子
+                    const nr = row + dr, nc = col + dc;
+                    if (nr < 0 || nr > 3 || nc < 0 || nc > 7) continue;
+                    const target = board[nr][nc];
+                    if (!target) {
+                        moves.push({ row: nr, col: nc, type: 'move' });
+                    } else if (target.faceUp && target.color !== color && canCapture(color, rank, target.color, target.rank)) {
+                        moves.push({ row: nr, col: nc, type: 'capture' });
+                    }
+                }
+            }
+            return moves;
+        }
+
+        // 優化版 hasValidMoves：提早返回
+        function hasValidMoves(boardState, targetColor) {
+            for (let r = 0; r < 4; r++) {
+                for (let c = 0; c < 8; c++) {
+                    const p = boardState[r][c];
+                    if (!p) continue;
+                    if (!p.faceUp) return true;   // 有暗棋可翻
+                    if (p.color === targetColor) {
+                        const moves = generateMoves(boardState, r, c);
+                        if (moves.length > 0) return true;
+                    }
+                }
+            }
+            return false;
+        }
+
+        function checkTotalEliminate(board) {
+            let redCount = 0, blackCount = 0;
+            for (let r = 0; r < 4; r++) {
+                for (let c = 0; c < 8; c++) {
+                    if (board[r][c]) {
+                        if (board[r][c].color === 'red') redCount++; else blackCount++;
+                    }
+                }
+            }
+            return { redAlive: redCount > 0, blackAlive: blackCount > 0 };
+        }
+
+        function cloneBoard(board) {
+            return board.map(row => row.map(cell => cell ? { ...cell } : null));
+        }
+
+        // ---- 子組件 ----
+        const Piece = memo(({ piece, isSelected, onClick }) => {
+            if (!piece) return null;
+            const { color, rank, faceUp } = piece;
+            const isRed = color === 'red';
+            const name = faceUp ? getPieceName(color, rank) : '';
+            const isBack = !faceUp;
+            const className = `relative w-full h-full rounded-full flex items-center justify-center font-extrabold transition-shadow duration-150 ${isBack ? 'piece-back-pattern' : ''} ${isSelected ? 'ring-4 ring-amber-400 ring-offset-2 ring-offset-wood-900/40' : ''} cursor-pointer touch-manipulation ${isBack ? 'bg-gradient-to-br from-wood-700/90 to-wood-900/95 border border-wood-600/40 shadow-piece' : isRed ? 'bg-gradient-to-br from-red-400 to-red-700 border border-red-300/50 text-white shadow-piece' : 'bg-gradient-to-br from-stone-500 to-stone-800 border border-stone-400/40 text-white shadow-piece'}`;
+            const style = {
+                fontSize: faceUp ? 'clamp(1.1rem, 5.5vw, 2.2rem)' : '0',
+                color: faceUp ? (isRed ? '#fff8f0' : '#f0f0f0') : 'transparent',
+                textShadow: faceUp ? (isRed ? '0 2px 8px rgba(80,0,0,0.5)' : '0 2px 8px rgba(0,0,0,0.6)') : 'none',
+            };
+            return html`
+                <${motion.div} className=${className} style=${style}
+                    initial=${{ scale: 0.85 }}
+                    animate=${{ scale: 1 }}
+                    transition=${{ type: 'spring', stiffness: 350, damping: 28, mass: 0.6 }}
+                    whileTap=${{ scale: 0.94 }}
+                    onClick=${onClick}>
+                    ${faceUp ? name : ''}
+                <//>
+            `;
+        });
+
+        const Cell = memo(({ row, col, piece, isHighlight, highlightType, isSelected, onCellClick, index }) => {
+            const handleClick = () => onCellClick(row, col);
+            let highlightClass = '';
+            if (isHighlight) highlightClass = highlightType === 'capture' ? 'cell-highlight-capture' : 'cell-highlight-move';
+            const className = `relative aspect-square rounded-xl cell-bg border border-wood-500/30 flex items-center justify-center transition-colors duration-150 ${highlightClass} ${piece ? 'cursor-pointer' : 'cursor-default'}`;
+            return html`
+                <${motion.div} className=${className}
+                    initial=${{ opacity: 0, scale: 0.92 }}
+                    animate=${{ opacity: 1, scale: 1 }}
+                    transition=${{ delay: index * 0.006, type: 'spring', stiffness: 400, damping: 30 }}
+                    onClick=${handleClick}>
+                    ${piece && html`<${Piece} piece=${piece} isSelected=${isSelected} onClick=${handleClick} />`}
+                <//>
+            `;
+        });
+
+        // ---- 主 App ----
+        function App() {
+            const [board, setBoard] = useState(() => createInitialBoard());
+            const [currentTurn, setCurrentTurn] = useState(null);
+            const [playerColor, setPlayerColor] = useState(null);
+            const [selectedPos, setSelectedPos] = useState(null);
+            const [highlightCells, setHighlightCells] = useState([]);
+            const [gameOver, setGameOver] = useState(false);
+            const [winner, setWinner] = useState(null);
+            const [gameMode, setGameMode] = useState('pvp');
+            const [aiColor, setAiColor] = useState(null);
+
+            // 使用 useCallback 包裝 checkWinCondition
+            const checkWinCondition = useCallback((newBoard, nextTurn) => {
+                let redGeneral = false, blackGeneral = false;
+                for (let r = 0; r < 4; r++) {
+                    for (let c = 0; c < 8; c++) {
+                        const p = newBoard[r][c];
+                        if (p && p.rank === 1) {
+                            if (p.color === 'red') redGeneral = true;
+                            else blackGeneral = true;
+                        }
+                    }
+                }
+                if (!redGeneral) { setGameOver(true); setWinner('black'); return true; }
+                if (!blackGeneral) { setGameOver(true); setWinner('red'); return true; }
+                
+                const { redAlive, blackAlive } = checkTotalEliminate(newBoard);
+                if (!redAlive) { setGameOver(true); setWinner('black'); return true; }
+                if (!blackAlive) { setGameOver(true); setWinner('red'); return true; }
+
+                if (nextTurn && !hasValidMoves(newBoard, nextTurn)) {
+                    const opponent = nextTurn === 'red' ? 'black' : 'red';
+                    setGameOver(true);
+                    setWinner(opponent);
+                    return true;
+                }
+                return false;
+            }, []);
+
+            const executeMove = useCallback((fromRow, fromCol, toRow, toCol) => {
+                if (gameOver) return;
+                const newBoard = cloneBoard(board);
+                const attacker = newBoard[fromRow][fromCol];
+                newBoard[toRow][toCol] = attacker;
+                newBoard[fromRow][fromCol] = null;
+                
+                const nextTurn = currentTurn === 'red' ? 'black' : 'red';
+                
+                if (checkWinCondition(newBoard, nextTurn)) {
+                    setBoard(newBoard);
+                    setSelectedPos(null);
+                    setHighlightCells([]);
+                    return;
+                }
+                
+                setBoard(newBoard);
+                setCurrentTurn(nextTurn);
+                setSelectedPos(null);
+                setHighlightCells([]);
+            }, [board, currentTurn, gameOver, checkWinCondition]);
+
+            // AI 自動決策
+            useEffect(() => {
+                if (gameOver || gameMode !== 'ai' || currentTurn === null || !aiColor || currentTurn !== aiColor) return;
+
+                const timer = setTimeout(() => {
+                    const availableCaptures = [];
+                    const availableMoves = [];
+                    const unrevealedPieces = [];
+
+                    for (let r = 0; r < 4; r++) {
+                        for (let c = 0; c < 8; c++) {
+                            const p = board[r][c];
+                            if (!p) continue;
+                            if (!p.faceUp) {
+                                unrevealedPieces.push({ row: r, col: c });
+                                continue;
+                            }
+                            if (p.color === aiColor) {
+                                const moves = generateMoves(board, r, c);
+                                moves.forEach(m => {
+                                    if (m.type === 'capture') {
+                                        availableCaptures.push({ from: { row: r, col: c }, to: m });
+                                    } else {
+                                        availableMoves.push({ from: { row: r, col: c }, to: m });
+                                    }
+                                });
+                            }
+                        }
+                    }
+
+                    if (availableCaptures.length > 0) {
+                        const choice = availableCaptures[Math.floor(Math.random() * availableCaptures.length)];
+                        executeMove(choice.from.row, choice.from.col, choice.to.row, choice.to.col);
+                    } 
+                    else if (availableMoves.length > 0 && (unrevealedPieces.length === 0 || Math.random() > 0.4)) {
+                        const choice = availableMoves[Math.floor(Math.random() * availableMoves.length)];
+                        executeMove(choice.from.row, choice.from.col, choice.to.row, choice.to.col);
+                    } 
+                    else if (unrevealedPieces.length > 0) {
+                        const choice = unrevealedPieces[Math.floor(Math.random() * unrevealedPieces.length)];
+                        const newBoard = cloneBoard(board);
+                        newBoard[choice.row][choice.col].faceUp = true;
+                        
+                        const nextTurn = aiColor === 'red' ? 'black' : 'red';
+                        const ended = checkWinCondition(newBoard, nextTurn);
+                        setBoard(newBoard);
+                        if (!ended) {
+                            setCurrentTurn(nextTurn);
+                        }
+                    }
+                }, 600);
+
+                return () => clearTimeout(timer);
+            }, [board, currentTurn, gameOver, gameMode, aiColor, executeMove, checkWinCondition]);
+
+            const handleCellClick = useCallback((row, col) => {
+                if (gameOver) return;
+                if (gameMode === 'ai' && currentTurn !== null && currentTurn === aiColor) return;
+
+                const piece = board[row][col];
+
+                if (currentTurn === null) {
+                    if (piece && !piece.faceUp) {
+                        const newBoard = cloneBoard(board);
+                        newBoard[row][col] = { ...piece, faceUp: true };
+                        setBoard(newBoard);
+                        
+                        const firstColor = piece.color;
+                        setPlayerColor(firstColor);
+                        
+                        if (gameMode === 'ai') {
+                            setAiColor(firstColor === 'red' ? 'black' : 'red');
+                        }
+                        
+                        setCurrentTurn(firstColor === 'red' ? 'black' : 'red');
+                    }
+                    return;
+                }
+
+                if (selectedPos) {
+                    const hit = highlightCells.find(h => h.row === row && h.col === col);
+                    if (hit) {
+                        executeMove(selectedPos.row, selectedPos.col, row, col);
+                        return;
+                    }
+                    setSelectedPos(null);
+                    setHighlightCells([]);
+                    if (piece && piece            for (let i = 0; i < 2; i++) pieces.push({ id: `r2-${i}`, color: 'red', rank: 2 });
             for (let i = 0; i < 2; i++) pieces.push({ id: `r3-${i}`, color: 'red', rank: 3 });
             for (let i = 0; i < 2; i++) pieces.push({ id: `r4-${i}`, color: 'red', rank: 4 });
             for (let i = 0; i < 2; i++) pieces.push({ id: `r5-${i}`, color: 'red', rank: 5 });

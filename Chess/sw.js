@@ -2,15 +2,12 @@ const CACHE_NAME = 'dark-chess-pwa-v1';
 const ASSETS = [
   './game.html',
   './manifest.json',
-  './chess192.jpg',
-  './chess512.jpg',
-  // 與 game.html 保持 100% 一致的 Tailwind 核心
+  // 與 game.html 保持 100% 完全一致的標準整合快取清單（杜絕底層動態二次探測）
   'https://cdn.tailwindcss.com',
-  // 獨立打包的 React 與動態庫，確保斷網時不會觸發隱藏的網路請求
-  'https://esm.sh/react@18.2.0?bundle',
-  'https://esm.sh/react-dom@18.2.0/client?bundle',
-  'https://esm.sh/framer-motion@10.16.4?bundle',
-  'https://esm.sh/htm@3.1.1?bundle'
+  'https://esm.sh/react@18.2.0',
+  'https://esm.sh/react-dom@18.2.0/client',
+  'https://esm.sh/framer-motion@10.16.4?external=react',
+  'https://esm.sh/htm@3.1.1?external=react'
 ];
 
 // 安裝階段：將核心資源全部寫入 Cache 中
@@ -37,7 +34,7 @@ self.addEventListener('activate', e => {
   );
 });
 
-// 攔截請求：優先讀取本機 Cache 資源，實現秒開與斷網容錯
+// 攔截請求階段：採用 Cache First 策略，保證斷網狀態秒開遊戲
 self.addEventListener('fetch', e => {
   e.respondWith(
     caches.match(e.request).then(cachedResponse => {

@@ -2,14 +2,13 @@ const CACHE_NAME = 'dark-chess-pwa-v1';
 const ASSETS = [
   './game.html',
   './manifest.json',
-  'https://cdn.tailwindcss.com',
+  './chess192.jpg',
+  './chess512.jpg',
+  'https://cdnjs.cloudflare.com/ajax/libs/tailwindcss/2.2.19/tailwind.min.css',
   'https://cdn.jsdelivr.net/npm/react@18.2.0/+esm',
   'https://cdn.jsdelivr.net/npm/react-dom@18.2.0/+esm',
   'https://cdn.jsdelivr.net/npm/framer-motion@10.16.4/+esm',
   'https://cdn.jsdelivr.net/npm/htm@3.1.1/+esm',
-  'https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/265f.png',
-  'https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/128x128/265f.png',
-  'https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/512x512/265f.png',
   // 音效與 BGM 離線快取資源清單
   'https://assets.mixkit.co/active_storage/sfx/2568/2568-84.wav', // UI_Click (竹筒敲擊感)
   'https://assets.mixkit.co/active_storage/sfx/1110/1110-84.wav', // Piece_Flip (木質滑動翻轉)
@@ -17,7 +16,7 @@ const ASSETS = [
   'https://assets.mixkit.co/active_storage/sfx/1653/1653-84.wav', // Piece_Capture (沉重碎裂撞擊)
   'https://assets.mixkit.co/active_storage/sfx/923/923-84.wav',   // General_Threat (驚悚突發弦音)
   'https://assets.mixkit.co/active_storage/sfx/2019/2019-84.wav', // Game_Win (歡慶五聲與環境雨聲結合)
-  'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3' // BGM (示範用禪意環境輕音樂，可替換為您產出的 Suno 音檔)
+  'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3' // BGM (示範用禪意環境輕音樂)
 ];
 
 // 安裝階段：將核心資源全部寫入 Cache 中

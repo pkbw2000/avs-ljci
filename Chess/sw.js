@@ -4,19 +4,13 @@ const ASSETS = [
   './manifest.json',
   './chess192.jpg',
   './chess512.jpg',
-  'https://cdnjs.cloudflare.com/ajax/libs/tailwindcss/2.2.19/tailwind.min.css',
-  'https://cdn.jsdelivr.net/npm/react@18.2.0/+esm',
-  'https://cdn.jsdelivr.net/npm/react-dom@18.2.0/+esm',
-  'https://cdn.jsdelivr.net/npm/framer-motion@10.16.4/+esm',
-  'https://cdn.jsdelivr.net/npm/htm@3.1.1/+esm',
-  // 音效與 BGM 離線快取資源清單
-  'https://assets.mixkit.co/active_storage/sfx/2568/2568-84.wav', // UI_Click (竹筒敲擊感)
-  'https://assets.mixkit.co/active_storage/sfx/1110/1110-84.wav', // Piece_Flip (木質滑動翻轉)
-  'https://assets.mixkit.co/active_storage/sfx/1111/1111-84.wav', // Piece_Move (常規木質落子)
-  'https://assets.mixkit.co/active_storage/sfx/1653/1653-84.wav', // Piece_Capture (沉重碎裂撞擊)
-  'https://assets.mixkit.co/active_storage/sfx/923/923-84.wav',   // General_Threat (驚悚突發弦音)
-  'https://assets.mixkit.co/active_storage/sfx/2019/2019-84.wav', // Game_Win (歡慶五聲與環境雨聲結合)
-  'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3' // BGM (示範用禪意環境輕音樂)
+  // 與 game.html 保持 100% 一致的 Tailwind 核心
+  'https://cdn.tailwindcss.com',
+  // 獨立打包的 React 與動態庫，確保斷網時不會觸發隱藏的網路請求
+  'https://esm.sh/react@18.2.0?bundle',
+  'https://esm.sh/react-dom@18.2.0/client?bundle',
+  'https://esm.sh/framer-motion@10.16.4?bundle',
+  'https://esm.sh/htm@3.1.1?bundle'
 ];
 
 // 安裝階段：將核心資源全部寫入 Cache 中

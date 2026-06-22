@@ -98,12 +98,25 @@
 
         const html = htm.bind(React.createElement);
 
-        // ---- 網頁原生 Web Audio API 音效合成引擎 ----
+        // ---- [修改區塊]：全域共用單例 AudioContext，防禦硬體解碼錯誤 ----
+        let globalAudioCtx = null;
+
         const playSound = (type) => {
             try {
                 const AudioContext = window.AudioContext || window.webkitAudioContext;
                 if (!AudioContext) return;
-                const ctx = new AudioContext();
+                
+                // 採用單例模式，避免重複 new 耗盡瀏覽器音訊裝置資源
+                if (!globalAudioCtx || globalAudioCtx.state === 'closed') {
+                    globalAudioCtx = new AudioContext();
+                }
+                
+                const ctx = globalAudioCtx;
+                
+                // 處理使用者未互動或硬體掛起時的狀態恢復
+                if (ctx.state === 'suspended') {
+                    ctx.resume();
+                }
                 
                 if (type === 'move' || type === 'flip') {
                     const osc = ctx.createOscillator();
@@ -146,7 +159,7 @@
                     osc2.stop(ctx.currentTime + 0.15);
                 }
             } catch (e) {
-                console.log("音效播放受瀏覽器安全策略限制:", e);
+                console.log("音效播放受瀏覽器安全策略或設備硬體限制:", e);
             }
         };
 
@@ -670,6 +683,7 @@
         const root = ReactDOM.createRoot(document.getElementById('root'));
         root.render(html`<${React.StrictMode}><${App} /><//>`);
 
+        // 註冊 Service Worker（確保在 DOM 載入後執行）
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
                 navigator.serviceWorker.register('./sw.js')

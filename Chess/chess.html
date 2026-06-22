@@ -19,17 +19,12 @@
                         wood: { 50: '#f7efe6', 100: '#ede0d0', 200: '#dcc4aa', 300: '#c9a884', 400: '#b88f66', 500: '#a57850', 600: '#8a6240', 700: '#6f4d30', 800: '#543a22', 900: '#3a2818', 950: '#241810' },
                     },
                     fontFamily: { sans: ['Inter', 'system-ui', 'sans-serif'] },
-                    boxShadow: {
-                        glass: '0 8px 32px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.06)',
-                        piece: '0 4px 0 rgba(0,0,0,0.25), 0 8px 24px rgba(0,0,0,0.35)',
-                        'inner-glow': 'inset 0 2px 12px rgba(255,215,140,0.15)',
-                    }
                 }
             }
         }
     </script>
     <style>
-        /* 全域重置與防觸控 */
+        /* 全域重置 */
         * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; outline: none; }
         html, body { 
             margin: 0; padding: 0; 
@@ -50,89 +45,127 @@
                      env(safe-area-inset-bottom) env(safe-area-inset-left);
         }
 
-        /* 主容器：垂直排列，高度填滿，強制無滾動 */
+        /* 主容器：垂直排列，無滾動 */
         .app-container {
             width: 100%;
-            max-width: 420px;  /* 手機舒適寬度 */
+            max-width: 450px;
             height: 100vh;
             max-height: 100%;
             display: flex;
             flex-direction: column;
-            padding: 8px 10px 12px;
+            padding: 8px 12px 12px;
             gap: 8px;
             overflow: hidden;
         }
 
-        /* 頂部與底部欄固定高度 */
+        /* 頂部和底部欄固定高度 */
         .top-bar, .bottom-bar {
             flex-shrink: 0;
             z-index: 10;
         }
+        .top-bar {
+            height: 48px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 16px;
+            background: rgba(30, 22, 16, 0.6);
+            backdrop-filter: blur(8px);
+            border-radius: 20px;
+            border: 1px solid rgba(200,170,130,0.12);
+        }
+        .bottom-bar {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            height: 52px;
+        }
+        .bottom-bar button {
+            border: none;
+            border-radius: 16px;
+            font-weight: 800;
+            font-size: 0.95rem;
+            background: rgba(60, 44, 32, 0.5);
+            backdrop-filter: blur(4px);
+            border: 1px solid rgba(200,170,130,0.15);
+            color: #d0c0a8;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            transition: transform 0.1s, background 0.1s;
+            cursor: pointer;
+            touch-action: manipulation;
+        }
+        .bottom-bar button:active { transform: scale(0.96); }
+        .bottom-bar .btn-primary {
+            background: linear-gradient(135deg, #8a6240, #6f4d30);
+            color: #f0e6d8;
+            border-color: rgba(200,170,130,0.3);
+        }
+        .bottom-bar .btn-secondary {
+            background: rgba(30,22,16,0.5);
+            color: #c9b89c;
+        }
 
-        /* 棋盤區域：彈性填滿剩餘空間，並強制比例 4:8 */
+        /* 棋盤區域：伸縮填滿剩餘空間 */
         .board-area {
             flex: 1;
-            min-height: 0;   /* 允許 flex 收縮 */
+            min-height: 0;   /* 允許收縮 */
             display: flex;
             align-items: center;
             justify-content: center;
             width: 100%;
         }
 
+        /* 棋盤外殼：強制比例 4:8，並限制最大尺寸 */
         .board-wrapper {
             width: 100%;
-            aspect-ratio: 4 / 8;
             max-height: 100%;
-            max-width: 100%;
+            aspect-ratio: 4 / 8;
+            background: rgba(84, 58, 34, 0.3);
+            backdrop-filter: blur(4px);
+            border-radius: 24px;
+            padding: 6px;  /* 極小內距，不影響比例 */
+            border: 1px solid rgba(200,170,130,0.12);
+            box-shadow: 0 8px 32px rgba(0,0,0,0.5);
         }
 
+        /* 內部網格外殼：撐滿 */
         .board-inner {
             width: 100%;
             height: 100%;
-            background: rgba(84, 58, 34, 0.4);
-            backdrop-filter: blur(4px);
-            border-radius: 28px;
-            padding: clamp(6px, 1.5vw, 14px);
-            border: 1px solid rgba(200, 170, 130, 0.15);
-            box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+            background: rgba(165, 120, 80, 0.15);
+            border-radius: 18px;
+            padding: 4px;
+            box-shadow: inset 0 2px 12px rgba(255,215,140,0.05);
+            position: relative;
         }
 
-        .board-grid-container {
-            width: 100%;
-            height: 100%;
-            background: rgba(165, 120, 80, 0.2);
-            border-radius: 20px;
-            padding: clamp(4px, 1vw, 10px);
-            box-shadow: inset 0 2px 12px rgba(255,215,140,0.08);
-        }
-
-        /* 4x8 網格 */
+        /* 4x8 網格：使用 grid，每個格子自動正方形 */
         .board-grid {
             display: grid;
             grid-template-columns: repeat(4, 1fr);
             grid-template-rows: repeat(8, 1fr);
-            gap: clamp(2px, 0.5vw, 4px);
+            gap: 3px;
             width: 100%;
             height: 100%;
         }
 
         /* 每個格子 */
         .cell {
-            position: relative;
-            background: radial-gradient(circle at 30% 30%, rgba(200,170,130,0.2), rgba(140,110,80,0.1));
-            border-radius: clamp(8px, 1.5vw, 16px);
-            border: 1px solid rgba(180,150,110,0.2);
+            background: radial-gradient(circle at 30% 30%, rgba(200,170,130,0.2), rgba(140,110,80,0.08));
+            border-radius: 8px;
+            border: 1px solid rgba(180,150,110,0.15);
             display: flex;
             align-items: center;
             justify-content: center;
-            aspect-ratio: 1 / 1;  /* 正方形 */
             transition: box-shadow 0.15s;
+            position: relative;
+            /* 強制正方形：grid 自動分配寬高，因容器寬高比 4:8，且列數4行數8，所以每個單元格寬高相等 */
         }
 
         .cell-highlight-move { box-shadow: inset 0 0 0 2px rgba(120,200,120,0.6), 0 0 20px rgba(120,200,120,0.15); }
         .cell-highlight-capture { box-shadow: inset 0 0 0 2px rgba(230,120,120,0.6), 0 0 20px rgba(230,120,120,0.15); }
 
-        /* 棋子元件 – 完全適應父容器 */
+        /* 棋子元件 - 完全適應格子 */
         .piece {
             width: 88%;
             height: 88%;
@@ -204,34 +237,19 @@
             font-size: clamp(0.9rem, 3vw, 1.2rem);
             color: rgba(255,255,255,0.6);
         }
-
-        /* 按鈕通用 */
-        .btn {
-            padding: 10px 0;
-            border-radius: 16px;
-            font-weight: 900;
-            font-size: 0.9rem;
-            text-align: center;
-            transition: all 0.15s;
-            cursor: pointer;
-            touch-action: manipulation;
+        .victory-overlay button {
+            padding: 10px 28px;
+            background: #b88f66;
             border: none;
-            background: rgba(60, 44, 32, 0.6);
-            backdrop-filter: blur(4px);
-            border: 1px solid rgba(200,170,130,0.15);
-            color: #d0c0a8;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            border-radius: 40px;
+            font-weight: 700;
+            color: #1a120e;
+            font-size: 1rem;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.4);
+            cursor: pointer;
+            transition: transform 0.1s;
         }
-        .btn:active { transform: scale(0.96); }
-        .btn-primary {
-            background: linear-gradient(135deg, #8a6240, #6f4d30);
-            color: #f0e6d8;
-            border-color: rgba(200,170,130,0.3);
-        }
-        .btn-secondary {
-            background: rgba(30,22,16,0.5);
-            color: #c9b89c;
-        }
+        .victory-overlay button:active { transform: scale(0.95); }
     </style>
 </head>
 <body>
@@ -245,7 +263,7 @@
 
         const html = htm.bind(React.createElement);
 
-        // ========================= 音效 (完全還原原始 code) =========================
+        // ========================= 音效 (完全原始) =========================
         let globalAudioCtx = null;
         const playSound = (type) => {
             try {
@@ -292,7 +310,7 @@
             } catch (e) { /* 靜默 */ }
         };
 
-        // ========================= 遊戲邏輯 (完全複製原始) =========================
+        // ========================= 遊戲邏輯 (完全原始) =========================
         const NAMES = { red: ['', '帥', '仕', '相', '俥', '傌', '炮', '兵'], black: ['', '將', '士', '象', '車', '馬', '砲', '卒'] };
         function getPieceName(color, rank) { return NAMES[color]?.[rank] || '?'; }
 
@@ -445,7 +463,6 @@
             const [gameMode, setGameMode] = useState('pvp');
             const [aiColor, setAiColor] = useState(null);
 
-            // 勝負判定（包含困斃）
             const checkWinCondition = useCallback((newBoard) => {
                 let hasUnrevealed = false;
                 for (let r = 0; r < 4; r++) {
@@ -497,11 +514,10 @@
                 setHighlightCells([]);
             }, [board, currentTurn, gameOver, checkWinCondition]);
 
-            // AI 邏輯（完整複製原始）
+            // AI 邏輯（完整原始）
             useEffect(() => {
                 if (gameOver || gameMode !== 'ai' || currentTurn === null || !aiColor || currentTurn !== aiColor) return;
                 const timer = setTimeout(() => {
-                    // 收集資訊
                     let generalPos = null;
                     const enemyThreats = [];
                     const availableCaptures = [];
@@ -530,7 +546,6 @@
                         }
                     }
 
-                    // 威脅檢測
                     if (generalPos) {
                         for (let r = 0; r < 4; r++) {
                             for (let c = 0; c < 8; c++) {
@@ -546,7 +561,6 @@
                         }
                     }
 
-                    // 反擊威脅
                     if (enemyThreats.length > 0 && generalPos) {
                         const counterCaptures = availableCaptures.filter(cap =>
                             enemyThreats.some(threat => cap.to.row === threat.row && cap.to.col === threat.col)
@@ -557,7 +571,6 @@
                             return;
                         }
 
-                        // 移動將帥避險
                         const generalMoves = generateMoves(board, generalPos.row, generalPos.col);
                         const safeGeneralMoves = [];
                         generalMoves.forEach(gm => {
@@ -585,7 +598,6 @@
                         }
                     }
 
-                    // 優先吃子
                     if (availableCaptures.length > 0) {
                         const choice = availableCaptures[Math.floor(Math.random() * availableCaptures.length)];
                         executeMove(choice.from.row, choice.from.col, choice.to.row, choice.to.col);
@@ -611,7 +623,6 @@
                 return () => clearTimeout(timer);
             }, [board, currentTurn, gameOver, gameMode, aiColor, executeMove, checkWinCondition]);
 
-            // 玩家點擊
             const handleCellClick = useCallback((row, col) => {
                 if (gameOver) return;
                 if (gameMode === 'ai' && currentTurn !== null && currentTurn === aiColor) return;
@@ -717,7 +728,7 @@
             return html`
                 <div className="app-container">
                     <!-- 頂部狀態欄 -->
-                    <div className="top-bar flex items-center justify-between px-4 py-2 bg-wood-950/40 backdrop-blur-md rounded-2xl border border-wood-900/30">
+                    <div className="top-bar">
                         <span className="text-wood-300 text-sm font-black tracking-wider">♟ 暗棋</span>
                         <div className="flex items-center gap-2 text-sm text-wood-300 font-bold">
                             <span>${turnLabel}</span>
@@ -729,20 +740,16 @@
                     <div className="board-area">
                         <div className="board-wrapper">
                             <div className="board-inner relative">
-                                <div className="board-grid-container">
-                                    <div className="board-grid">
-                                        <${AnimatePresence}>${renderBoard()}<//>
-                                    </div>
+                                <div className="board-grid">
+                                    <${AnimatePresence}>${renderBoard()}<//>
                                 </div>
                                 ${gameOver && winner && html`
                                     <div className="victory-overlay">
                                         <div className="victory-text ${winner === 'red' ? 'victory-red' : 'victory-black'}">
                                             ${winner === 'red' ? '紅方獲勝' : '黑方獲勝'}
                                         </div>
-                                        <div className="victory-sub text-center px-4">因對手被全殲或無子可走</div>
-                                        <button onClick=${handleRestart} className="px-6 py-2.5 bg-amber-600 hover:bg-amber-500 text-white font-bold rounded-xl shadow-lg transition-transform active:scale-95">
-                                            重新新局
-                                        </button>
+                                        <div className="victory-sub">因對手無子可走或被全殲</div>
+                                        <button onClick=${handleRestart}>重新新局</button>
                                     </div>
                                 `}
                             </div>
@@ -750,11 +757,11 @@
                     </div>
 
                     <!-- 底部按鈕 -->
-                    <div className="bottom-bar grid grid-cols-2 gap-3">
-                        <button onClick=${toggleMode} className="btn btn-secondary">
+                    <div className="bottom-bar">
+                        <button className="btn-secondary" onClick=${toggleMode}>
                             ${gameMode === 'pvp' ? '👥 雙人' : '🤖 電腦'}
                         </button>
-                        <button onClick=${handleRestart} className="btn btn-primary">
+                        <button className="btn-primary" onClick=${handleRestart}>
                             ↺ 重開
                         </button>
                     </div>

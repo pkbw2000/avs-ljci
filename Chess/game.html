@@ -11,27 +11,684 @@
     <link rel="apple-touch-icon" href="https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/265f.png" />
     
     <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        wood: { 50: '#f7efe6', 100: '#ede0d0', 200: '#dcc4aa', 300: '#c9a884', 400: '#b88f66', 500: '#a57850', 600: '#8a6240', 700: '#6f4d30', 800: '#543a22', 900: '#3a2818', 950: '#241810' },
+                        brand: { red: '#c0392b', redLight: '#e74c3c', redDark: '#922b21', black: '#2c2c2c', blackLight: '#4a4a4a' }
+                    },
+                    fontFamily: { sans: ['Inter', 'system-ui', 'sans-serif'] },
+                    boxShadow: {
+                        glass: '0 8px 32px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.06)',
+                        piece: '0 4px 0 rgba(0,0,0,0.25), 0 8px 24px rgba(0,0,0,0.35)',
+                        'inner-glow': 'inset 0 2px 12px rgba(255,215,140,0.15)',
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; outline: none; }
+        html, body { 
+            margin: 0; padding: 0; height: 100%; overflow: hidden; 
+            font-family: 'Inter', system-ui, sans-serif; background: #1a120e; 
+            touch-action: none;
+            -webkit-user-select: none; user-select: none;
+        }
+        #root { height: 100%; display: flex; align-items: center; justify-content: center; background: radial-gradient(ellipse at 50% 30%, #2d1e14, #120c08); }
+
+        .cell-highlight-move { box-shadow: inset 0 0 0 2px rgba(120,200,120,0.6), 0 0 24px rgba(120,200,120,0.2); }
+        .cell-highlight-capture { box-shadow: inset 0 0 0 2px rgba(230,120,120,0.6), 0 0 24px rgba(230,120,120,0.2); }
+
+        .piece-back-pattern::after {
+            content: "♟";
+            position: absolute;
+            font-size: clamp(0.9rem, 4.5vw, 1.8rem);
+            color: rgba(180,150,100,0.3);
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%,-50%);
+            pointer-events: none;
+        }
+
+        .cell-bg {
+            background: radial-gradient(circle at 30% 30%, rgba(200,170,130,0.25), rgba(140,110,80,0.15));
+        }
+        .board-grid {
+            gap: clamp(2px, 0.8vw, 6px);
+        }
+
+        .victory-overlay {
+            position: absolute;
+            inset: 0;
+            background: rgba(0,0,0,0.75);
+            backdrop-filter: blur(6px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: inherit;
+            z-index: 20;
+            flex-direction: column;
+            gap: 12px;
+        }
+        .victory-text {
+            font-size: clamp(1.8rem, 8vw, 4rem);
+            font-weight: 900;
+            text-shadow: 0 4px 20px rgba(0,0,0,0.8);
+            letter-spacing: 4px;
+        }
+        .victory-red { color: #ff6b6b; }
+        .victory-black { color: #d0d0d0; }
+        .victory-sub {
+            font-size: clamp(0.9rem, 3.5vw, 1.3rem);
+            color: rgba(255,255,255,0.6);
+        }
+    </style>
 </head>
-<body class="bg-[#1a120e] flex items-center justify-center min-h-screen text-stone-100 p-3 select-none">
-    <div id="root" class="w-full max-w-md h-full flex flex-col items-center justify-center"></div>
+<body>
+    <div id="root"></div>
 
     <script type="module">
-        import React, { useState, useEffect, useCallback, memo } from 'https://esm.sh/react@18.2.0';
-        import ReactDOM from 'https://esm.sh/react-dom@18.2.0/client';
-        import { motion, AnimatePresence } from 'https://esm.sh/framer-motion@10.16.4';
-        import htm from 'https://esm.sh/htm@3.1.1';
+        import React, { useState, useEffect, useCallback, useRef, memo } from 'https://cdn.jsdelivr.net/npm/react@18.2.0/+esm';
+        import ReactDOM from 'https://cdn.jsdelivr.net/npm/react-dom@18.2.0/+esm';
+        import { motion, AnimatePresence } from 'https://cdn.jsdelivr.net/npm/framer-motion@10.16.4/+esm';
+        import htm from 'https://cdn.jsdelivr.net/npm/htm@3.1.1/+esm';
 
         const html = htm.bind(React.createElement);
-        
-        // 此處嵌入您的遊戲核心邏輯 (App 組件與邏輯)...
-        
-        const root = ReactDOM.createRoot(document.getElementById('root'));
-        root.render(html`<${React.StrictMode}><App /><//>`);
 
+        // ---- [修改區塊]：全域共用單例 AudioContext，防禦硬體解碼錯誤 ----
+        let globalAudioCtx = null;
+
+        const playSound = (type) => {
+            try {
+                const AudioContext = window.AudioContext || window.webkitAudioContext;
+                if (!AudioContext) return;
+                
+                // 採用單例模式，避免重複 new 耗盡瀏覽器音訊裝置資源
+                if (!globalAudioCtx || globalAudioCtx.state === 'closed') {
+                    globalAudioCtx = new AudioContext();
+                }
+                
+                const ctx = globalAudioCtx;
+                
+                // 處理使用者未互動或硬體掛起時的狀態恢復
+                if (ctx.state === 'suspended') {
+                    ctx.resume();
+                }
+                
+                if (type === 'move' || type === 'flip') {
+                    const osc = ctx.createOscillator();
+                    const gain = ctx.createGain();
+                    
+                    osc.type = 'triangle';
+                    osc.frequency.setValueAtTime(180, ctx.currentTime);
+                    osc.frequency.exponentialRampToValueAtTime(80, ctx.currentTime + 0.08);
+                    
+                    gain.gain.setValueAtTime(0.4, ctx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.08);
+                    
+                    osc.connect(gain);
+                    gain.connect(ctx.destination);
+                    osc.start();
+                    osc.stop(ctx.currentTime + 0.08);
+                } else if (type === 'capture') {
+                    const osc1 = ctx.createOscillator();
+                    const osc2 = ctx.createOscillator();
+                    const gain = ctx.createGain();
+                    
+                    osc1.type = 'sawtooth';
+                    osc1.frequency.setValueAtTime(140, ctx.currentTime);
+                    osc1.frequency.exponentialRampToValueAtTime(50, ctx.currentTime + 0.15);
+                    
+                    osc2.type = 'triangle';
+                    osc2.frequency.setValueAtTime(90, ctx.currentTime);
+                    osc2.frequency.exponentialRampToValueAtTime(40, ctx.currentTime + 0.15);
+                    
+                    gain.gain.setValueAtTime(0.5, ctx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.15);
+                    
+                    osc1.connect(gain);
+                    osc2.connect(gain);
+                    gain.connect(ctx.destination);
+                    
+                    osc1.start();
+                    osc2.start();
+                    osc1.stop(ctx.currentTime + 0.15);
+                    osc2.stop(ctx.currentTime + 0.15);
+                }
+            } catch (e) {
+                console.log("音效播放受瀏覽器安全策略或設備硬體限制:", e);
+            }
+        };
+
+        // ---- 工具函數 ----
+        const NAMES = { red: ['', '帥', '仕', '相', '俥', '傌', '炮', '兵'], black: ['', '將', '士', '象', '車', '馬', '砲', '卒'] };
+        function getPieceName(color, rank) { return NAMES[color]?.[rank] || '?'; }
+
+        function canCapture(attackerRank, defenderRank) {
+            if (attackerRank === 1 && defenderRank === 7) return false;
+            if (attackerRank === 7) {
+                return defenderRank === 1 || defenderRank === 7;
+            }
+            return attackerRank <= defenderRank;
+        }
+
+        function createInitialBoard() {
+            const pieces = [];
+            pieces.push({ id: 'r1', color: 'red', rank: 1 });
+            for (let i = 0; i < 2; i++) pieces.push({ id: `r2-${i}`, color: 'red', rank: 2 });
+            for (let i = 0; i < 2; i++) pieces.push({ id: `r3-${i}`, color: 'red', rank: 3 });
+            for (let i = 0; i < 2; i++) pieces.push({ id: `r4-${i}`, color: 'red', rank: 4 });
+            for (let i = 0; i < 2; i++) pieces.push({ id: `r5-${i}`, color: 'red', rank: 5 });
+            for (let i = 0; i < 2; i++) pieces.push({ id: `r6-${i}`, color: 'red', rank: 6 });
+            for (let i = 0; i < 5; i++) pieces.push({ id: `r7-${i}`, color: 'red', rank: 7 });
+            pieces.push({ id: 'b1', color: 'black', rank: 1 });
+            for (let i = 0; i < 2; i++) pieces.push({ id: `b2-${i}`, color: 'black', rank: 2 });
+            for (let i = 0; i < 2; i++) pieces.push({ id: `b3-${i}`, color: 'black', rank: 3 });
+            for (let i = 0; i < 2; i++) pieces.push({ id: `b4-${i}`, color: 'black', rank: 4 });
+            for (let i = 0; i < 2; i++) pieces.push({ id: `b5-${i}`, color: 'black', rank: 5 });
+            for (let i = 0; i < 2; i++) pieces.push({ id: `b6-${i}`, color: 'black', rank: 6 });
+            for (let i = 0; i < 5; i++) pieces.push({ id: `b7-${i}`, color: 'black', rank: 7 });
+
+            for (let i = pieces.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [pieces[i], pieces[j]] = [pieces[j], pieces[i]];
+            }
+
+            const board = [];
+            let idx = 0;
+            for (let r = 0; r < 4; r++) {
+                const row = [];
+                for (let c = 0; c < 8; c++) {
+                    row.push({ ...pieces[idx++], faceUp: false });
+                }
+                board.push(row);
+            }
+            return board;
+        }
+
+        function generateMoves(board, row, col) {
+            const piece = board[row]?.[col];
+            if (!piece || !piece.faceUp) return [];
+            const moves = [];
+            const color = piece.color;
+            const rank = piece.rank;
+            const isCannon = rank === 6;
+            const dirs = [[-1,0],[1,0],[0,-1],[0,1]];
+
+            for (const [dr, dc] of dirs) {
+                if (isCannon) {
+                    const nr = row + dr, nc = col + dc;
+                    if (nr >= 0 && nr <= 3 && nc >= 0 && nc <= 7 && !board[nr][nc]) {
+                        moves.push({ row: nr, col: nc, type: 'move' });
+                    }
+                    let tr = row + dr, tc = col + dc;
+                    let blockFound = false;
+                    while (tr >= 0 && tr <= 3 && tc >= 0 && tc <= 7) {
+                        const target = board[tr][tc];
+                        if (!target) {
+                            tr += dr; tc += dc;
+                            continue;
+                        }
+                        if (!blockFound) {
+                            blockFound = true;
+                            tr += dr; tc += dc;
+                            continue;
+                        }
+                        if (target.faceUp && target.color !== color) {
+                            moves.push({ row: tr, col: tc, type: 'capture' });
+                        }
+                        break;
+                    }
+                } else {
+                    const nr = row + dr, nc = col + dc;
+                    if (nr < 0 || nr > 3 || nc < 0 || nc > 7) continue;
+                    const target = board[nr][nc];
+                    if (!target) {
+                        moves.push({ row: nr, col: nc, type: 'move' });
+                    } else if (target.faceUp && target.color !== color && canCapture(rank, target.rank)) {
+                        moves.push({ row: nr, col: nc, type: 'capture' });
+                    }
+                }
+            }
+            return moves;
+        }
+
+        function cloneBoard(board) {
+            return board.map(row => row.map(cell => cell ? { ...cell } : null));
+        }
+
+        // ---- 子組件 ----
+        const Piece = memo(({ piece, isSelected, onClick }) => {
+            if (!piece) return null;
+            const { color, rank, faceUp } = piece;
+            const isRed = color === 'red';
+            const name = faceUp ? getPieceName(color, rank) : '';
+            const isBack = !faceUp;
+            const className = `relative w-[88%] h-[88%] rounded-full flex items-center justify-center font-extrabold transition-shadow duration-150 ${isBack ? 'piece-back-pattern' : ''} ${isSelected ? 'ring-4 ring-amber-400 ring-offset-2 ring-offset-wood-900/40' : ''} cursor-pointer touch-manipulation ${isBack ? 'bg-gradient-to-br from-wood-700/90 to-wood-900/95 border border-wood-600/40 shadow-piece' : isRed ? 'bg-gradient-to-br from-red-400 to-red-700 border border-red-300/50 text-white shadow-piece' : 'bg-gradient-to-br from-stone-500 to-stone-800 border border-stone-400/40 text-white shadow-piece'}`;
+            const style = {
+                fontSize: faceUp ? 'clamp(1rem, 4.5vw, 1.8rem)' : '0',
+                color: faceUp ? (isRed ? '#fff8f0' : '#f0f0f0') : 'transparent',
+                textShadow: faceUp ? (isRed ? '0 2px 8px rgba(80,0,0,0.5)' : '0 2px 8px rgba(0,0,0,0.6)') : 'none',
+            };
+            return html`
+                <${motion.div} className=${className} style=${style}
+                    initial=${{ scale: 0.85 }}
+                    animate=${{ scale: 1 }}
+                    transition=${{ type: 'spring', stiffness: 350, damping: 28, mass: 0.6 }}
+                    onClick=${onClick}>
+                    ${faceUp ? name : ''}
+                <//>
+            `;
+        });
+
+        const Cell = memo(({ row, col, piece, isHighlight, highlightType, isSelected, onCellClick, index }) => {
+            const handleClick = (e) => {
+                e.preventDefault();
+                onCellClick(row, col);
+            };
+            let highlightClass = '';
+            if (isHighlight) highlightClass = highlightType === 'capture' ? 'cell-highlight-capture' : 'cell-highlight-move';
+            const className = `relative aspect-square rounded-xl cell-bg border border-wood-500/30 flex items-center justify-center transition-colors duration-150 ${highlightClass} ${piece ? 'cursor-pointer' : 'cursor-default'}`;
+            return html`
+                <${motion.div} className=${className}
+                    initial=${{ opacity: 0, scale: 0.92 }}
+                    animate=${{ opacity: 1, scale: 1 }}
+                    transition=${{ delay: index * 0.005, type: 'spring', stiffness: 400, damping: 30 }}
+                    onTouchEnd=${handleClick}
+                    onClick=${handleClick}>
+                    ${piece && html`<${Piece} piece=${piece} isSelected=${isSelected} onClick=${handleClick} />`}
+                <//>
+            `;
+        });
+
+        // ---- 主 App ----
+        function App() {
+            const [board, setBoard] = useState(() => createInitialBoard());
+            const [currentTurn, setCurrentTurn] = useState(null);
+            const [playerColor, setPlayerColor] = useState(null);
+            const [selectedPos, setSelectedPos] = useState(null);
+            const [highlightCells, setHighlightCells] = useState([]);
+            const [gameOver, setGameOver] = useState(false);
+            const [winner, setWinner] = useState(null);
+            const [gameMode, setGameMode] = useState('pvp');
+            const [aiColor, setAiColor] = useState(null);
+
+            // 精準重構的勝負邏輯
+            const checkWinCondition = useCallback((newBoard) => {
+                let hasUnrevealed = false;
+                for (let r = 0; r < 4; r++) {
+                    for (let c = 0; c < 8; c++) {
+                        if (newBoard[r][c] && !newBoard[r][c].faceUp) {
+                            hasUnrevealed = true;
+                            break;
+                        }
+                    }
+                    if (hasUnrevealed) break;
+                }
+
+                if (hasUnrevealed) return false;
+
+                let redPieces = 0;
+                let blackPieces = 0;
+                let redMoves = 0;
+                let blackMoves = 0;
+
+                for (let r = 0; r < 4; r++) {
+                    for (let c = 0; c < 8; c++) {
+                        const p = newBoard[r][c];
+                        if (!p) continue;
+                        
+                        const moves = generateMoves(newBoard, r, c);
+                        if (p.color === 'red') {
+                            redPieces++;
+                            redMoves += moves.length;
+                        } else if (p.color === 'black') {
+                            blackPieces++;
+                            blackMoves += moves.length;
+                        }
+                    }
+                }
+
+                if (redPieces === 0 || redMoves === 0) {
+                    setGameOver(true);
+                    setWinner('black');
+                    return true;
+                }
+                if (blackPieces === 0 || blackMoves === 0) {
+                    setGameOver(true);
+                    setWinner('red');
+                    return true;
+                }
+
+                return false;
+            }, [generateMoves]);
+
+            const executeMove = useCallback((fromRow, fromCol, toRow, toCol) => {
+                if (gameOver) return;
+                const newBoard = cloneBoard(board);
+                const attacker = newBoard[fromRow][fromCol];
+                const target = newBoard[toRow][toCol];
+                
+                if (target) {
+                    playSound('capture');
+                } else {
+                    playSound('move');
+                }
+
+                newBoard[toRow][toCol] = attacker;
+                newBoard[fromRow][fromCol] = null;
+                
+                const nextTurn = currentTurn === 'red' ? 'black' : 'red';
+                
+                if (checkWinCondition(newBoard)) {
+                    setBoard(newBoard);
+                    setSelectedPos(null);
+                    setHighlightCells([]);
+                    return;
+                }
+                
+                setBoard(newBoard);
+                setCurrentTurn(nextTurn);
+                setSelectedPos(null);
+                setHighlightCells([]);
+            }, [board, currentTurn, gameOver, checkWinCondition]);
+
+            // AI 自動決策流
+            useEffect(() => {
+                if (gameOver || gameMode !== 'ai' || currentTurn === null || !aiColor || currentTurn !== aiColor) return;
+
+                const timer = setTimeout(() => {
+                    let generalPos = null;
+                    const enemyThreats = [];
+                    const availableCaptures = [];
+                    const availableMoves = [];
+                    const unrevealedPieces = [];
+
+                    for (let r = 0; r < 4; r++) {
+                        for (let c = 0; c < 8; c++) {
+                            const p = board[r][c];
+                            if (!p) continue;
+                            if (!p.faceUp) {
+                                unrevealedPieces.push({ row: r, col: c });
+                                continue;
+                            }
+                            if (p.color === aiColor) {
+                                if (p.rank === 1) generalPos = { row: r, col: c };
+                                
+                                const moves = generateMoves(board, r, c);
+                                moves.forEach(m => {
+                                    if (m.type === 'capture') {
+                                        availableCaptures.push({ from: { row: r, col: c }, to: m });
+                                    } else {
+                                        availableMoves.push({ from: { row: r, col: c }, to: m });
+                                    }
+                                });
+                            }
+                        }
+                    }
+
+                    if (generalPos) {
+                        for (let r = 0; r < 4; r++) {
+                            for (let c = 0; c < 8; c++) {
+                                const p = board[r][c];
+                                if (p && p.faceUp && p.color !== aiColor) {
+                                    const eMoves = generateMoves(board, r, c);
+                                    const canHitGeneral = eMoves.some(m => m.row === generalPos.row && m.col === generalPos.col && m.type === 'capture');
+                                    if (canHitGeneral) {
+                                        enemyThreats.push({ row: r, col: c, rank: p.rank });
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    if (enemyThreats.length > 0 && generalPos) {
+                        const counterCaptures = availableCaptures.filter(cap => 
+                            enemyThreats.some(threat => cap.to.row === threat.row && cap.to.col === threat.col)
+                        );
+                        if (counterCaptures.length > 0) {
+                            const choice = counterCaptures[Math.floor(Math.random() * counterCaptures.length)];
+                            executeMove(choice.from.row, choice.from.col, choice.to.row, choice.to.col);
+                            return;
+                        }
+
+                        const generalMoves = generateMoves(board, generalPos.row, generalPos.col);
+                        const safeGeneralMoves = [];
+
+                        generalMoves.forEach(gm => {
+                            const simBoard = cloneBoard(board);
+                            simBoard[gm.row][gm.col] = simBoard[generalPos.row][generalPos.col];
+                            simBoard[generalPos.row][generalPos.col] = null;
+
+                            let stillThreatened = false;
+                            for (let r = 0; r < 4; r++) {
+                                for (let c = 0; c < 8; c++) {
+                                    const p = simBoard[r][c];
+                                    if (p && p.faceUp && p.color !== aiColor) {
+                                        const eMoves = generateMoves(simBoard, r, c);
+                                        if (eMoves.some(m => m.row === gm.row && m.col === gm.col && m.type === 'capture')) {
+                                            stillThreatened = true;
+                                        }
+                                    }
+                                }
+                            }
+                            if (!stillThreatened) safeGeneralMoves.push(gm);
+                        });
+
+                        if (safeGeneralMoves.length > 0) {
+                            const choice = safeGeneralMoves[Math.floor(Math.random() * safeGeneralMoves.length)];
+                            executeMove(generalPos.row, generalPos.col, choice.row, choice.col);
+                            return;
+                        }
+                    }
+
+                    if (availableCaptures.length > 0) {
+                        const choice = availableCaptures[Math.floor(Math.random() * availableCaptures.length)];
+                        executeMove(choice.from.row, choice.from.col, choice.to.row, choice.to.col);
+                    } 
+                    else if (availableMoves.length > 0 && (unrevealedPieces.length === 0 || Math.random() > 0.4)) {
+                        const choice = availableMoves[Math.floor(Math.random() * availableMoves.length)];
+                        executeMove(choice.from.row, choice.from.col, choice.to.row, choice.to.col);
+                    } 
+                    else if (unrevealedPieces.length > 0) {
+                        const choice = unrevealedPieces[Math.floor(Math.random() * unrevealedPieces.length)];
+                        playSound('flip');
+                        const newBoard = cloneBoard(board);
+                        newBoard[choice.row][choice.col].faceUp = true;
+                        
+                        const nextTurn = aiColor === 'red' ? 'black' : 'red';
+                        if (checkWinCondition(newBoard)) {
+                            setBoard(newBoard);
+                            return;
+                        }
+
+                        setBoard(newBoard);
+                        setCurrentTurn(nextTurn);
+                    }
+                }, 550);
+
+                return () => clearTimeout(timer);
+            }, [board, currentTurn, gameOver, gameMode, aiColor, executeMove, checkWinCondition, generateMoves]);
+
+            const handleCellClick = useCallback((row, col) => {
+                if (gameOver) return;
+                if (gameMode === 'ai' && currentTurn !== null && currentTurn === aiColor) return;
+
+                const piece = board[row][col];
+
+                if (currentTurn === null) {
+                    if (piece && !piece.faceUp) {
+                        playSound('flip');
+                        const newBoard = cloneBoard(board);
+                        newBoard[row][col] = { ...piece, faceUp: true };
+                        setBoard(newBoard);
+                        
+                        const firstColor = piece.color;
+                        setPlayerColor(firstColor);
+                        
+                        if (gameMode === 'ai') {
+                            setAiColor(firstColor === 'red' ? 'black' : 'red');
+                        }
+                        
+                        setCurrentTurn(firstColor === 'red' ? 'black' : 'red');
+                    }
+                    return;
+                }
+
+                if (selectedPos) {
+                    const hit = highlightCells.find(h => h.row === row && h.col === col);
+                    if (hit) {
+                        executeMove(selectedPos.row, selectedPos.col, row, col);
+                        return;
+                    }
+                    setSelectedPos(null);
+                    setHighlightCells([]);
+                    if (piece && piece.faceUp && piece.color === currentTurn) {
+                        const moves = generateMoves(board, row, col);
+                        setSelectedPos({ row, col });
+                        setHighlightCells(moves);
+                    }
+                    return;
+                }
+
+                if (!piece) return;
+                
+                if (!piece.faceUp) {
+                    playSound('flip');
+                    const newBoard = cloneBoard(board);
+                    newBoard[row][col] = { ...piece, faceUp: true };
+                    
+                    const nextTurn = currentTurn === 'red' ? 'black' : 'red';
+                    if (checkWinCondition(newBoard)) {
+                        setBoard(newBoard);
+                        return;
+                    }
+
+                    setBoard(newBoard);
+                    setCurrentTurn(nextTurn);
+                    return;
+                }
+                
+                if (piece.color === currentTurn) {
+                    const moves = generateMoves(board, row, col);
+                    setSelectedPos({ row, col });
+                    setHighlightCells(moves);
+                }
+            }, [board, currentTurn, gameOver, selectedPos, highlightCells, executeMove, gameMode, aiColor, checkWinCondition, generateMoves]);
+
+            const handleRestart = () => {
+                playSound('move');
+                const newBoard = createInitialBoard();
+                setBoard(newBoard);
+                setCurrentTurn(null);
+                setPlayerColor(null);
+                setAiColor(null);
+                setSelectedPos(null);
+                setHighlightCells([]);
+                setGameOver(false);
+                setWinner(null);
+            };
+
+            const toggleMode = () => {
+                playSound('move');
+                const nextMode = gameMode === 'pvp' ? 'ai' : 'pvp';
+                setGameMode(nextMode);
+                handleRestart();
+            };
+
+            const renderBoard = () => {
+                const cells = [];
+                let index = 0;
+                for (let c = 0; c < 8; c++) {
+                    for (let r = 0; r < 4; r++) {
+                        const piece = board[r][c];
+                        const isHighlight = highlightCells.some(h => h.row === r && h.col === c);
+                        const highlightType = highlightCells.find(h => h.row === r && h.col === c)?.type || 'move';
+                        const isSelected = selectedPos && selectedPos.row === r && selectedPos.col === c;
+                        
+                        cells.push(html`
+                            <${Cell} 
+                                key=${`cell-${r}-${c}`} 
+                                row=${r} 
+                                col=${c} 
+                                piece=${piece} 
+                                isHighlight=${isHighlight} 
+                                highlightType=${highlightType} 
+                                isSelected=${isSelected} 
+                                onCellClick=${handleCellClick} 
+                                index=${index++} 
+                            />
+                        `);
+                    }
+                }
+                return cells;
+            };
+
+            const turnLabel = currentTurn ? (currentTurn === 'red' ? '紅方' : '黑方') : '翻牌開局';
+            const turnColor = currentTurn === 'red' ? 'bg-red-500' : (currentTurn === 'black' ? 'bg-stone-600' : 'bg-wood-500');
+            const turnShadow = currentTurn === 'red' ? 'shadow-red-500/40' : (currentTurn === 'black' ? 'shadow-stone-500/40' : '');
+
+            const victoryContent = winner && html`
+                <div className="victory-overlay">
+                    <div className="victory-text ${winner === 'red' ? 'victory-red' : 'victory-black'}">
+                        ${winner === 'red' ? '紅方獲勝' : '黑方獲勝'}
+                    </div>
+                    <div className="victory-sub text-center px-4">因對手被全殲或已無子可走（困斃）</div>
+                    <button onClick=${handleRestart} className="mt-4 px-6 py-2.5 bg-amber-600 hover:bg-amber-500 text-white font-bold rounded-xl shadow-lg transition-transform active:scale-95">
+                        重新新局
+                    </button>
+                </div>
+            `;
+
+            return html`
+                <div className="w-full h-full flex items-center justify-center p-4 select-none">
+                    <div className="w-full max-w-[400px] h-[94vh] flex flex-col justify-between">
+                        <div className="flex items-center justify-between px-3 bg-wood-950/40 backdrop-blur-md rounded-2xl p-3 border border-wood-900/30 flex-shrink-0">
+                            <span className="text-wood-300 text-sm sm:text-base font-black tracking-wider">
+                                ♟ 暗棋 · PWA極簡
+                            </span>
+                            <div className="flex items-center gap-2 text-sm text-wood-300 font-bold">
+                                <span>當前：${turnLabel}</span>
+                                <div className="w-3 h-3 rounded-full ${turnColor} transition-all duration-300 shadow-lg ${turnShadow}"></div>
+                            </div>
+                        </div>
+
+                        <div className="flex-1 min-h-0 flex items-center justify-center py-4 w-full">
+                            <div className="relative bg-wood-800/40 backdrop-blur-sm rounded-3xl p-2.5 border border-wood-600/20 shadow-glass w-full max-h-full flex flex-col justify-center">
+                                <div className="relative bg-wood-500/30 rounded-2xl p-2 border border-wood-400/20 shadow-inner-glow w-full">
+                                    <div className="grid grid-cols-4 board-grid w-full">
+                                        <${AnimatePresence}>${renderBoard()}<//>
+                                    </div>
+                                    ${gameOver && winner ? victoryContent : ''}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-3 px-1 flex-shrink-0">
+                            <button onClick=${toggleMode} className="py-3.5 rounded-2xl text-sm font-black transition-all duration-150 border tracking-widest bg-wood-900/40 border-wood-700/60 shadow-md text-amber-300 active:scale-[0.98]">
+                                ${gameMode === 'pvp' ? '👥 雙人對戰' : '🤖 電腦對戰'}
+                            </button>
+                            <button onClick=${handleRestart} className="py-3.5 rounded-2xl bg-gradient-to-r from-wood-700 to-wood-600 hover:from-wood-600 hover:to-wood-500 active:scale-[0.98] transition-all duration-150 text-wood-100 text-sm font-black border border-wood-500/40 backdrop-blur-sm shadow-md tracking-widest">
+                                ↺ 重新新局
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(html`<${React.StrictMode}><${App} /><//>`);
+
+        // 註冊 Service Worker（確保在 DOM 載入後執行）
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
                 navigator.serviceWorker.register('./sw.js')
-                    .catch(err => console.log('SW 註冊失敗: ', err));
+                    .then(reg => console.log('ServiceWorker 註冊成功，範圍: ', reg.scope))
+                    .catch(err => console.log('ServiceWorker 註冊失敗: ', err));
             });
         }
     </script>

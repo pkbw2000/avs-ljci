@@ -3,46 +3,33 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
-    <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="theme-color" content="#1a120e" />
     <title>暗棋 · 極簡 PWA</title>
     <link rel="manifest" href="./manifest.json" />
-    <link rel="apple-touch-icon" href="https://cdnjs.cloudflare.com/ajax/libs/twemoji/14.0.2/72x72/265f.png" />
+    <link rel="apple-touch-icon" href="https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/265f.png" />
     
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/tailwindcss/2.2.19/tailwind.min.css" />
+    <script src="https://cdn.tailwindcss.com"></script>
     <script>
-        // 由於切換為正式版 CSS，在此手動注入客製化顏色與陰影設定，維持畫面完全不變
-        window.tailwind = {
-            config: {
-                theme: {
-                    extend: {
-                        colors: {
-                            wood: { 50: '#f7efe6', 100: '#ede0d0', 200: '#dcc4aa', 300: '#c9a884', 400: '#b88f66', 500: '#a57850', 600: '#8a6240', 700: '#6f4d30', 800: '#543a22', 900: '#3a2818', 950: '#241810' }
-                        }
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        wood: { 50: '#f7efe6', 100: '#ede0d0', 200: '#dcc4aa', 300: '#c9a884', 400: '#b88f66', 500: '#a57850', 600: '#8a6240', 700: '#6f4d30', 800: '#543a22', 900: '#3a2818', 950: '#241810' },
+                        brand: { red: '#c0392b', redLight: '#e74c3c', redDark: '#922b21', black: '#2c2c2c', blackLight: '#4a4a4a' }
+                    },
+                    fontFamily: { sans: ['Inter', 'system-ui', 'sans-serif'] },
+                    boxShadow: {
+                        glass: '0 8px 32px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.06)',
+                        piece: '0 4px 0 rgba(0,0,0,0.25), 0 8px 24px rgba(0,0,0,0.35)',
+                        'inner-glow': 'inset 0 2px 12px rgba(255,215,140,0.15)',
                     }
                 }
             }
-        };
+        }
     </script>
     <style>
-        /* 注入正式版 Tailwind 缺少的特定客製樣式與陰影，確保界面與功能完全不變 */
-        .bg-wood-950\/40 { background-color: rgba(36, 24, 16, 0.4); }
-        .bg-wood-800\/40 { background-color: rgba(84, 58, 34, 0.4); }
-        .bg-wood-500\/30 { background-color: rgba(165, 120, 80, 0.3); }
-        .bg-wood-900\/40 { background-color: rgba(58, 40, 24, 0.4); }
-        .border-wood-900\/30 { border-color: rgba(58, 40, 24, 0.3); }
-        .border-wood-600\/20 { border-color: rgba(138, 98, 64, 0.2); }
-        .border-wood-400\/20 { border-color: rgba(184, 143, 102, 0.2); }
-        .border-wood-700\/60 { border-color: rgba(111, 77, 48, 0.6); }
-        .border-wood-500\/40 { border-color: rgba(165, 120, 80, 0.4); }
-        .shadow-glass { box-shadow: 0 8px 32px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.06); }
-        .shadow-piece { box-shadow: 0 4px 0 rgba(0,0,0,0.25), 0 8px 24px rgba(0,0,0,0.35); }
-        .shadow-inner-glow { box-shadow: inset 0 2px 12px rgba(255,215,140,0.15); }
-        .text-wood-300 { color: #c9a884; }
-        .text-wood-100 { color: #ede0d0; }
-
         * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; outline: none; }
         html, body { 
             margin: 0; padding: 0; height: 100%; overflow: hidden; 
@@ -70,7 +57,6 @@
             background: radial-gradient(circle at 30% 30%, rgba(200,170,130,0.25), rgba(140,110,80,0.15));
         }
         .board-grid {
-            grid-template-columns: repeat(4, minmax(0, 1fr));
             gap: clamp(2px, 0.8vw, 6px);
         }
 
@@ -268,7 +254,7 @@
             const isRed = color === 'red';
             const name = faceUp ? getPieceName(color, rank) : '';
             const isBack = !faceUp;
-            const className = `relative w-11/12 h-11/12 rounded-full flex items-center justify-center font-extrabold transition-all duration-150 ${isBack ? 'piece-back-pattern' : ''} ${isSelected ? 'ring-4 ring-amber-400 ring-offset-2' : ''} cursor-pointer touch-manipulation ${isBack ? 'bg-gradient-to-br from-wood-700 to-wood-950 border border-wood-600 shadow-piece' : isRed ? 'bg-gradient-to-br from-red-500 to-red-800 border border-red-400 text-white shadow-piece' : 'bg-gradient-to-br from-gray-600 to-gray-800 border border-gray-500 text-white shadow-piece'}`;
+            const className = `relative w-[88%] h-[88%] rounded-full flex items-center justify-center font-extrabold transition-shadow duration-150 ${isBack ? 'piece-back-pattern' : ''} ${isSelected ? 'ring-4 ring-amber-400 ring-offset-2 ring-offset-wood-900/40' : ''} cursor-pointer touch-manipulation ${isBack ? 'bg-gradient-to-br from-wood-700/90 to-wood-900/95 border border-wood-600/40 shadow-piece' : isRed ? 'bg-gradient-to-br from-red-400 to-red-700 border border-red-300/50 text-white shadow-piece' : 'bg-gradient-to-br from-stone-500 to-stone-800 border border-stone-400/40 text-white shadow-piece'}`;
             const style = {
                 fontSize: faceUp ? 'clamp(1rem, 4.5vw, 1.8rem)' : '0',
                 color: faceUp ? (isRed ? '#fff8f0' : '#f0f0f0') : 'transparent',
@@ -292,7 +278,7 @@
             };
             let highlightClass = '';
             if (isHighlight) highlightClass = highlightType === 'capture' ? 'cell-highlight-capture' : 'cell-highlight-move';
-            const className = `relative aspect-square rounded-xl cell-bg border border-wood-600 flex items-center justify-center transition-all duration-150 ${highlightClass} ${piece ? 'cursor-pointer' : 'cursor-default'}`;
+            const className = `relative aspect-square rounded-xl cell-bg border border-wood-500/30 flex items-center justify-center transition-colors duration-150 ${highlightClass} ${piece ? 'cursor-pointer' : 'cursor-default'}`;
             return html`
                 <${motion.div} className=${className}
                     initial=${{ opacity: 0, scale: 0.92 }}
@@ -317,6 +303,7 @@
             const [gameMode, setGameMode] = useState('pvp');
             const [aiColor, setAiColor] = useState(null);
 
+            // 精準重構的勝負邏輯
             const checkWinCondition = useCallback((newBoard) => {
                 let hasUnrevealed = false;
                 for (let r = 0; r < 4; r++) {
@@ -396,6 +383,7 @@
                 setHighlightCells([]);
             }, [board, currentTurn, gameOver, checkWinCondition]);
 
+            // AI 自動決策流
             useEffect(() => {
                 if (gameOver || gameMode !== 'ai' || currentTurn === null || !aiColor || currentTurn !== aiColor) return;
 
@@ -627,7 +615,8 @@
             };
 
             const turnLabel = currentTurn ? (currentTurn === 'red' ? '紅方' : '黑方') : '翻牌開局';
-            const turnColor = currentTurn === 'red' ? 'bg-red-600' : (currentTurn === 'black' ? 'bg-gray-700' : 'bg-yellow-800');
+            const turnColor = currentTurn === 'red' ? 'bg-red-500' : (currentTurn === 'black' ? 'bg-stone-600' : 'bg-wood-500');
+            const turnShadow = currentTurn === 'red' ? 'shadow-red-500/40' : (currentTurn === 'black' ? 'shadow-stone-500/40' : '');
 
             const victoryContent = winner && html`
                 <div className="victory-overlay">
@@ -635,7 +624,7 @@
                         ${winner === 'red' ? '紅方獲勝' : '黑方獲勝'}
                     </div>
                     <div className="victory-sub text-center px-4">因對手被全殲或已無子可走（困斃）</div>
-                    <button onClick=${handleRestart} className="mt-4 px-6 py-2.5 bg-yellow-700 hover:bg-yellow-600 text-white font-bold rounded-xl shadow-lg transition-all active:scale-95">
+                    <button onClick=${handleRestart} className="mt-4 px-6 py-2.5 bg-amber-600 hover:bg-amber-500 text-white font-bold rounded-xl shadow-lg transition-transform active:scale-95">
                         重新新局
                     </button>
                 </div>
@@ -650,14 +639,14 @@
                             </span>
                             <div className="flex items-center gap-2 text-sm text-wood-300 font-bold">
                                 <span>當前：${turnLabel}</span>
-                                <div className="w-3 h-3 rounded-full ${turnColor} transition-all duration-300 shadow-lg"></div>
+                                <div className="w-3 h-3 rounded-full ${turnColor} transition-all duration-300 shadow-lg ${turnShadow}"></div>
                             </div>
                         </div>
 
                         <div className="flex-1 min-h-0 flex items-center justify-center py-4 w-full">
-                            <div className="relative bg-wood-800/40 rounded-3xl p-2.5 border border-wood-600/20 shadow-glass w-full max-h-full flex flex-col justify-center">
+                            <div className="relative bg-wood-800/40 backdrop-blur-sm rounded-3xl p-2.5 border border-wood-600/20 shadow-glass w-full max-h-full flex flex-col justify-center">
                                 <div className="relative bg-wood-500/30 rounded-2xl p-2 border border-wood-400/20 shadow-inner-glow w-full">
-                                    <div className="grid board-grid w-full">
+                                    <div className="grid grid-cols-4 board-grid w-full">
                                         <${AnimatePresence}>${renderBoard()}<//>
                                     </div>
                                     ${gameOver && winner ? victoryContent : ''}
@@ -666,10 +655,10 @@
                         </div>
 
                         <div className="grid grid-cols-2 gap-3 px-1 flex-shrink-0">
-                            <button onClick=${toggleMode} className="py-3.5 rounded-2xl text-sm font-black transition-all duration-150 border tracking-widest bg-wood-900/40 border-wood-700/60 shadow-md text-yellow-500 active:scale-[0.98]">
+                            <button onClick=${toggleMode} className="py-3.5 rounded-2xl text-sm font-black transition-all duration-150 border tracking-widest bg-wood-900/40 border-wood-700/60 shadow-md text-amber-300 active:scale-[0.98]">
                                 ${gameMode === 'pvp' ? '👥 雙人對戰' : '🤖 電腦對戰'}
                             </button>
-                            <button onClick=${handleRestart} className="py-3.5 rounded-2xl bg-gradient-to-r from-gray-700 to-gray-600 hover:from-gray-600 hover:to-gray-500 active:scale-[0.98] transition-all duration-150 text-wood-100 text-sm font-black border border-wood-500/40 shadow-md tracking-widest">
+                            <button onClick=${handleRestart} className="py-3.5 rounded-2xl bg-gradient-to-r from-wood-700 to-wood-600 hover:from-wood-600 hover:to-wood-500 active:scale-[0.98] transition-all duration-150 text-wood-100 text-sm font-black border border-wood-500/40 backdrop-blur-sm shadow-md tracking-widest">
                                 ↺ 重新新局
                             </button>
                         </div>

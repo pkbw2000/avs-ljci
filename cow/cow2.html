@@ -14,20 +14,15 @@
             display: flex; flex-direction: column; align-items: center; position: relative; z-index: 1;
         }
 
-        /* 顶部状态 */
         .header { width: 100%; padding: 15px 15px 0 15px; display: flex; justify-content: space-between; align-items: center; font-size: 14px; }
         .level-title { font-size: 18px; font-weight: bold; color: #2c3e50; display: flex; flex-direction: column; align-items: flex-start; gap: 4px; }
         .level-title small { font-weight: normal; font-size: 12px; color: #7f8c8d; background: rgba(255,255,255,0.7); padding: 2px 8px; border-radius: 10px; }
-        
         .lives-box { display: flex; gap: 6px; font-size: 24px; transition: all 0.3s; }
         .lives-box .heart { transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
         .lives-box .lost { filter: grayscale(1) opacity: 0.2; transform: scale(0.8); }
 
-        /* 规则栏 */
         .rules-bar { width: 90%; display: flex; justify-content: center; gap: 10px; padding: 8px 0; color: #34495e; font-size: 12px; font-weight: 500; }
         .rules-bar span { background: white; padding: 4px 12px; border-radius: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
-
-        /* 状态栏 & 颜色图例 */
         .status-bar { width: 90%; display: flex; justify-content: space-between; margin: 5px 0 5px 0; font-size: 15px; color: #2c3e50; }
         .status-bar div { background: rgba(255,255,255,0.8); padding: 4px 14px; border-radius: 20px; box-shadow: 0 1px 4px rgba(0,0,0,0.03); }
         .timer.warning { color: #e74c3c; animation: pulse 1s infinite; }
@@ -36,7 +31,6 @@
         .legend-item { display: flex; align-items: center; gap: 6px; font-size: 12px; color: #2c3e50; background: white; padding: 4px 10px; border-radius: 20px; box-shadow: 0 1px 4px rgba(0,0,0,0.05); }
         .color-box { width: 14px; height: 14px; border-radius: 4px; }
 
-        /* 棋盘 */
         .board-wrap { flex: 1; width: 100%; display: flex; justify-content: center; align-items: center; padding: 5px; }
         #board { display: grid; gap: 5px; width: 100%; aspect-ratio: 1; max-width: 400px; background: transparent; }
         
@@ -52,14 +46,12 @@
         .cell.locked { border: 3px solid #e74c3c; } 
         .cell.highlight-hint { animation: glowPulse 0.8s infinite alternate; border: 3px solid #2ecc71; }
 
-        /* 底部按钮 */
         .footer { width: 90%; display: flex; justify-content: space-between; padding: 15px 0 30px 0; }
         .btn { display: flex; flex-direction: column; align-items: center; font-size: 12px; color: #7f8c8d; cursor: pointer; transition: all 0.2s; }
         .btn:active { transform: scale(0.9); }
         .btn .icon { background: white; width: 44px; height: 44px; border-radius: 50%; display: flex; justify-content: center; align-items: center; font-size: 20px; margin-bottom: 4px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); transition: all 0.2s; }
         .hint-btn .icon { background: #e3f2fd; }
 
-        /* 提示和弹窗 */
         .toast {
             position: absolute; bottom: 25%; left: 50%; transform: translateX(-50%) scale(0.8);
             background: rgba(0,0,0,0.75); backdrop-filter: blur(4px);
@@ -69,7 +61,6 @@
         }
         .toast.show { opacity: 1; transform: translateX(-50%) scale(1); bottom: 30%; }
 
-        /* 教学覆盖层 */
         .tutorial-overlay {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
             z-index: 500; display: none; pointer-events: none;
@@ -91,7 +82,6 @@
             box-shadow: 0 0 20px rgba(255, 87, 34, 0.4) inset;
         }
 
-        /* 胜利界面 */
         .win-modal {
             position: absolute; inset: 0; z-index: 200;
             display: none; justify-content: center; align-items: center; background: rgba(0,0,0,0.4); backdrop-filter: blur(2px);
@@ -106,19 +96,25 @@
         @keyframes popIn { 0% { transform: scale(0); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
         @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
         @keyframes glowPulse { 0% { box-shadow: 0 0 0 0 rgba(46, 204, 113, 0.4); } 100% { box-shadow: 0 0 15px 5px rgba(46, 204, 113, 0.2); } }
+        
+        /* 全局错误提示框 */
+        #global-error {
+            position: absolute; top: 20%; left: 10%; right: 10%;
+            background: rgba(255, 0, 0, 0.9); color: white; padding: 20px; border-radius: 16px;
+            text-align: center; z-index: 9999; display: none; word-wrap: break-word;
+        }
     </style>
 </head>
 <body>
 <div id="app">
+    <div id="global-error">⚠️ 检测到游戏错误，请截图此界面反馈。</div>
     
     <div class="header">
         <div class="level-title">
             <span id="level-txt">第 1 关</span>
             <small id="lv-size-txt">(4x4 教学)</small>
         </div>
-        <div class="lives-box" id="lives">
-            <span class="heart">❤️</span><span class="heart">❤️</span><span class="heart">❤️</span>
-        </div>
+        <div class="lives-box" id="lives"><span class="heart">❤️</span><span class="heart">❤️</span><span class="heart">❤️</span></div>
     </div>
     
     <div class="rules-bar">
@@ -132,9 +128,7 @@
         <div id="timer-txt" class="timer">⏱️ 02:30</div>
     </div>
 
-    <!-- 颜色对照图例 -->
     <div id="legend-area" class="legend-area"></div>
-    
     <div class="board-wrap"><div id="board"></div></div>
     
     <div class="footer">
@@ -143,7 +137,6 @@
         <div class="btn" onclick="doAction('reset')"><div class="icon">🔄</div>重玩</div>
     </div>
 
-    <!-- 教学覆盖层 -->
     <div id="tutorialOverlay" class="tutorial-overlay">
         <div id="tutorialBox" class="tutorial-box"></div>
         <div id="tutorialBubble" class="tutorial-bubble"></div>
@@ -151,7 +144,6 @@
     </div>
 
     <div id="toast" class="toast"></div>
-    
     <div id="winModal" class="win-modal">
         <div class="win-card">
             <h2>🎉 闯关成功！</h2>
@@ -159,34 +151,27 @@
             <button class="win-btn" onclick="goToNextLevel()">进入下一关 ➜</button>
         </div>
     </div>
-
 </div>
 
 <script>
-    // ================= 严格保底的颜色与核心配置 =================
-    // 使用高对比度色盘，保证绝对匹配数量与视觉
-    const COLOR_MAP = {
-        4: ['#FF3B30', '#007AFF', '#34C759', '#FFCC00'],
-        5: ['#FF3B30', '#007AFF', '#34C759', '#FFCC00', '#AF52DE'],
-        6: ['#FF3B30', '#007AFF', '#34C759', '#FFCC00', '#AF52DE', '#FF9500'],
-        7: ['#FF3B30', '#007AFF', '#34C759', '#FFCC00', '#AF52DE', '#FF9500', '#5AC8FA'],
-        8: ['#FF3B30', '#007AFF', '#34C759', '#FFCC00', '#AF52DE', '#FF9500', '#5AC8FA', '#FF2D55']
+    // ================= 终极错误捕获 =================
+    window.onerror = function(msg, url, line, col, error) {
+        document.getElementById('global-error').innerText = '错误详情: ' + msg + '\n行号: ' + line;
+        document.getElementById('global-error').style.display = 'block';
+        console.error(msg);
     };
-    const FALLBACK_COLORS = ['#FF4500','#1E90FF','#32CD32','#FFD700','#BA68C8','#FF69B4','#00CED1','#FF8C00'];
 
-    // 防死锁的核心解
+    // ================= 永远绝对可靠的 10 色硬编码调色板 =================
+    const FIXED_PALETTE = ['#FF3B30', '#007AFF', '#34C759', '#FFCC00', '#AF52DE', '#FF9500', '#5AC8FA', '#FF2D55', '#FF4500', '#1E90FF'];
+    const COLOR_NAMES = ['红', '蓝', '绿', '黄', '紫', '橙', '天蓝', '粉', '橙红', '深蓝'];
+
+    // 硬编码保底解（保证4x4到8x8绝对无相邻冲突）
     const HARDCODED_SOLUTIONS = {
         4: [{x:1,y:0},{x:3,y:1},{x:0,y:2},{x:2,y:3}],
         5: [{x:1,y:0},{x:3,y:1},{x:0,y:2},{x:2,y:3},{x:4,y:4}],
         6: [{x:1,y:0},{x:3,y:1},{x:5,y:2},{x:0,y:3},{x:2,y:4},{x:4,y:5}],
         7: [{x:1,y:0},{x:3,y:1},{x:5,y:2},{x:0,y:3},{x:2,y:4},{x:4,y:5},{x:6,y:6}],
         8: [{x:1,y:0},{x:3,y:1},{x:5,y:2},{x:7,y:3},{x:0,y:4},{x:2,y:5},{x:4,y:6},{x:6,y:7}]
-    };
-    const COLOR_NAMES = {
-        '#FF3B30':'红','#007AFF':'蓝','#34C759':'绿','#FFCC00':'黄',
-        '#AF52DE':'紫','#FF9500':'橙','#5AC8FA':'天蓝','#FF2D55':'粉',
-        '#FF4500':'橙','#1E90FF':'蓝','#32CD32':'绿','#FFD700':'金',
-        '#BA68C8':'紫','#FF69B4':'粉','#00CED1':'青','#FF8C00':'暗橙'
     };
 
     let GameState = { 
@@ -195,19 +180,11 @@
         isTutorial: false, tStep: 0
     };
 
-    // ================= 1. 关卡生成器（绝对强制可见） =================
+    // ================= 1. 关卡生成器 =================
     function generateLevel(size, seed) {
         let solution = HARDCODED_SOLUTIONS[size];
-        if(!solution) { // 极罕见的兜底
-            solution = [];
-            for(let i=0; i<size; i++) solution.push({x:i, y:i});
-        }
-
         let colors = [];
-        // 如果无法映射颜色，直接使用后备颜色数组平铺
-        let usedColors = COLOR_MAP[size];
-        if(!usedColors) usedColors = FALLBACK_COLORS; // 绝对不许颜色为空
-
+        // 直接硬编码映射，确保每种牛都有颜色块
         for(let y=0; y<size; y++) {
             colors[y] = [];
             for(let x=0; x<size; x++) {
@@ -216,7 +193,7 @@
                     let d = Math.abs(s.x-x) + Math.abs(s.y-y);
                     if(d < minD) { minD=d; id=i; }
                 });
-                colors[y][x] = usedColors[id % usedColors.length]; 
+                colors[y][x] = FIXED_PALETTE[id % FIXED_PALETTE.length]; 
             }
         }
         return { size, colors, solution, initial: [solution[0]] };
@@ -224,6 +201,7 @@
 
     // ================= 2. 加载关卡 =================
     function loadLevel(num) {
+        // 设置难度
         let size = num < 3 ? 4 : (num < 6 ? 5 : (num < 10 ? 6 : (num < 15 ? 7 : 8)));
         let lvData = generateLevel(size, 'lv_'+num);
         GameState.data = lvData; GameState.curLv = num;
@@ -244,36 +222,30 @@
         startTimer(150);
         
         renderLegend(lvData.size);
-        renderBoard();
+        renderBoard();  // 立即渲染棋盘
         updateUI();
 
+        // 延迟执行教学指引（防止DOM未加载完成导致崩溃）
         if (num === 0) {
             GameState.isTutorial = true; GameState.tStep = 0;
-            setTimeout(() => triggerTutorial(0), 600);
-        } else if (num === 1) {
-            showToast('📝 巩固练习：继续用【单击画X / 双击放牛】。');
-        } else if (num === 2) {
-            showToast('📝 进阶：5x5 挑战，卡住可点【提示】。');
-        } else if (num === 3) {
-            showToast('📝 逻辑：6x6 考验行列色组合。');
-        } else if (num === 4) {
-            showToast('📝 高手：7x7，推理能力大考验。');
+            setTimeout(() => {
+                try { triggerTutorial(0); } catch(e) {}
+            }, 600);
         }
     }
 
     function renderLegend(size) {
         const el = document.getElementById('legend-area');
         el.innerHTML = '';
-        let colors = COLOR_MAP[size] || FALLBACK_COLORS.slice(0,size);
-        colors.forEach(c => {
+        for(let i=0; i<size; i++) {
             let div = document.createElement('div');
             div.className = 'legend-item';
-            div.innerHTML = `<div class="color-box" style="background:${c};"></div> ${COLOR_NAMES[c] || '色'}`;
+            div.innerHTML = `<div class="color-box" style="background:${FIXED_PALETTE[i]};"></div> ${COLOR_NAMES[i]}`;
             el.appendChild(div);
-        });
+        }
     }
 
-    // ================= 3. 交互渲染（防颜色挂掉的终极加固） =================
+    // ================= 3. 交互渲染（防颜色丢失终极加固） =================
     function renderBoard() {
         let d = GameState.data;
         if(!d) return;
@@ -282,56 +254,53 @@
         b.innerHTML = '';
         let remain = 0;
 
-        for(let y=0; y<d.size; y++) for(let x=0; x<d.size; x++) {
-            let div = document.createElement('div');
-            div.className = 'cell';
-            // 绝对防丢失：如果颜色丢失则强制使用备用色块
-            let color = d.colors && d.colors[y] && d.colors[y][x] ? d.colors[y][x] : FALLBACK_COLORS[(x+y) % FALLBACK_COLORS.length];
-            div.style.background = color;
-            
-            let cell = GameState.board[y][x];
+        for(let y=0; y<d.size; y++) {
+            for(let x=0; x<d.size; x++) {
+                let div = document.createElement('div');
+                div.className = 'cell';
+                
+                // 超强容错：如果颜色没取到，强制设为灰色以免透明
+                let color = '#CCCCCC';
+                try {
+                    if (d.colors && d.colors[y] && d.colors[y][x]) {
+                        color = d.colors[y][x];
+                    } else {
+                        // 兜底方案：用坐标计算颜色，绝对不许空
+                        color = FIXED_PALETTE[(x + y) % d.size];
+                    }
+                } catch(e) { color = '#EEEEEE'; }
+                div.style.backgroundColor = color;
+                
+                let cell = GameState.board[y][x];
 
-            if(cell.l) div.classList.add('locked');
-            if(cell.c) { let sp=document.createElement('span'); sp.className='cow'; sp.innerText='🐮'; div.appendChild(sp); remain++; } 
-            else if (cell.x) { let sp=document.createElement('span'); sp.className='cross'; sp.innerText='✕'; div.appendChild(sp); }
+                if(cell.l) div.classList.add('locked');
+                if(cell.c) { let sp=document.createElement('span'); sp.className='cow'; sp.innerText='🐮'; div.appendChild(sp); remain++; } 
+                else if (cell.x) { let sp=document.createElement('span'); sp.className='cross'; sp.innerText='✕'; div.appendChild(sp); }
 
-            let clickTimer = null;
-            div.addEventListener('click', function(e) {
-                if(GameState.isLocked) return;
-                if(clickTimer) { clearTimeout(clickTimer); clickTimer = null; handleDblClick(x,y); } 
-                else { clickTimer = setTimeout(() => { clickTimer = null; handleSingleClick(x,y); }, 300); }
-            });
-            b.appendChild(div);
+                let clickTimer = null;
+                div.addEventListener('click', function(e) {
+                    if(GameState.isLocked) return;
+                    if(clickTimer) { clearTimeout(clickTimer); clickTimer = null; handleDblClick(x,y); } 
+                    else { clickTimer = setTimeout(() => { clickTimer = null; handleSingleClick(x,y); }, 300); }
+                });
+                b.appendChild(div);
+            }
         }
         document.getElementById('remain-txt').innerText = d.size - remain;
         checkWin();
     }
 
-    // ================= 4. 单/双击逻辑（防卡死强化） =================
+    // ================= 4. 单/双击逻辑 =================
     function handleSingleClick(x, y) {
         if(GameState.isTutorial) {
             if(GameState.tStep === 0) {
                 if(x === 0 && y === 0) {
-                    let cell = GameState.board[0][0];
-                    cell.x = !cell.x;
+                    let cell = GameState.board[0][0]; cell.x = !cell.x;
                     renderBoard(); updateUI();
                     GameState.tStep = 1;
-                    triggerTutorial(1);
+                    setTimeout(() => { try { triggerTutorial(1); } catch(e) {} }, 300);
                     return;
-                } else {
-                    showToast('👆 请先点击左上角格子画X');
-                    return;
-                }
-            } else if(GameState.tStep === 1) {
-                // 教程期间允许自由单击画X推理
-                let cell = GameState.board[y][x];
-                if(cell.l || cell.c) return;
-                cell.x = !cell.x;
-                renderBoard(); updateUI();
-                return;
-            } else {
-                showToast('请先完成当前的教学指引');
-                return;
+                } else { showToast('👆 请先点击左上角格子画X'); return; }
             }
         }
         let cell = GameState.board[y][x];
@@ -345,21 +314,13 @@
             if(GameState.tStep === 1) {
                 let target = GameState.data.solution[1];
                 if(x === target.x && y === target.y) {
-                    let cell = GameState.board[y][x];
-                    if(cell.c) return;
-                    cell.c = true;
+                    let cell = GameState.board[y][x]; cell.c = true;
                     renderBoard(); updateUI();
                     GameState.tStep = 2;
-                    triggerTutorial(2);
+                    setTimeout(() => { try { triggerTutorial(2); } catch(e) {} }, 300);
                     return;
-                } else {
-                    showToast('🐮 必须双击高亮的正确位置放牛！');
-                    return;
-                }
-            } else {
-                showToast('请先完成当前的教学指引');
-                return;
-            }
+                } else { showToast('🐮 必须双击高亮的正确位置放牛！'); return; }
+            } else { showToast('请先完成当前的教学指引'); return; }
         }
 
         let cell = GameState.board[y][x];
@@ -373,9 +334,7 @@
             if(GameState.lives <= 0) {
                 showToast('💔 生命耗尽，重置本关...');
                 setTimeout(()=>{ GameState.isLocked = true; loadLevel(GameState.curLv); }, 1200);
-            } else {
-                showToast('❌ 规则冲突，消耗 1 个爱心');
-            }
+            } else { showToast('❌ 规则冲突，消耗 1 个爱心'); }
             return;
         }
         GameState.hist.push(JSON.stringify(GameState.board));
@@ -407,371 +366,51 @@
         if(!d) return;
         let targetEl = null;
         let text = '';
-        let isFinal = false;
 
         if(step === 0) {
             targetEl = document.querySelector('#board > div:nth-child(1)');
-            text = '👆 单击这个左上角格子，画上【X】排除不可能的位置。';
+            text = '👆 单击这个左上角格子，画上【X】排除。';
         } else if(step === 1) {
             let target = d.solution[1];
             targetEl = document.querySelector(`#board > div:nth-child(${target.y * d.size + target.x + 1})`);
-            text = '🐮 双击这个高亮空位，放置第一头【牛】。';
+            text = '🐮 双击这个高亮空位，放置【牛】。';
         } else if(step === 2) {
             targetEl = document.getElementById('hintBtn');
-            text = '💡 卡住时点击【提示】按钮，正确位置会闪烁。';
-        } else if(step === 3) {
-            targetEl = document.getElementById('app');
-            text = '🎉 恭喜完成新手教学！\n自由完成剩下所有的牛即可过关。';
-            isFinal = true;
+            text = '💡 卡住时点击【提示】按钮，位置会闪烁。';
         }
 
         if(targetEl) {
             overlay.style.display = 'block';
             const rect = targetEl.getBoundingClientRect();
             const appRect = app.getBoundingClientRect();
+            const left = rect.left - appRect.left - 4; const top = rect.top - appRect.top - 4;
+            const width = rect.width + 8; const height = rect.height + 8;
 
-            const left = rect.left - appRect.left - 4;
-            const top = rect.top - appRect.top - 4;
-            const width = rect.width + 8;
-            const height = rect.height + 8;
-
-            if(isFinal) {
-                box.style.display = 'none'; highlight.style.display = 'none';
-                bubble.style.top = '40%'; bubble.style.left = '50%'; bubble.style.transform = 'translate(-50%, -50%)';
-                bubble.style.fontSize = '18px'; bubble.style.fontWeight = 'bold'; bubble.style.textAlign = 'center';
-                bubble.style.whiteSpace = 'pre-wrap'; bubble.innerText = text;
-                setTimeout(() => { overlay.style.display = 'none'; GameState.isTutorial = false; },        @keyframes popIn { 0% { transform: scale(0); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
-        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
-        @keyframes glowPulse { 0% { box-shadow: 0 0 0 0 rgba(46, 204, 113, 0.4); } 100% { box-shadow: 0 0 15px 5px rgba(46, 204, 113, 0.2); } }
-    </style>
-</head>
-<body>
-<div id="app">
-    
-    <div class="header">
-        <div class="level-title">
-            <span id="level-txt">第 1 关</span>
-            <small id="lv-size-txt">(4x4 教学)</small>
-        </div>
-        <div class="lives-box" id="lives">
-            <span class="heart">❤️</span><span class="heart">❤️</span><span class="heart">❤️</span>
-        </div>
-    </div>
-    
-    <div class="rules-bar">
-        <span>🚫 牛周边不可有牛</span>
-        <span>⬜ 每行每列唯一</span>
-        <span>🎨 每种颜色唯一</span>
-    </div>
-    
-    <div class="status-bar">
-        <div>🐮 剩余: <b id="remain-txt">0</b></div>
-        <div id="timer-txt" class="timer">⏱️ 02:30</div>
-    </div>
-
-    <!-- 颜色对照图例 -->
-    <div id="legend-area" class="legend-area"></div>
-    
-    <div class="board-wrap"><div id="board"></div></div>
-    
-    <div class="footer">
-        <div class="btn hint-btn" id="hintBtn" onclick="doAction('hint')"><div class="icon">💡</div>提示</div>
-        <div class="btn" onclick="doAction('undo')"><div class="icon">↩️</div>撤回</div>
-        <div class="btn" onclick="doAction('reset')"><div class="icon">🔄</div>重玩</div>
-    </div>
-
-    <!-- 教学覆盖层 -->
-    <div id="tutorialOverlay" class="tutorial-overlay">
-        <div id="tutorialBox" class="tutorial-box"></div>
-        <div id="tutorialBubble" class="tutorial-bubble"></div>
-        <div id="tutorialHighlight" class="tutorial-highlight"></div>
-    </div>
-
-    <div id="toast" class="toast"></div>
-    
-    <div id="winModal" class="win-modal">
-        <div class="win-card">
-            <h2>🎉 闯关成功！</h2>
-            <p style="color:#7f8c8d; margin:0 0 10px 0;">逻辑推理很棒！</p>
-            <button class="win-btn" onclick="goToNextLevel()">进入下一关 ➜</button>
-        </div>
-    </div>
-
-</div>
-
-<script>
-    // 硬编码保底解（保证4x4到8x8绝对无相邻冲突）
-    const HARDCODED_SOLUTIONS = {
-        4: [{x:1,y:0},{x:3,y:1},{x:0,y:2},{x:2,y:3}],
-        5: [{x:1,y:0},{x:3,y:1},{x:0,y:2},{x:2,y:3},{x:4,y:4}],
-        6: [{x:1,y:0},{x:3,y:1},{x:5,y:2},{x:0,y:3},{x:2,y:4},{x:4,y:5}],
-        7: [{x:1,y:0},{x:3,y:1},{x:5,y:2},{x:0,y:3},{x:2,y:4},{x:4,y:5},{x:6,y:6}],
-        8: [{x:1,y:0},{x:3,y:1},{x:5,y:2},{x:7,y:3},{x:0,y:4},{x:2,y:5},{x:4,y:6},{x:6,y:7}]
-    };
-    // 强制使用高对比度色盘，完美契合牛的数量
-    const COLOR_MAP = {
-        4: ['#FF3B30', '#007AFF', '#34C759', '#FFCC00'],
-        5: ['#FF3B30', '#007AFF', '#34C759', '#FFCC00', '#AF52DE'],
-        6: ['#FF3B30', '#007AFF', '#34C759', '#FFCC00', '#AF52DE', '#FF9500'],
-        7: ['#FF3B30', '#007AFF', '#34C759', '#FFCC00', '#AF52DE', '#FF9500', '#5AC8FA'],
-        8: ['#FF3B30', '#007AFF', '#34C759', '#FFCC00', '#AF52DE', '#FF9500', '#5AC8FA', '#FF2D55']
-    };
-    const COLOR_NAMES = {
-        '#FF3B30':'红','#007AFF':'蓝','#34C759':'绿','#FFCC00':'黄',
-        '#AF52DE':'紫','#FF9500':'橙','#5AC8FA':'天蓝','#FF2D55':'粉'
-    };
-
-    let GameState = { 
-        curLv: 0, maxLv: 0, lives: 3, 
-        board: [], hist: [], timer: 150, timeId: null, data: null, isLocked: false,
-        isTutorial: false, tStep: 0
-    };
-
-    // ================= 1. 关卡生成器 (彻底解决颜色数量Bug) =================
-    function generateLevel(size, seed) {
-        let solution = HARDCODED_SOLUTIONS[size];
-        let colors = [];
-        let usedColors = COLOR_MAP[size]; // 严格要求颜色数量匹配牛的数量
-
-        for(let y=0; y<size; y++) {
-            colors[y] = [];
-            for(let x=0; x<size; x++) {
-                let minD=999, id=0;
-                solution.forEach((s,i) => {
-                    let d = Math.abs(s.x-x) + Math.abs(s.y-y);
-                    if(d < minD) { minD=d; id=i; }
-                });
-                colors[y][x] = usedColors[id]; 
+            box.style.display = 'block'; highlight.style.display = 'block';
+            box.style.left = left + 'px'; box.style.top = top + 'px'; box.style.width = width + 'px'; box.style.height = height + 'px';
+            highlight.style.left = left + 'px'; highlight.style.top = top + 'px'; highlight.style.width = width + 'px'; highlight.style.height = height + 'px';
+            
+            bubble.style.transform = 'none'; bubble.style.whiteSpace = 'pre-wrap';
+            bubble.style.top = (rect.bottom - appRect.top + 12) + 'px'; bubble.style.left = (rect.left - appRect.left) + 'px';
+            bubble.style.width = '80%'; bubble.innerText = text;
+            
+            if(step === 2) {
+                // 完成教学，4秒后自动关闭
+                setTimeout(() => { 
+                    overlay.style.display = 'none'; GameState.isTutorial = false; 
+                }, 4000);
             }
         }
-        return { size, colors, solution, initial: [solution[0]] };
     }
 
-    // ================= 2. 加载关卡 =================
-    function loadLevel(num) {
-        // 难度平滑过渡
-        let size = num < 3 ? 4 : (num < 6 ? 5 : (num < 10 ? 6 : (num < 15 ? 7 : 8)));
-        let lvData = generateLevel(size, 'lv_'+num);
-        GameState.data = lvData; GameState.curLv = num;
-
-        document.getElementById('level-txt').innerText = `第 ${num+1} 关`;
-        document.getElementById('lv-size-txt').innerText = `(${size}x${size})`;
-
-        GameState.board = [];
-        for(let y=0; y<lvData.size; y++) {
-            GameState.board[y] = [];
-            for(let x=0; x<lvData.size; x++) GameState.board[y][x] = {c:false, x:false, l:false};
-        }
-        lvData.initial.forEach(v=>GameState.board[v.y][v.x] = {c:true, x:false, l:true});
-
-        GameState.lives = 3; GameState.hist = []; GameState.isLocked = false;
-        document.getElementById('winModal').classList.remove('show');
-        document.getElementById('tutorialOverlay').style.display = 'none';
-        startTimer(150);
-        
-        // 渲染颜色图例
-        renderLegend(lvData.size);
-        renderBoard();
-        updateUI();
-
-        if (num === 0) {
-            GameState.isTutorial = true; GameState.tStep = 0;
-            setTimeout(() => triggerTutorial(0), 600);
-        } else if (num === 1) {
-            showToast('📝 巩固练习：继续用【单击画X / 双击放牛】。');
-        } else if (num === 2) {
-            showToast('📝 进阶：5x5 挑战，卡住可点【提示】。');
-        } else if (num === 3) {
-            showToast('📝 逻辑：6x6 考验行列色组合。');
-        } else if (num === 4) {
-            showToast('📝 高手：7x7，推理能力大考验。');
-        }
-    }
-
-    // 颜色图例渲染
-    function renderLegend(size) {
-        const el = document.getElementById('legend-area');
-        el.innerHTML = '';
-        let colors = COLOR_MAP[size];
-        colors.forEach(c => {
-            let div = document.createElement('div');
-            div.className = 'legend-item';
-            div.innerHTML = `<div class="color-box" style="background:${c};"></div> ${COLOR_NAMES[c] || '色'}`;
-            el.appendChild(div);
-        });
-    }
-
-    // ================= 3. 交互渲染 =================
-    function renderBoard() {
-        let d = GameState.data;
-        if(!d) return;
-        let b = document.getElementById('board');
-        b.style.gridTemplateColumns = `repeat(${d.size}, 1fr)`;
-        b.innerHTML = '';
-        let remain = 0;
-
-        for(let y=0; y<d.size; y++) for(let x=0; x<d.size; x++) {
-            let div = document.createElement('div');
-            div.className = 'cell';
-            div.style.background = d.colors[y][x];
-            let cell = GameState.board[y][x];
-
-            if(cell.l) div.classList.add('locked');
-            if(cell.c) { let sp=document.createElement('span'); sp.className='cow'; sp.innerText='🐮'; div.appendChild(sp); remain++; } 
-            else if (cell.x) { let sp=document.createElement('span'); sp.className='cross'; sp.innerText='✕'; div.appendChild(sp); }
-
-            let clickTimer = null;
-            div.addEventListener('click', function(e) {
-                if(GameState.isLocked) return;
-                if(clickTimer) { clearTimeout(clickTimer); clickTimer = null; handleDblClick(x,y); } 
-                else { clickTimer = setTimeout(() => { clickTimer = null; handleSingleClick(x,y); }, 300); }
-            });
-            b.appendChild(div);
-        }
-        document.getElementById('remain-txt').innerText = d.size - remain;
-        checkWin();
-    }
-
-    // ================= 4. 单/双击逻辑（严格修复教学卡死） =================
-    function handleSingleClick(x, y) {
-        if(GameState.isTutorial) {
-            if(GameState.tStep === 0) {
-                if(x === 0 && y === 0) {
-                    let cell = GameState.board[0][0];
-                    cell.x = !cell.x;
-                    renderBoard(); updateUI();
-                    GameState.tStep = 1;
-                    triggerTutorial(1);
-                    return;
-                } else {
-                    showToast('👆 请先点击左上角格子画X');
-                    return;
-                }
-            } else if(GameState.tStep === 1) {
-                // 允许在教程Step1单击画X，防止玩家卡死
-                let cell = GameState.board[y][x];
-                if(cell.l || cell.c) return;
-                cell.x = !cell.x;
-                renderBoard(); updateUI();
-                return;
-            } else {
-                showToast('请先完成当前的教学指引');
-                return;
-            }
-        }
-        let cell = GameState.board[y][x];
-        if(cell.l || cell.c) return;
-        cell.x = !cell.x;
-        renderBoard(); updateUI();
-    }
-
-    function handleDblClick(x, y) {
-        if(GameState.isTutorial) {
-            if(GameState.tStep === 1) {
-                // 必须强制在正确位置放牛
-                let target = GameState.data.solution[1];
-                if(x === target.x && y === target.y) {
-                    let cell = GameState.board[y][x];
-                    if(cell.c) return;
-                    cell.c = true;
-                    renderBoard(); updateUI();
-                    GameState.tStep = 2;
-                    triggerTutorial(2);
-                    return;
-                } else {
-                    showToast('🐮 必须双击高亮的正确位置才能放牛！');
-                    return;
-                }
-            } else {
-                showToast('请先完成当前的教学指引');
-                return;
-            }
-        }
-
-        let cell = GameState.board[y][x];
-        if(cell.l) return;
-        if(cell.c) { GameState.hist.push(JSON.stringify(GameState.board)); cell.c = false; renderBoard(); updateUI(); return; }
-        if(cell.x) cell.x = false;
-
-        if(checkConflict(x, y)) {
-            GameState.lives--;
-            updateUI();
-            if(GameState.lives <= 0) {
-                showToast('💔 生命耗尽，重置本关...');
-                setTimeout(()=>{ GameState.isLocked = true; loadLevel(GameState.curLv); }, 1200);
-            } else {
-                showToast('❌ 规则冲突，消耗 1 个爱心');
-            }
-            return;
-        }
-        GameState.hist.push(JSON.stringify(GameState.board));
-        cell.c = true; renderBoard(); updateUI(); checkWin();
-    }
-
-    // ================= 5. 冲突检测 =================
-    function checkConflict(x, y) {
-        let d = GameState.data, sz = d.size, col = d.colors[y][x];
-        for(let i=0; i<sz; i++) { if(GameState.board[y][i].c || GameState.board[i][x].c) return true; }
-        for(let yy=0; yy<sz; yy++) for(let xx=0; xx<sz; xx++) {
-            let c = GameState.board[yy][xx];
-            if(c.c) {
-                if(d.colors[yy][xx] === col) return true;
-                if(Math.abs(xx-x)<=1 && Math.abs(yy-y)<=1) return true;
-            }
-        }
-        return false;
-    }
-
-    // ================= 6. 引导教学系统 =================
-    function triggerTutorial(step) {
-        const overlay = document.getElementById('tutorialOverlay');
-        const box = document.getElementById('tutorialBox');
-        const bubble = document.getElementById('tutorialBubble');
-        const highlight = document.getElementById('tutorialHighlight');
-        const app = document.getElementById('app');
-        const d = GameState.data;
-        if(!d) return;
-        let targetEl = null;
-        let text = '';
-        let isFinal = false;
-
-        if(step === 0) {
-            targetEl = document.querySelector('#board > div:nth-child(1)');
-            text = '👆 单击这个格子，画上【X】排除不可能的位置。';
-        } else if(step === 1) {
-            let target = d.solution[1];
-            targetEl = document.querySelector(`#board > div:nth-child(${target.y * d.size + target.x + 1})`);
-            text = '🐮 双击这个空位，放置第一头【牛】。';
-        } else if(step === 2) {
-            targetEl = document.getElementById('hintBtn');
-            text = '💡 卡住时点击【提示】按钮，正确位置会闪烁。';
-        } else if(step === 3) {
-            targetEl = document.getElementById('app');
-            text = '🎉 恭喜完成新手教学！\n自由完成剩下的牛即可过关。';
-            isFinal = true;
-        }
-
-        if(targetEl) {
-            overlay.style.display = 'block';
-            const rect = targetEl.getBoundingClientRect();
-            const appRect = app.getBoundingClientRect();
-
-            const left = rect.left - appRect.left - 4;
-            const top = rect.top - appRect.top - 4;
-            const width = rect.width + 8;
-            const height = rect.height + 8;
-
-            if(isFinal) {
-                box.style.display = 'none'; highlight.style.display = 'none';
-                bubble.style.top = '40%'; bubble.style.left = '50%'; bubble.style.transform = 'translate(-50%, -50%)';
-                bubble.style.fontSize = '18px'; bubble.style.fontWeight = 'bold'; bubble.style.textAlign = 'center';
-                bubble.style.whiteSpace = 'pre-wrap'; bubble.innerText = text;
-                setTimeout(() => { overlay.style.display = 'none'; GameState.isTutorial = false; }, 3000);
-            } else {
-                box.style.display = 'block'; highlight.style.display = 'block';
-                box.style.left = left + 'px'; box.style.top = top + 'px'; box.style.width = width + 'px'; box.style.height = height + 'px';
-                highlight.style.left = left + 'px'; highlight.style.top = top + 'px'; highlight.style.width = width + 'px'; highlight.style.height = height + 'px';
-                
-                bubble.style.transform = 'none'; bubble.style.textAlign = 'left'; bubble.style.whiteSpace = 'pre-wrap';
-                bubble.style.top = (rect.bottom - appRect.top + 12) + 'px';
-                bubble.st
+    // ================= 7. 功能与计时 =================
+    function doAction(type) {
+        if(GameState.isLocked && type !== 'reset') return;
+        if(GameState.isTutorial && type !== 'reset') return;
+        if(type === 'hint') {
+            let d=GameState.data, pos=d.solution.find(s=>!GameState.board[s.y][s.x].c);
+            if(pos) { 
+                let hintCell = document.querySelector(`#board > div:nth-child(${pos.y*d.size+pos.x+1})`);
+                if(hintCell) { hintCell.classList.add('highlight-hint'); showToast('💡 闪烁的位置正确'); setTimeout(()=>hintCell.classList.remove('highlight-hint'), 2000); }
+            } else showToast('🎉 已完成本关！');
+        } else if(type === 'undo') { if(

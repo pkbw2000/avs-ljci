@@ -3,107 +3,344 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
-    <title>牛牛逻辑 - 完整运营版</title>
+    <title>牛牛逻辑 - 稳定运营版</title>
     <style>
-        /* 基础重置与主题色 */
-        * { box-sizing: border-box; user-select: none; }
+        /* 基础重置 */
+        * { box-sizing: border-box; user-select: none; margin:0; padding:0; }
         body {
-            margin: 0; padding: 0; background: #f2f7fb; font-family: 'PingFang SC', Arial, sans-serif;
+            font-family: 'PingFang SC', Arial, sans-serif; background: #f2f7fb;
             display: flex; justify-content: center; height: 100vh; overflow: hidden;
         }
         #app {
             width: 100%; max-width: 480px; height: 100%; background: #e3f2fd;
-            display: flex; flex-direction: column; position: relative;
+            display: flex; flex-direction: column; position: relative; align-items: center;
         }
+        
+        /* 界面组件 */
+        .top-bar { width: 100%; display: flex; justify-content: space-between; padding: 12px 15px; font-size: 14px; font-weight: bold; }
+        .top-left { display: flex; gap: 15px; }
+        .res-item { background: rgba(255,255,255,0.7); padding: 4px 10px; border-radius: 20px; }
+        
+        .header { margin-top: 5px; font-size: 15px; font-weight: bold; color: #333; }
+        .lives { display: flex; justify-content: center; gap: 6px; font-size: 22px; margin: 8px 0 12px 0; }
+        .lives .lost { filter: grayscale(1) opacity: 0.3; }
 
-        /* 顶部状态栏 */
-        .status-bar {
-            display: flex; justify-content: space-between; align-items: center;
-            padding: 10px 15px; background: transparent;
-        }
-        .resource { display: flex; align-items: center; gap: 10px; font-size: 14px; font-weight: bold; }
-        .res-item { background: rgba(255,255,255,0.6); padding: 4px 12px 4px 4px; border-radius: 20px; display: flex; align-items: center; gap: 4px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
-        .res-item span { margin-left: 4px; color: #333; }
-        .tool-btns { display: flex; gap: 6px; }
-        .tool-btns button { background: white; border: none; border-radius: 50%; width: 32px; height: 32px; font-size: 16px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+        .rules { display: flex; gap: 10px; font-size: 11px; color: #555; margin-bottom: 12px; }
+        .rules div { background: white; padding: 4px 10px; border-radius: 20px; }
 
-        /* 副标题与生命值 */
-        .sub-header {
-            text-align: center; font-size: 14px; font-weight: bold; color: #3a4a58; margin-top: 10px;
-        }
-        .lives { display: flex; justify-content: center; gap: 6px; font-size: 22px; margin: 8px 0 15px 0; }
-        .lives .lost { filter: grayscale(1) opacity(0.3); }
+        .info { width: 90%; display: flex; justify-content: space-between; font-size: 15px; margin-bottom: 12px; }
+        .info span { background: white; padding: 4px 12px; border-radius: 20px; }
+        .timer.warning { color: #e74c3c; }
 
-        /* 规则提示区 */
-        .rule-area {
-            display: flex; justify-content: center; gap: 15px; margin: 0 15px 15px 15px; font-size: 11px; color: #555;
-        }
-        .rule-item { background: white; border-radius: 20px; padding: 6px 10px; display: flex; align-items: center; gap: 4px; box-shadow: 0 2px 4px rgba(0,0,0,0.04); }
-        .rule-item span { background: #e3f2fd; border-radius: 4px; padding: 2px; font-size: 14px; }
-
-        /* 游戏信息（剩余牛 & 计时器） */
-        .info-panel {
-            display: flex; justify-content: space-between; align-items: center; padding: 0 25px 10px 25px; font-size: 16px; color: #3a4a58;
-        }
-        .info-panel span { background: white; padding: 4px 12px; border-radius: 20px; display: flex; align-items: center; gap: 4px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
-        .info-panel .timer.warning { color: #e74c3c; animation: pulse 1s infinite; }
-
-        /* 主棋盘 */
+        /* 核心棋盘渲染（确保90%宽度居中） */
         #board {
-            display: grid; width: 90%; margin: 10px auto; gap: 4px; flex: 1; align-content: center;
+            display: grid; width: 90%; margin-top: 5px; background: transparent;
+            flex: 1; align-content: center; gap: 4px;
         }
         .c {
-            aspect-ratio: 1; border-radius: 8px; display: flex; justify-content: center; align-items: center;
-            font-size: 28px; position: relative; cursor: pointer; transition: all 0.1s;
+            aspect-ratio: 1; border-radius: 8px; display: flex; justify-content: center;
+            align-items: center; font-size: 24px; position: relative; cursor: pointer;
+            transition: transform 0.1s;
         }
         .c:active { transform: scale(0.95); }
-        .c.invalid { background: #b0bec5 !important; opacity: 0.8; cursor: not-allowed; } /* 灰块 */
-        .c.locked::after { content: '🔒'; position: absolute; top: 2px; right: 2px; font-size: 12px; }
-        .c .x-mark { font-size: 20px; color: #e74c3c; font-weight: bold; background: rgba(255,255,255,0.7); border-radius: 50%; width: 24px; height: 24px; display: flex; justify-content: center; align-items: center; }
+        .c.invalid { background: #b0bec5 !important; }
+        .c .x-mark { font-size: 18px; color: #e74c3c; font-weight: bold; background: white; border-radius: 50%; width: 24px; height: 24px; display: flex; justify-content: center; align-items: center; }
 
         /* 底部按钮 */
-        .footer {
-            display: flex; justify-content: space-between; padding: 20px 30px; margin-bottom: env(safe-area-inset-bottom);
-        }
-        .footer-btn {
-            display: flex; flex-direction: column; align-items: center; font-size: 12px; color: #666; cursor: pointer;
-        }
-        .footer-btn .icon { background: white; width: 44px; height: 44px; border-radius: 50%; display: flex; justify-content: center; align-items: center; font-size: 20px; margin-bottom: 4px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
+        .footer { width: 90%; display: flex; justify-content: space-between; padding: 20px 0; }
+        .btn { display: flex; flex-direction: column; align-items: center; font-size: 12px; color: #666; }
+        .btn .icon { background: white; width: 44px; height: 44px; border-radius: 50%; display: flex; justify-content: center; align-items: center; font-size: 20px; margin-bottom: 5px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
 
-        /* 弹窗遮罩 */
-        .modal-overlay {
-            position: absolute; inset: 0; background: rgba(0,0,0,0.5); backdrop-filter: blur(2px);
-            display: none; justify-content: center; align-items: center; z-index: 100; flex-direction: column;
-        }
-        .modal-overlay.show { display: flex; }
-        .modal-card {
-            background: #f2f7fb; width: 85%; border-radius: 24px; padding: 20px; box-shadow: 0 20px 40px rgba(0,0,0,0.2); display: flex; flex-direction: column; align-items: center; gap: 12px;
-        }
-        .modal-card h2 { font-size: 22px; margin: 0; color: #4a90e2; }
-        .modal-preview { display: grid; gap: 2px; width: 120px; height: 120px; margin: 10px 0; }
-        .modal-preview .c { border-radius: 2px; font-size: 12px; }
-        .modal-info-box {
-            background: #cce4fb; width: 100%; border-radius: 12px; padding: 12px; text-align: center; font-size: 14px; color: #333; line-height: 1.8;
-        }
-        .modal-btn {
-            background: #4cd964; color: white; border: none; border-radius: 30px; padding: 12px 0; width: 80%; font-size: 18px; font-weight: bold; margin: 5px 0; box-shadow: 0 4px 8px rgba(76, 217, 100, 0.3);
-        }
-        .modal-btn.gray { background: #e0e0e0; color: #666; box-shadow: none; }
+        /* 弹出层 */
         .toast {
             position: absolute; bottom: 100px; left: 50%; transform: translateX(-50%);
-            background: rgba(0,0,0,0.7); color: white; padding: 10px 20px; border-radius: 20px; font-size: 14px; display: none; z-index: 50; white-space: nowrap;
+            background: rgba(0,0,0,0.7); color: white; padding: 10px 20px; border-radius: 20px;
+            font-size: 14px; display: none; z-index: 50; white-space: nowrap;
         }
-        .toast.show { display: block; animation: slideUp 0.3s; }
-
-        @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.3; } 100% { opacity: 1; } }
-        @keyframes slideUp { from { transform: translateX(-50%) translateY(20px); opacity: 0; } to { transform: translateX(-50%) translateY(0); opacity: 1; } }
+        .toast.show { display: block; }
     </style>
 </head>
 <body>
 <div id="app">
-    <!-- 顶部状态栏 -->
-    <div class="status-bar">
-        <div class="resource">
+    <div class="top-bar">
+        <div class="top-left"><div class="res-item">⭐<span id="stars">200</span></div><div class="res-item">⚡<span id="energy">8</span></div></div>
+        <div><button style="border:0;background:white;border-radius:50%;width:32px;height:32px;">⚙️</button></div>
+    </div>
+
+    <div class="header">第<span id="level-text">1</span>关</div>
+    <div class="lives" id="lives-box"><span class="heart">❤️</span><span class="heart">❤️</span><span class="heart">❤️</span></div>
+
+    <div class="rules"><div>🚫 周边不能有牛</div><div>⬜ 行列只能1头</div><div>🎨 同色只能1头</div></div>
+
+    <div class="info"><span>🐮 剩余: <b id="remain">0</b></span><span id="timer-box">⏱️ 02:30</span></div>
+
+    <!-- 游戏棋盘 -->
+    <div id="board"></div>
+
+    <div class="footer">
+        <div class="btn" onclick="actionHint()"><div class="icon">💡</div>提示</div>
+        <div class="btn" onclick="actionUndo()"><div class="icon">↩️</div>撤回</div>
+        <div class="btn" onclick="actionReset()"><div class="icon">🔄</div>重玩</div>
+    </div>
+
+    <div id="toast" class="toast">提示</div>
+</div>
+
+<script>
+    // 极简状态管理
+    const COLORS = ['#FFD54F','#81C784','#4DD0E1','#F48FB1','#BA68C8','#FFB74D','#A5D6A7'];
+    let gameState = {
+        curLevel: 0, maxLevel: 0, lives: 3, stars: 200, energy: 8,
+        board: [], history: [], timer: 0, timerInterval: null, levelData: null
+    };
+
+    // 1. 关卡生成器
+    function makeLevel(seed, size) {
+        // 寻找符合规则的答案
+        let solution = [];
+        for(let y=0; y<size; y++) {
+            for(let x=0; x<size; x++) {
+                let valid = true;
+                for(let s of solution) {
+                    if(s.x===x || s.y===y || (Math.abs(s.x-x)<=1 && Math.abs(s.y-y)<=1)) valid=false;
+                }
+                if(valid) { solution.push({x:x, y:y}); break; } // 简单贪心策略，总能解开
+            }
+        }
+
+        // 分配颜色
+        let colors = [];
+        for(let y=0; y<size; y++) {
+            colors[y] = [];
+            for(let x=0; x<size; x++) {
+                let minDist = 999, id = 0;
+                solution.forEach((s, idx)=>{
+                    let dist = Math.abs(s.x-x) + Math.abs(s.y-y);
+                    if(dist < minDist) { minDist = dist; id = idx; }
+                });
+                colors[y][x] = COLORS[id % COLORS.length];
+            }
+        }
+        return { size, colors, solution, initial:[solution[0]] };
+    }
+
+    // 2. 加载关卡
+    function loadLevel(num, isDaily=false) {
+        if(!isDaily) gameState.curLevel = num;
+        let size = num < 15 ? 4 : (num < 35 ? 5 : 6);
+        if(isDaily) size = 10;
+
+        let data = makeLevel('seed'+num, size);
+        gameState.levelData = data;
+
+        // 初始化棋盘
+        gameState.board = [];
+        for(let y=0; y<data.size; y++) {
+            gameState.board[y] = [];
+            for(let x=0; x<data.size; x++) {
+                gameState.board[y][x] = { cow:false, xmark:false, lock:false };
+            }
+        }
+        data.initial.forEach(v=>{ gameState.board[v.y][v.x] = { cow:true, xmark:false, lock:true }; });
+        
+        gameState.history = []; // 清空历史
+        document.getElementById('level-text').innerText = isDaily ? '每日挑战' : (num+1);
+        startTimer(150);
+        renderBoard();
+        updateUI();
+    }
+
+    // 3. 渲染核心棋盘 (纯DOM局部更新，稳定可靠)
+    function renderBoard() {
+        let lv = gameState.levelData;
+        let boardEl = document.getElementById('board');
+        if(!lv) return;
+        boardEl.style.gridTemplateColumns = `repeat(${lv.size}, 1fr)`;
+        boardEl.innerHTML = ''; // 清空重绘
+
+        let cowCnt = 0;
+        for(let y=0; y<lv.size; y++) {
+            for(let x=0; x<lv.size; x++) {
+                let div = document.createElement('div');
+                div.className = 'c';
+                div.style.background = lv.colors[y][x]; // 必须每个格子都有颜色
+                div.dataset.x = x; div.dataset.y = y;
+
+                let cell = gameState.board[y][x];
+                if(cell.cow) { div.innerText = '🐮'; cowCnt++; }
+                else if(cell.xmark) { div.innerHTML = '<div class="x-mark">✕</div>'; }
+
+                if(cell.lock) div.style.border = '2px solid #e74c3c'; // 锁标记
+                
+                // 绑定点击事件 (保证手机端不卡)
+                div.addEventListener('click', function() { clickCell(x,y); });
+                boardEl.appendChild(div);
+            }
+        }
+        document.getElementById('remain').innerText = lv.size - cowCnt;
+    }
+
+    // 4. 点击交互核心 (允许错误放牛，扣减生命值)
+    function clickCell(x, y) {
+        let lv = gameState.levelData;
+        let cell = gameState.board[y][x];
+        if(cell.lock) return;
+
+        // 如果点的是牛，则取消它
+        if(cell.cow) {
+            gameState.history.push(JSON.stringify(gameState.board));
+            cell.cow = false;
+            renderBoard(); updateUI(); return;
+        }
+
+        // 尝试放牛，先检测冲突
+        if(checkConflict(x,y)) {
+            // 触发了规则冲突，扣除生命值
+            gameState.lives -= 1;
+            updateUI();
+            if(gameState.lives <= 0) {
+                showToast('💔 生命值耗尽，关卡失败！重试');
+                setTimeout(()=>{ gameState.lives = 3; loadLevel(gameState.curLevel, false); }, 1200);
+            } else {
+                showToast('❌ 规则冲突，消耗1条命！');
+            }
+            return;
+        }
+
+        // 无冲突，正确放下牛
+        gameState.history.push(JSON.stringify(gameState.board));
+        cell.cow = true;
+        renderBoard(); updateUI();
+        checkWin();
+    }
+
+    // 5. 冲突检测算法
+    function checkConflict(x, y) {
+        let lv = gameState.levelData;
+        let color = lv.colors[y][x];
+        let size = lv.size;
+        for(let i=0; i<size; i++) {
+            // 行列冲突
+            if(gameState.board[y][i].cow || gameState.board[i][x].cow) return true;
+        }
+        for(let yy=0; yy<size; yy++) {
+            for(let xx=0; xx<size; xx++) {
+                let c = gameState.board[yy][xx];
+                if(c.cow) {
+                    if(lv.colors[yy][xx] === color) return true; // 同色
+                    if(Math.abs(xx-x)<=1 && Math.abs(yy-y)<=1) return true; // 九宫格
+                }
+            }
+        }
+        return false;
+    }
+
+    // 6. 辅助功能：提示、撤回、重玩
+    function actionHint() {
+        let lv = gameState.levelData;
+        let pos = lv.solution.find(s=>!gameState.board[s.y][s.x].cow);
+        if(pos) {
+            gameState.board[pos.y][pos.x].xmark = true;
+            renderBoard(); updateUI();
+            showToast('💡 提示位置在此（X处）');
+            setTimeout(()=>{ gameState.board[pos.y][pos.x].xmark = false; renderBoard(); }, 2000);
+        } else { showToast('🎉 牛已放齐！'); }
+    }
+
+    function actionUndo() {
+        if(gameState.history.length === 0) { showToast('没有上一步'); return; }
+        gameState.board = JSON.parse(gameState.history.pop());
+        renderBoard(); updateUI();
+        showToast('↩️ 已撤回');
+    }
+
+    function actionReset() {
+        loadLevel(gameState.curLevel, false);
+        showToast('🔄 已重置');
+    }
+
+    // 7. 计时器与通关检测
+    function startTimer(sec) {
+        clearInterval(gameState.timerInterval);
+        gameState.timer = sec;
+        updateTimer();
+        gameState.timerInterval = setInterval(()=>{
+            gameState.timer--;
+            updateTimer();
+            if(gameState.timer<=0) {
+                clearInterval(gameState.timerInterval);
+                showToast('⏱️ 超时失败！');
+                setTimeout(()=>{ loadLevel(gameState.curLevel, false); }, 1000);
+            }
+        }, 1000);
+    }
+
+    function updateTimer() {
+        let m = Math.floor(gameState.timer/60), s = gameState.timer%60;
+        let el = document.getElementById('timer-box');
+        el.innerText = `⏱️ ${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+        if(gameState.timer <= 30) el.className = 'timer warning'; else el.className = 'timer';
+    }
+
+    function checkWin() {
+        let lv = gameState.levelData;
+        let success = lv.solution.every(s=>gameState.board[s.y][s.x].cow === true);
+        if(success) {
+            clearInterval(gameState.timerInterval);
+            showToast('🎉 恭喜过关！获得 ⭐+20');
+            gameState.stars += 20;
+            if(gameState.curLevel+1 > gameState.maxLevel) gameState.maxLevel = gameState.curLevel+1;
+            saveData();
+            setTimeout(()=>{ loadLevel(gameState.maxLevel, false); }, 1500);
+        }
+    }
+
+    // 8. UI更新与Toast
+    function updateUI() {
+        let hearts = document.getElementById('lives-box').children;
+        for(let i=0; i<hearts.length; i++) {
+            hearts[i].className = i >= gameState.lives ? 'heart lost' : 'heart';
+        }
+        document.getElementById('stars').innerText = gameState.stars;
+        document.getElementById('energy').innerText = gameState.energy;
+    }
+
+    let toastTimer = null;
+    function showToast(text) {
+        let el = document.getElementById('toast');
+        clearTimeout(toastTimer);
+        el.innerText = text; el.className = 'toast show';
+        toastTimer = setTimeout(()=>{ el.className = 'toast'; }, 1500);
+    }
+
+    // 9. 本地存档系统
+    function saveData() {
+        try {
+            localStorage.setItem('niuniu_data', JSON.stringify({
+                max: gameState.maxLevel, stars: gameState.stars, energy: gameState.energy
+            }));
+        } catch(e){}
+    }
+
+    function loadData() {
+        try {
+            let raw = localStorage.getItem('niuniu_data');
+            if(raw) {
+                let d = JSON.parse(raw);
+                gameState.maxLevel = d.max || 0;
+                gameState.stars = d.stars || 200;
+                gameState.energy = d.energy || 8;
+            }
+        } catch(e){}
+    }
+
+    // 10. 启动游戏
+    loadData();
+    loadLevel(gameState.maxLevel, false);
+    console.log('游戏已启动！如果仍白屏，请点击右上角三点，打开“调试/开发者工具”查看控制台报错。');
+</script>
+</body>
+</html>        <div class="resource">
             <div class="res-item"><span>⭐</span><span id="stars-display">200</span></div>
             <div class="res-item"><span>⚡</span><span id="energy-display">8</span></div>
         </div>

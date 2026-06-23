@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>牛牛逻辑 - 双击放牛版</title>
+    <title>牛牛逻辑 - 教学演示版</title>
     <style>
         * { box-sizing: border-box; user-select: none; -webkit-tap-highlight-color: transparent; }
         body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: #e8f4fd; font-family: 'PingFang SC', sans-serif; }
@@ -38,12 +38,12 @@
             transition: all 0.1s; touch-action: manipulation; cursor: pointer;
             background-clip: padding-box;
         }
-        /* 放牛/画叉的动效 */
         .cell:active { transform: scale(0.90); }
         .cell .cross {
             color: #e74c3c; font-weight: bold; font-size: 1.2em;
             text-shadow: 0 0 4px rgba(255,255,255,0.8);
         }
+        .cell.locked { border: 2px solid #e74c3c; } /* 演示锁的记号 */
 
         .footer { width: 90%; display: flex; justify-content: space-between; padding: 15px 0 25px 0; }
         .btn { display: flex; flex-direction: column; align-items: center; font-size: 12px; color: #666; }
@@ -63,7 +63,7 @@
         <div class="info">⭐ <span id="star-txt">200</span></div>
         <div class="info">⚡ <span id="energy-txt">8</span></div>
     </div>
-    <div class="title">第<span id="level-txt">1</span>关</div>
+    <div class="title">第<span id="level-txt">1</span>关 (演示教学)</div>
     <div class="lives-box" id="lives"><span>❤️</span><span>❤️</span><span>❤️</span></div>
     <div class="rules">
         <span>🚫 周边无牛</span>
@@ -71,7 +71,7 @@
         <span>🎨 同色唯一</span>
     </div>
     <div class="info-bar">
-        <div>🐮 剩余: <b id="remain-txt">0</b></div>
+        <div>🐮 剩余: <b id="remain-txt">0</b> <span style="font-size:10px;color:#888;">(再找出2隻)</span></div>
         <div id="timer-txt">⏱️ 02:30</div>
     </div>
     
@@ -93,7 +93,7 @@
         board: [], hist: [], timer: 150, timeId: null, data: null 
     };
 
-    // --- 1. 关卡生成器 ---
+    // --- 1. 更加平滑的关卡生成器 ---
     function generateLv(seed, size) {
         let solution = [];
         for(let y=0; y<size; y++) for(let x=0; x<size; x++) {
@@ -104,6 +104,174 @@
         let colors = [];
         for(let y=0; y<size; y++) {
             colors[y] = [];
+            for(let x=0; x<size; x++) {
+                let minD=999, id=0;
+                solution.forEach((s,i)=>{ let d = Math.abs(s.x-x) + Math.abs(s.y-y); if(d<minD){ minD=d; id=i; } });
+                colors[y][x] = COLORS[id % COLORS.length];
+            }
+        }
+        return {size, colors, solution, initial:[solution[0]]};
+    }
+
+    // --- 2. 加载关卡 (这里进行了您要求的难度分级优化) ---
+    function loadLv(num) {
+        // 前 5 关为 3x3 新手教学：一共 3 头牛，预置 1 头，剩余 2 头！
+        let size = num < 5 ? 3 : (num < 15 ? 4 : (num < 30 ? 5 : 6));
+        
+        State.data = generateLv('se'+num, size); State.curLevel = num;
+        
+        let titleTxt = document.getElementById('level-txt');
+        if(num === 0) titleTxt.innerText = '第1关 (演示教学)';
+        else titleTxt.innerText = `第${num+1}关`;
+        
+        State.board = [];
+        let d = State.data;
+        for(let y=0; y<d.size; y++) {
+            State.board[y] = [];
+            for(let x=0; x<d.size; x++) State.board[y][x] = {c:false, x:false, l:false};
+        }
+        d.initial.forEach(v=>State.board[v.y][v.x] = {c:true, x:false, l:true});
+        State.hist = []; State.lives = 3; startTimer(); render(); updateUI();
+    }
+
+    // --- 3. 棋盘渲染 ---
+    function render() {
+        let d = State.data;
+        if(!d) return;
+        let b = document.getElementById('board');
+        b.style.gridTemplateColumns = `repeat(${d.size}, 1fr)`;
+        b.innerHTML = '';
+        let remain = 0;
+        
+        for(let y=0; y<d.size; y++) {
+            for(let x=0; x<d.size; x++) {
+                let div = document.createElement('div');
+                div.className = 'cell';
+                div.style.background = d.colors[y][x];
+                let cell = State.board[y][x];
+                
+                if(cell.c) { div.innerText = '🐮'; remain++; } 
+                else if (cell.x) { div.innerHTML = '<div class="cross">✕</div>'; } 
+                else { div.innerHTML = ''; }
+                
+                // 如果是系统预置的牛，加个红框区分
+                if(cell.l) div.classList.add('locked');
+
+                // ★★★ 核心交互：单击画X，双击放牛 ★★★
+                let clickTimer = null;
+                div.addEventListener('click', function(e) {
+                    if(cell.l) return; // 锁定牛不能交互
+                    if(clickTimer) {
+                        clearTimeout(clickTimer);
+                        clickTimer = null;
+                        handleDblClick(x, y);
+                    } else {
+                        clickTimer = setTimeout(() => {
+                            clickTimer = null;
+                            handleSingleClick(x, y);
+                        }, 300);
+                    }
+                });
+                
+                b.appendChild(div);
+            }
+        }
+        // 明确显示剩余数量，前端教学提示
+        document.getElementById('remain-txt').innerText = d.size - remain;
+        checkWin();
+    }
+
+    // --- 4. 交互执行逻辑 ---
+    function handleSingleClick(x, y) {
+        let cell = State.board[y][x];
+        if(cell.c || cell.l) return; 
+        cell.x = !cell.x; // 切换X状态
+        render(); updateUI();
+    }
+
+    function handleDblClick(x, y) {
+        let cell = State.board[y][x];
+        if(cell.l) return;
+
+        if(cell.c) {
+            State.hist.push(JSON.stringify(State.board));
+            cell.c = false; render(); updateUI(); return;
+        }
+
+        if(isConflict(x, y)) {
+            State.lives--; updateUI();
+            if(State.lives <= 0) {
+                showToast('💔 生命耗尽，重开本关');
+                setTimeout(()=>{ loadLv(State.curLevel); }, 1000);
+            } else {
+                showToast('❌ 双击错误，消耗一个爱心');
+            }
+            return;
+        }
+
+        State.hist.push(JSON.stringify(State.board));
+        if(cell.x) cell.x = false;
+        cell.c = true; render(); updateUI(); checkWin();
+    }
+
+    // --- 5. 游戏规则检测 (行列、同色、九宫格) ---
+    function isConflict(x, y) {
+        let d = State.data, sz = d.size, col = d.colors[y][x];
+        for(let i=0; i<sz; i++) {
+            if(State.board[y][i].c || State.board[i][x].c) return true; 
+        }
+        for(let yy=0; yy<sz; yy++) {
+            for(let xx=0; xx<sz; xx++) {
+                let c = State.board[yy][xx];
+                if(c.c) {
+                    if(d.colors[yy][xx] === col) return true; 
+                    if(Math.abs(xx-x)<=1 && Math.abs(yy-y)<=1) return true; 
+                }
+            }
+        }
+        return false;
+    }
+
+    // --- 6. 计时器 ---
+    function startTimer() { clearInterval(State.timeId); State.timer = 150; updateTimer(); State.timeId = setInterval(()=>{ State.timer--; updateTimer(); if(State.timer<=0){ clearInterval(State.timeId); showToast('⏱️ 超时，重新挑战'); setTimeout(()=>loadLv(State.curLevel), 1000); } }, 1000); }
+    function updateTimer() { let m=Math.floor(State.timer/60), s=State.timer%60; document.getElementById('timer-txt').innerText = `⏱️ ${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`; }
+
+    // --- 7. 胜利判定 ---
+    function checkWin() {
+        let d = State.data;
+        let win = d.solution.every(s=>State.board[s.y][s.x].c===true);
+        if(win) { clearInterval(State.timeId); showToast('🎉 恭喜通关！'); State.stars += 20; saveData(); setTimeout(()=>loadLv(State.curLevel+1), 1500); }
+    }
+
+    // --- 8. 底部辅助按钮 ---
+    function doHint() {
+        let d = State.data; 
+        let pos = d.solution.find(s=>!State.board[s.y][s.x].c);
+        if(pos) { State.board[pos.y][pos.x].x = true; render(); updateUI(); showToast('💡 提示在X标记处'); setTimeout(()=>{ State.board[pos.y][pos.x].x = false; render(); }, 2500); } 
+        else { showToast('已经完成！'); }
+    }
+    function doUndo() { if(State.hist.length<=0) return; State.board = JSON.parse(State.hist.pop()); render(); updateUI(); showToast('↩️ 撤回上一步'); }
+    function doReset() { loadLv(State.curLevel); showToast('🔄 重置本关'); }
+
+    // --- 9. UI与数据持久化 ---
+    function updateUI() {
+        let livesEls = document.getElementById('lives').children;
+        for(let i=0; i<livesEls.length; i++) livesEls[i].className = i >= State.lives ? 'lost' : '';
+        document.getElementById('star-txt').innerText = State.stars;
+        document.getElementById('energy-txt').innerText = State.energy;
+    }
+    function showToast(t) {
+        let el = document.getElementById('toast'); el.innerText = t; el.className = 'toast show';
+        clearTimeout(el._t); el._t = setTimeout(()=>el.className = 'toast', 1500);
+    }
+    function saveData() { localStorage.setItem('cow_progress', JSON.stringify({lv:State.curLevel, star:State.stars})); }
+    function loadData() { try { let d = JSON.parse(localStorage.getItem('cow_progress')); if(d) { State.curLevel = d.lv; State.stars = d.star || 200; } } catch(e){} }
+
+    // --- 启动 ---
+    loadData(); loadLv(State.curLevel);
+</script>
+</body>
+</html>            colors[y] = [];
             for(let x=0; x<size; x++) {
                 let minD=999, id=0;
                 solution.forEach((s,i)=>{ let d = Math.abs(s.x-x) + Math.abs(s.y-y); if(d<minD){ minD=d; id=i; } });

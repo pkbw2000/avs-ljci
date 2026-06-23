@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>牛牛逻辑</title>
+    <title>牛牛逻辑 - 双击放牛版</title>
     <style>
         * { box-sizing: border-box; user-select: none; -webkit-tap-highlight-color: transparent; }
         body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: #e8f4fd; font-family: 'PingFang SC', sans-serif; }
@@ -30,14 +30,16 @@
         .board-wrap { flex: 1; width: 100%; display: flex; justify-content: center; align-items: center; padding: 5px; }
         #board { display: grid; gap: 4px; width: 100%; aspect-ratio: 1; max-width: 420px; background: transparent; }
         
-        /* ★ 格子及动画 */
+        /* ★ 核心网格及点击反馈 */
         .cell {
             aspect-ratio: 1; border-radius: 8px; width: 100%;
             display: flex; justify-content: center; align-items: center;
             font-size: min(6vw, 32px); box-shadow: inset 0 2px 4px rgba(0,0,0,0.05);
-            transition: transform 0.1s; touch-action: manipulation; cursor: pointer;
+            transition: all 0.1s; touch-action: manipulation; cursor: pointer;
+            background-clip: padding-box;
         }
-        .cell:active { transform: scale(0.92); }
+        /* 放牛/画叉的动效 */
+        .cell:active { transform: scale(0.90); }
         .cell .cross {
             color: #e74c3c; font-weight: bold; font-size: 1.2em;
             text-shadow: 0 0 4px rgba(255,255,255,0.8);
@@ -84,9 +86,14 @@
 </div>
 
 <script>
+    // 配置：颜色、状态
     const COLORS = ['#FFD54F','#81C784','#4DD0E1','#F48FB1','#BA68C8','#FFB74D','#A5D6A7'];
-    let State = { curLevel: 0, lives: 3, stars: 200, energy: 8, board: [], hist: [], timer: 150, timeId: null, data: null };
+    let State = { 
+        curLevel: 0, lives: 3, stars: 200, energy: 8, 
+        board: [], hist: [], timer: 150, timeId: null, data: null 
+    };
 
+    // --- 1. 关卡生成器 ---
     function generateLv(seed, size) {
         let solution = [];
         for(let y=0; y<size; y++) for(let x=0; x<size; x++) {
@@ -106,6 +113,7 @@
         return {size, colors, solution, initial:[solution[0]]};
     }
 
+    // --- 2. 加载关卡 ---
     function loadLv(num) {
         let size = num<15 ? 4 : (num<35 ? 5 : 6);
         State.data = generateLv('se'+num, size); State.curLevel = num;
@@ -120,7 +128,7 @@
         State.hist = []; State.lives = 3; startTimer(); render(); updateUI();
     }
 
-    // ★★★ 核心：修复渲染逻辑，确保 X 不会被牛覆盖 ★★★
+    // --- 3. 棋盘渲染 ---
     function render() {
         let d = State.data;
         if(!d) return;
@@ -136,33 +144,35 @@
                 div.style.background = d.colors[y][x];
                 let cell = State.board[y][x];
                 
-                // ★ 使用 else if 严格判断优先级：牛 > X > 空
-                if(cell.c) { 
-                    div.innerText = '🐮'; remain++; 
-                } else if (cell.x) { 
-                    div.innerHTML = '<div class="cross">✕</div>'; 
-                } else {
-                    div.innerHTML = '';
-                }
+                if(cell.c) { div.innerText = '🐮'; remain++; } 
+                else if (cell.x) { div.innerHTML = '<div class="cross">✕</div>'; } 
+                else { div.innerHTML = ''; }
 
-                // ★★★ 交互逻辑：支持长按打X ★★★
-                let pressTimer = null;
-                // 电脑右键打X
-                div.addEventListener('contextmenu', (e) => { 
-                    e.preventDefault(); 
-                    if(!cell.c && !cell.l) { cell.x = !cell.x; render(); updateUI(); } 
+                // ★★★ 核心交互：单击画X，双击放牛 ★★★
+                let clickTimer = null;
+                div.addEventListener('click', function(e) {
+                    // 如果格子被锁住，直接忽略
+                    if(cell.l) return;
+
+                    if(clickTimer) {
+                        // 如果已有定时器，说明是双击
+                        clearTimeout(clickTimer);
+                        clickTimer = null;
+                        handleDblClick(x, y);
+                    } else {
+                        // 第一次点击，开启定时器等待双击
+                        clickTimer = setTimeout(() => {
+                            clickTimer = null;
+                            handleSingleClick(x, y);
+                        }, 300); // 300毫秒内判定为双击，否则为单击
+                    }
                 });
-                // 手机长按打X
-                div.addEventListener('touchstart', (e) => {
-                    pressTimer = setTimeout(() => {
-                        if(!cell.c && !cell.l) { cell.x = !cell.x; render(); updateUI(); }
-                    }, 500); // 长按0.5秒触发
+
+                // 辅助：PC端鼠标右键也能打X，方便习惯
+                div.addEventListener('contextmenu', function(e) { 
+                    e.preventDefault(); handleSingleClick(x, y); 
                 });
-                div.addEventListener('touchend', () => clearTimeout(pressTimer));
-                div.addEventListener('touchmove', () => clearTimeout(pressTimer));
                 
-                // 普通点击（放牛）
-                div.addEventListener('click', (e) => { clickCell(x, y); });
                 b.appendChild(div);
             }
         }
@@ -170,53 +180,89 @@
         checkWin();
     }
 
-    function clickCell(x, y) {
+    // --- 4. 交互执行逻辑 ---
+    function handleSingleClick(x, y) {
+        let cell = State.board[y][x];
+        if(cell.c || cell.l) return; // 有牛或锁定不能画X
+        cell.x = !cell.x; // 切换X状态
+        render(); updateUI();
+    }
+
+    function handleDblClick(x, y) {
         let cell = State.board[y][x];
         if(cell.l) return;
-        if(cell.c) { State.hist.push(JSON.stringify(State.board)); cell.c = false; render(); updateUI(); return; }
-        // 如果之前画了X，放牛时自动清掉X
-        if(cell.x) cell.x = false;
-        
-        if(isConflict(x, y)) {
-            State.lives--; updateUI();
-            if(State.lives <= 0) { showToast('💔 生命耗尽，重置关卡'); setTimeout(()=>loadLv(State.curLevel), 1000); }
-            else { showToast('❌ 双击错误消耗生命值哦！'); }
+
+        // 如果格子已经有牛，双击取消牛（放回）
+        if(cell.c) {
+            State.hist.push(JSON.stringify(State.board));
+            cell.c = false;
+            render(); updateUI();
             return;
         }
+
+        // 尝试放置牛，先检测冲突
+        if(isConflict(x, y)) {
+            // 规则2：双击位置不正确，扣除一颗爱心
+            State.lives--; 
+            updateUI();
+            if(State.lives <= 0) {
+                // 规则3：扣光爱心则游戏结束
+                showToast('💔 游戏结束，重新挑战');
+                setTimeout(()=>{ loadLv(State.curLevel); }, 1000);
+            } else {
+                showToast('❌ 双击错误，消耗生命值');
+            }
+            return;
+        }
+
+        // 规则1：双击位置正确，出现牛
         State.hist.push(JSON.stringify(State.board));
-        cell.c = true; render(); updateUI(); checkWin();
+        if(cell.x) cell.x = false; // 清除该格子的X标记
+        cell.c = true;
+        render(); updateUI();
+        checkWin(); // 检查是否通关
     }
 
+    // --- 5. 游戏规则（严谨冲突检测） ---
     function isConflict(x, y) {
         let d = State.data, sz = d.size, col = d.colors[y][x];
-        for(let i=0; i<sz; i++) if(State.board[y][i].c || State.board[i][x].c) return true;
-        for(let yy=0; yy<sz; yy++) for(let xx=0; xx<sz; xx++) {
-            let c = State.board[yy][xx];
-            if(c.c) {
-                if(d.colors[yy][xx] === col) return true;
-                if(Math.abs(xx-x)<=1 && Math.abs(yy-y)<=1) return true;
+        for(let i=0; i<sz; i++) {
+            if(State.board[y][i].c || State.board[i][x].c) return true; // 行列冲突
+        }
+        for(let yy=0; yy<sz; yy++) {
+            for(let xx=0; xx<sz; xx++) {
+                let c = State.board[yy][xx];
+                if(c.c) {
+                    if(d.colors[yy][xx] === col) return true; // 同色冲突
+                    if(Math.abs(xx-x)<=1 && Math.abs(yy-y)<=1) return true; // 九宫格冲突
+                }
             }
-        } return false;
+        }
+        return false;
     }
 
-    function startTimer() { clearInterval(State.timeId); State.timer = 150; updateTimer(); State.timeId = setInterval(()=>{ State.timer--; updateTimer(); if(State.timer<=0){ clearInterval(State.timeId); showToast('⏱️ 超时重置'); setTimeout(()=>loadLv(State.curLevel), 1000); } }, 1000); }
+    // --- 6. 计时器 ---
+    function startTimer() { clearInterval(State.timeId); State.timer = 150; updateTimer(); State.timeId = setInterval(()=>{ State.timer--; updateTimer(); if(State.timer<=0){ clearInterval(State.timeId); showToast('⏱️ 超时，重新挑战'); setTimeout(()=>loadLv(State.curLevel), 1000); } }, 1000); }
     function updateTimer() { let m=Math.floor(State.timer/60), s=State.timer%60; document.getElementById('timer-txt').innerText = `⏱️ ${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`; }
 
+    // --- 7. 胜利判定 ---
     function checkWin() {
-        let d = State.data, win = d.solution.every(s=>State.board[s.y][s.x].c===true);
+        let d = State.data;
+        let win = d.solution.every(s=>State.board[s.y][s.x].c===true);
         if(win) { clearInterval(State.timeId); showToast('🎉 恭喜通关！'); State.stars += 20; saveData(); setTimeout(()=>loadLv(State.curLevel+1), 1500); }
     }
 
-    // 提示功能（打X位置，2秒后消失）
+    // --- 8. 底部辅助按钮 ---
     function doHint() {
-        let d = State.data, pos = d.solution.find(s=>!State.board[s.y][s.x].c);
-        if(pos) { State.board[pos.y][pos.x].x = true; render(); updateUI(); showToast('💡 提示在此(长按可自主画X)'); 
-        setTimeout(()=>{ State.board[pos.y][pos.x].x = false; render(); }, 2500); } 
-        else { showToast('牛都放完了'); }
+        let d = State.data; 
+        let pos = d.solution.find(s=>!State.board[s.y][s.x].c);
+        if(pos) { State.board[pos.y][pos.x].x = true; render(); updateUI(); showToast('💡 单击可自主画X标记'); setTimeout(()=>{ State.board[pos.y][pos.x].x = false; render(); }, 2500); } 
+        else { showToast('已经完成！'); }
     }
-    function doUndo() { if(State.hist.length<=0) return; State.board = JSON.parse(State.hist.pop()); render(); updateUI(); showToast('↩️ 已撤回'); }
-    function doReset() { loadLv(State.curLevel); }
+    function doUndo() { if(State.hist.length<=0) return; State.board = JSON.parse(State.hist.pop()); render(); updateUI(); showToast('↩️ 撤回上一步'); }
+    function doReset() { loadLv(State.curLevel); showToast('🔄 重置本关'); }
 
+    // --- 9. UI与数据持久化 ---
     function updateUI() {
         let livesEls = document.getElementById('lives').children;
         for(let i=0; i<livesEls.length; i++) livesEls[i].className = i >= State.lives ? 'lost' : '';
@@ -227,865 +273,11 @@
         let el = document.getElementById('toast'); el.innerText = t; el.className = 'toast show';
         clearTimeout(el._t); el._t = setTimeout(()=>el.className = 'toast', 1500);
     }
-
     function saveData() { localStorage.setItem('cow_progress', JSON.stringify({lv:State.curLevel, star:State.stars})); }
     function loadData() { try { let d = JSON.parse(localStorage.getItem('cow_progress')); if(d) { State.curLevel = d.lv; State.stars = d.star || 200; } } catch(e){} }
 
+    // --- 启动 ---
     loadData(); loadLv(State.curLevel);
 </script>
 </body>
-</html>        <div class="btn" onclick="doReset()"><div class="icon">🔄</div>重玩</div>
-    </div>
-    
-    <!-- Toast提示 -->
-    <div id="toast" class="toast">提示信息</div>
-</div>
-
-<script>
-    // 调色板
-    const COLORS = ['#FFD54F','#81C784','#4DD0E1','#F48FB1','#BA68C8','#FFB74D','#A5D6A7'];
-    
-    // 全局唯一状态
-    let State = {
-        curLevel: 0, lives: 3, stars: 200, energy: 8, 
-        board: [], hist: [], timer: 150, timeId: null, data: null
-    };
-
-    // 1. 关卡生成器（永不卡死的贪心算法）
-    function generateLv(seed, size) {
-        let solution = [];
-        for(let y=0; y<size; y++) {
-            for(let x=0; x<size; x++) {
-                let valid = true;
-                for(let s of solution) {
-                    if(s.x===x || s.y===y || (Math.abs(s.x-x)<=1 && Math.abs(s.y-y)<=1)) { valid=false; break; }
-                }
-                if(valid) { solution.push({x:x, y:y}); break; }
-            }
-        }
-        // 颜色扩散
-        let colors = [];
-        for(let y=0; y<size; y++) {
-            colors[y] = [];
-            for(let x=0; x<size; x++) {
-                let minD=999, id=0;
-                solution.forEach((s,i)=>{
-                    let d = Math.abs(s.x-x) + Math.abs(s.y-y);
-                    if(d<minD){ minD=d; id=i; }
-                });
-                colors[y][x] = COLORS[id % COLORS.length];
-            }
-        }
-        return {size, colors, solution, initial:[solution[0]]};
-    }
-
-    // 2. 加载关卡
-    function loadLv(num) {
-        let size = num<15 ? 4 : (num<35 ? 5 : 6);
-        State.data = generateLv('se'+num, size);
-        State.curLevel = num;
-        document.getElementById('level-txt').innerText = num + 1;
-
-        // 重置棋盘
-        State.board = [];
-        let d = State.data;
-        for(let y=0; y<d.size; y++) {
-            State.board[y] = [];
-            for(let x=0; x<d.size; x++) {
-                State.board[y][x] = {c:false, x:false, l:false};
-            }
-        }
-        d.initial.forEach(v=>State.board[v.y][v.x] = {c:true, x:false, l:true});
-        State.hist = [];
-        State.lives = 3; // 重置生命值
-        startTimer();
-        render();
-        updateUI();
-    }
-
-    // 3. 渲染游戏盘
-    function render() {
-        let d = State.data;
-        if(!d) return;
-        let b = document.getElementById('board');
-        b.style.gridTemplateColumns = `repeat(${d.size}, 1fr)`;
-        b.innerHTML = '';
-        let remain = 0;
-        
-        for(let y=0; y<d.size; y++) {
-            for(let x=0; x<d.size; x++) {
-                let div = document.createElement('div');
-                div.className = 'cell';
-                div.style.background = d.colors[y][x];
-                let cell = State.board[y][x];
-                if(cell.c) { div.innerText = '🐮'; remain++; }
-                if(cell.x) { div.innerHTML = '<div class="cross">✕</div>'; }
-                // 绑定点击事件
-                div.onclick = function(){ clickCell(x,y); };
-                b.appendChild(div);
-            }
-        }
-        document.getElementById('remain-txt').innerText = d.size - remain;
-        checkWin();
-    }
-
-    // 4. 核心点击逻辑
-    function clickCell(x, y) {
-        let cell = State.board[y][x];
-        if(cell.l) return;
-        if(cell.c) {
-            State.hist.push(JSON.stringify(State.board));
-            cell.c = false; render(); updateUI(); return;
-        }
-        // 检测冲突
-        if(isConflict(x, y)) {
-            State.lives--;
-            updateUI();
-            if(State.lives <= 0) {
-                showToast('💔 生命耗尽，关卡重置');
-                setTimeout(()=>loadLv(State.curLevel), 1000);
-            } else {
-                showToast('❌ 双击错误消耗生命值哦!');
-            }
-            return;
-        }
-        // 放置成功
-        State.hist.push(JSON.stringify(State.board));
-        cell.c = true;
-        render(); updateUI();
-        checkWin();
-    }
-
-    // 5. 冲突判定
-    function isConflict(x, y) {
-        let d = State.data, sz = d.size, col = d.colors[y][x];
-        for(let i=0; i<sz; i++) {
-            if(State.board[y][i].c || State.board[i][x].c) return true;
-        }
-        for(let yy=0; yy<sz; yy++) {
-            for(let xx=0; xx<sz; xx++) {
-                let c = State.board[yy][xx];
-                if(c.c) {
-                    if(d.colors[yy][xx] === col) return true;
-                    if(Math.abs(xx-x)<=1 && Math.abs(yy-y)<=1) return true;
-                }
-            }
-        }
-        return false;
-    }
-
-    // 6. 倒计时
-    function startTimer() {
-        clearInterval(State.timeId); State.timer = 150;
-        updateTimer();
-        State.timeId = setInterval(()=>{
-            State.timer--;
-            updateTimer();
-            if(State.timer<=0) {
-                clearInterval(State.timeId);
-                showToast('⏱️ 挑战超时，重新挑战');
-                setTimeout(()=>loadLv(State.curLevel), 1000);
-            }
-        }, 1000);
-    }
-    function updateTimer() {
-        let m=Math.floor(State.timer/60), s=State.timer%60;
-        document.getElementById('timer-txt').innerText = `⏱️ ${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
-    }
-
-    // 7. 胜利判定
-    function checkWin() {
-        let d = State.data;
-        let win = d.solution.every(s=>State.board[s.y][s.x].c===true);
-        if(win) {
-            clearInterval(State.timeId);
-            showToast('🎉 恭喜通关！');
-            State.stars += 20; saveData();
-            setTimeout(()=>loadLv(State.curLevel+1), 1500);
-        }
-    }
-
-    // 8. 底部按钮功能
-    function doHint() {
-        let d = State.data;
-        let pos = d.solution.find(s=>!State.board[s.y][s.x].c);
-        if(pos) {
-            State.board[pos.y][pos.x].x = true;
-            render(); updateUI(); showToast('💡 提示位置(打X处)');
-            setTimeout(()=>{ State.board[pos.y][pos.x].x = false; render(); }, 2000);
-        } else { showToast('牛都放完了'); }
-    }
-    function doUndo() {
-        if(State.hist.length<=0) { showToast('没有操作可撤回'); return; }
-        State.board = JSON.parse(State.hist.pop());
-        render(); updateUI(); showToast('↩️ 已撤回');
-    }
-    function doReset() { loadLv(State.curLevel); showToast('🔄 已重置'); }
-
-    // 9. UI 更新
-    function updateUI() {
-        let livesEls = document.getElementById('lives').children;
-        for(let i=0; i<livesEls.length; i++) {
-            if(i >= State.lives) livesEls[i].className = 'lost'; else livesEls[i].className = '';
-        }
-        document.getElementById('star-txt').innerText = State.stars;
-        document.getElementById('energy-txt').innerText = State.energy;
-    }
-    function showToast(t) {
-        let el = document.getElementById('toast');
-        el.innerText = t; el.className = 'toast show';
-        clearTimeout(el._t);
-        el._t = setTimeout(()=>el.className = 'toast', 1500);
-    }
-
-    // 10. 存档系统
-    function saveData() { localStorage.setItem('cow_progress', JSON.stringify({lv:State.curLevel, star:State.stars})); }
-    function loadData() {
-        try {
-            let d = JSON.parse(localStorage.getItem('cow_progress'));
-            if(d) { State.curLevel = d.lv; State.stars = d.star || 200; }
-        } catch(e){}
-    }
-
-    // 11. 启动游戏
-    loadData();
-    loadLv(State.curLevel);
-
-</script>
-</body>
-</html>                }
-                if(valid) { solution.push({x:x, y:y}); break; } // 简单贪心策略，总能解开
-            }
-        }
-
-        // 分配颜色
-        let colors = [];
-        for(let y=0; y<size; y++) {
-            colors[y] = [];
-            for(let x=0; x<size; x++) {
-                let minDist = 999, id = 0;
-                solution.forEach((s, idx)=>{
-                    let dist = Math.abs(s.x-x) + Math.abs(s.y-y);
-                    if(dist < minDist) { minDist = dist; id = idx; }
-                });
-                colors[y][x] = COLORS[id % COLORS.length];
-            }
-        }
-        return { size, colors, solution, initial:[solution[0]] };
-    }
-
-    // 2. 加载关卡
-    function loadLevel(num, isDaily=false) {
-        if(!isDaily) gameState.curLevel = num;
-        let size = num < 15 ? 4 : (num < 35 ? 5 : 6);
-        if(isDaily) size = 10;
-
-        let data = makeLevel('seed'+num, size);
-        gameState.levelData = data;
-
-        // 初始化棋盘
-        gameState.board = [];
-        for(let y=0; y<data.size; y++) {
-            gameState.board[y] = [];
-            for(let x=0; x<data.size; x++) {
-                gameState.board[y][x] = { cow:false, xmark:false, lock:false };
-            }
-        }
-        data.initial.forEach(v=>{ gameState.board[v.y][v.x] = { cow:true, xmark:false, lock:true }; });
-        
-        gameState.history = []; // 清空历史
-        document.getElementById('level-text').innerText = isDaily ? '每日挑战' : (num+1);
-        startTimer(150);
-        renderBoard();
-        updateUI();
-    }
-
-    // 3. 渲染核心棋盘 (纯DOM局部更新，稳定可靠)
-    function renderBoard() {
-        let lv = gameState.levelData;
-        let boardEl = document.getElementById('board');
-        if(!lv) return;
-        boardEl.style.gridTemplateColumns = `repeat(${lv.size}, 1fr)`;
-        boardEl.innerHTML = ''; // 清空重绘
-
-        let cowCnt = 0;
-        for(let y=0; y<lv.size; y++) {
-            for(let x=0; x<lv.size; x++) {
-                let div = document.createElement('div');
-                div.className = 'c';
-                div.style.background = lv.colors[y][x]; // 必须每个格子都有颜色
-                div.dataset.x = x; div.dataset.y = y;
-
-                let cell = gameState.board[y][x];
-                if(cell.cow) { div.innerText = '🐮'; cowCnt++; }
-                else if(cell.xmark) { div.innerHTML = '<div class="x-mark">✕</div>'; }
-
-                if(cell.lock) div.style.border = '2px solid #e74c3c'; // 锁标记
-                
-                // 绑定点击事件 (保证手机端不卡)
-                div.addEventListener('click', function() { clickCell(x,y); });
-                boardEl.appendChild(div);
-            }
-        }
-        document.getElementById('remain').innerText = lv.size - cowCnt;
-    }
-
-    // 4. 点击交互核心 (允许错误放牛，扣减生命值)
-    function clickCell(x, y) {
-        let lv = gameState.levelData;
-        let cell = gameState.board[y][x];
-        if(cell.lock) return;
-
-        // 如果点的是牛，则取消它
-        if(cell.cow) {
-            gameState.history.push(JSON.stringify(gameState.board));
-            cell.cow = false;
-            renderBoard(); updateUI(); return;
-        }
-
-        // 尝试放牛，先检测冲突
-        if(checkConflict(x,y)) {
-            // 触发了规则冲突，扣除生命值
-            gameState.lives -= 1;
-            updateUI();
-            if(gameState.lives <= 0) {
-                showToast('💔 生命值耗尽，关卡失败！重试');
-                setTimeout(()=>{ gameState.lives = 3; loadLevel(gameState.curLevel, false); }, 1200);
-            } else {
-                showToast('❌ 规则冲突，消耗1条命！');
-            }
-            return;
-        }
-
-        // 无冲突，正确放下牛
-        gameState.history.push(JSON.stringify(gameState.board));
-        cell.cow = true;
-        renderBoard(); updateUI();
-        checkWin();
-    }
-
-    // 5. 冲突检测算法
-    function checkConflict(x, y) {
-        let lv = gameState.levelData;
-        let color = lv.colors[y][x];
-        let size = lv.size;
-        for(let i=0; i<size; i++) {
-            // 行列冲突
-            if(gameState.board[y][i].cow || gameState.board[i][x].cow) return true;
-        }
-        for(let yy=0; yy<size; yy++) {
-            for(let xx=0; xx<size; xx++) {
-                let c = gameState.board[yy][xx];
-                if(c.cow) {
-                    if(lv.colors[yy][xx] === color) return true; // 同色
-                    if(Math.abs(xx-x)<=1 && Math.abs(yy-y)<=1) return true; // 九宫格
-                }
-            }
-        }
-        return false;
-    }
-
-    // 6. 辅助功能：提示、撤回、重玩
-    function actionHint() {
-        let lv = gameState.levelData;
-        let pos = lv.solution.find(s=>!gameState.board[s.y][s.x].cow);
-        if(pos) {
-            gameState.board[pos.y][pos.x].xmark = true;
-            renderBoard(); updateUI();
-            showToast('💡 提示位置在此（X处）');
-            setTimeout(()=>{ gameState.board[pos.y][pos.x].xmark = false; renderBoard(); }, 2000);
-        } else { showToast('🎉 牛已放齐！'); }
-    }
-
-    function actionUndo() {
-        if(gameState.history.length === 0) { showToast('没有上一步'); return; }
-        gameState.board = JSON.parse(gameState.history.pop());
-        renderBoard(); updateUI();
-        showToast('↩️ 已撤回');
-    }
-
-    function actionReset() {
-        loadLevel(gameState.curLevel, false);
-        showToast('🔄 已重置');
-    }
-
-    // 7. 计时器与通关检测
-    function startTimer(sec) {
-        clearInterval(gameState.timerInterval);
-        gameState.timer = sec;
-        updateTimer();
-        gameState.timerInterval = setInterval(()=>{
-            gameState.timer--;
-            updateTimer();
-            if(gameState.timer<=0) {
-                clearInterval(gameState.timerInterval);
-                showToast('⏱️ 超时失败！');
-                setTimeout(()=>{ loadLevel(gameState.curLevel, false); }, 1000);
-            }
-        }, 1000);
-    }
-
-    function updateTimer() {
-        let m = Math.floor(gameState.timer/60), s = gameState.timer%60;
-        let el = document.getElementById('timer-box');
-        el.innerText = `⏱️ ${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
-        if(gameState.timer <= 30) el.className = 'timer warning'; else el.className = 'timer';
-    }
-
-    function checkWin() {
-        let lv = gameState.levelData;
-        let success = lv.solution.every(s=>gameState.board[s.y][s.x].cow === true);
-        if(success) {
-            clearInterval(gameState.timerInterval);
-            showToast('🎉 恭喜过关！获得 ⭐+20');
-            gameState.stars += 20;
-            if(gameState.curLevel+1 > gameState.maxLevel) gameState.maxLevel = gameState.curLevel+1;
-            saveData();
-            setTimeout(()=>{ loadLevel(gameState.maxLevel, false); }, 1500);
-        }
-    }
-
-    // 8. UI更新与Toast
-    function updateUI() {
-        let hearts = document.getElementById('lives-box').children;
-        for(let i=0; i<hearts.length; i++) {
-            hearts[i].className = i >= gameState.lives ? 'heart lost' : 'heart';
-        }
-        document.getElementById('stars').innerText = gameState.stars;
-        document.getElementById('energy').innerText = gameState.energy;
-    }
-
-    let toastTimer = null;
-    function showToast(text) {
-        let el = document.getElementById('toast');
-        clearTimeout(toastTimer);
-        el.innerText = text; el.className = 'toast show';
-        toastTimer = setTimeout(()=>{ el.className = 'toast'; }, 1500);
-    }
-
-    // 9. 本地存档系统
-    function saveData() {
-        try {
-            localStorage.setItem('niuniu_data', JSON.stringify({
-                max: gameState.maxLevel, stars: gameState.stars, energy: gameState.energy
-            }));
-        } catch(e){}
-    }
-
-    function loadData() {
-        try {
-            let raw = localStorage.getItem('niuniu_data');
-            if(raw) {
-                let d = JSON.parse(raw);
-                gameState.maxLevel = d.max || 0;
-                gameState.stars = d.stars || 200;
-                gameState.energy = d.energy || 8;
-            }
-        } catch(e){}
-    }
-
-    // 10. 启动游戏
-    loadData();
-    loadLevel(gameState.maxLevel, false);
-    console.log('游戏已启动！如果仍白屏，请点击右上角三点，打开“调试/开发者工具”查看控制台报错。');
-</script>
-</body>
-</html>        <div class="resource">
-            <div class="res-item"><span>⭐</span><span id="stars-display">200</span></div>
-            <div class="res-item"><span>⚡</span><span id="energy-display">8</span></div>
-        </div>
-        <div class="tool-btns">
-            <button>⚙️</button>
-        </div>
-    </div>
-
-    <!-- 标题与生命值 -->
-    <div class="sub-header">第<span id="level-display">1</span>关</div>
-    <div class="lives" id="lives-container">
-        <span id="life-0">❤️</span><span id="life-1">❤️</span><span id="life-2">❤️</span>
-    </div>
-
-    <!-- 规则提示 -->
-    <div class="rule-area">
-        <div class="rule-item"><span>🟨🟩</span> 每种颜色1头牛</div>
-        <div class="rule-item"><span>⬜⬜</span> 每行每列1头牛</div>
-        <div class="rule-item"><span>🚫</span> 牛四周不能有牛</div>
-    </div>
-
-    <!-- 剩余数与计时器 -->
-    <div class="info-panel">
-        <span>🐮 剩余: <b id="remain-cow">0</b></span>
-        <span class="timer" id="timer-display">⏱️ 02:30</span>
-    </div>
-
-    <!-- 主棋盘 -->
-    <div id="board"></div>
-
-    <!-- 底部按钮 -->
-    <div class="footer">
-        <div class="footer-btn" onclick="triggerHint()"><div class="icon">💡</div>提示</div>
-        <div class="footer-btn" onclick="triggerUndo()"><div class="icon">↩️</div>撤回</div>
-        <div class="footer-btn" onclick="openDaily()"><div class="icon">📅</div>挑战</div>
-        <div class="footer-btn" onclick="showToast('此为规则说明页面')"><div class="icon">📜</div>规则</div>
-    </div>
-
-    <!-- Toast 轻提示 -->
-    <div id="toast" class="toast">提示信息</div>
-
-    <!-- 每日挑战弹窗 (对应图1) -->
-    <div id="daily-modal" class="modal-overlay">
-        <div class="modal-card">
-            <h2>📅 每日挑战</h2>
-            <div style="font-size: 14px; color: #e74c3c;">来自策划哞哞哞的挑战邀请</div>
-            <div id="daily-preview" class="modal-preview"></div>
-            <div class="modal-info-box">
-                尺寸：10x10<br>模式：单牛挑战<br>限时：02:30<br>难度：⭐⭐⭐⭐⭐
-            </div>
-            <div style="color: #4a90e2; font-weight: bold;">挑战成功可获得 ⚡+30</div>
-            <button class="modal-btn" onclick="startDaily()">🌟 挑战</button>
-            <div style="font-size: 12px; color: #888;">剩余次数：<b>1</b></div>
-            <button class="modal-btn gray" onclick="closeModal('daily-modal')">关闭</button>
-        </div>
-    </div>
-</div>
-
-<script>
-    // --- 调色板与基础配置 ---
-    const palette = ['#FFD54F','#81C784','#4DD0E1','#F48FB1','#BA68C8','#FFB74D','#A5D6A7','#EF5350','#42A5F5','#AB47BC'];
-    
-    // --- 游戏全局状态 ---
-    let state = {
-        currentLevel: 0,
-        lives: 3,
-        stars: 200,
-        energy: 8,
-        maxLevelUnlocked: 0,
-        isDaily: false, // 是否为每日挑战模式
-        timerInterval: null,
-        secondsLeft: 0,
-        boardData: [], // 当前棋盘状态 [{cow, x, lock}]
-        history: [], // 撤回栈
-        levelGen: null // 当前关卡生成器数据
-    };
-
-    // --- 核心关卡生成器 (支持异形/灰块棋盘) ---
-    function generateLevel(seedStr, size) {
-        // 伪随机算法
-        let seed = 12345;
-        for (let i = 0; i < seedStr.length; i++) seed = (seed * 31 + seedStr.charCodeAt(i)) & 0xFFFFFFFF;
-        function pseudoRandom() { seed = (seed * 9301 + 49297) % 233280; return seed / 233280; }
-
-        // 1. 生成合法解
-        let solution = [];
-        let row = 0;
-        let maxAttempts = 1000;
-        while (solution.length < size && maxAttempts-- > 0) {
-            let col = Math.floor(pseudoRandom() * size);
-            let y = row;
-            let valid = true;
-            for (let s of solution) {
-                if (s.x === col || s.y === y || (Math.abs(s.x - col) <= 1 && Math.abs(s.y - y) <= 1)) { valid = false; break; }
-            }
-            if (valid) { solution.push({x: col, y: row}); row++; }
-        }
-        // 容错：如果算法极端死循环，回退到简单对角线（参考前代码）
-        if (solution.length < size) {
-            solution = [];
-            for (let y = 0; y < size; y++) solution.push({x: y, y: y});
-        }
-
-        // 2. 生成颜色
-        let colors = [];
-        for (let y = 0; y < size; y++) {
-            colors[y] = [];
-            for (let x = 0; x < size; x++) {
-                let minD = Infinity, id = 0;
-                solution.forEach((s, i) => {
-                    let d = Math.abs(s.x - x) + Math.abs(s.y - y);
-                    if (d < minD) { minD = d; id = i; }
-                });
-                colors[y][x] = palette[id % palette.length];
-            }
-        }
-
-        // 3. 异形网格 (灰块) - 仅限 10x10 的每日挑战模式
-        let validGrid = [];
-        let isDailyMode = (size === 10);
-        for (let y = 0; y < size; y++) {
-            validGrid[y] = [];
-            for (let x = 0; x < size; x++) {
-                validGrid[y][x] = true;
-                // 图1：底部区域有一部分灰块 (模拟异形)
-                if (isDailyMode && y > 6 && x < 3) validGrid[y][x] = false;
-                if (isDailyMode && y > 7 && x > 6) validGrid[y][x] = false;
-            }
-        }
-
-        return {
-            size: size,
-            colors: colors,
-            solution: solution,
-            initial: [solution[0]], // 默认送第一头牛
-            validGrid: validGrid, // 布尔矩阵 true=可用 false=灰块
-            isDaily: isDailyMode
-        };
-    }
-
-    // --- 加载关卡逻辑 ---
-    function loadLevel(levelIdx, isDailyOverride = false) {
-        let lvData;
-        if (isDailyOverride) {
-            // 每日挑战，用当前日期生成种子，保证每天不一样
-            let seed = new Date().toDateString();
-            lvData = generateLevel(seed, 10); // 10x10
-            state.isDaily = true;
-            document.getElementById('level-display').innerText = '每日挑战';
-        } else {
-            let seed = 'normal_' + levelIdx;
-            // 正常流程，从小到大增加棋盘难度：1-10关(4x4), 11-25(5x5), 26-40(6x6), 41-50(7x7)
-            let size = levelIdx < 10 ? 4 : (levelIdx < 25 ? 5 : (levelIdx < 40 ? 6 : 7));
-            lvData = generateLevel(seed, size);
-            state.isDaily = false;
-            document.getElementById('level-display').innerText = levelIdx + 1;
-        }
-        state.levelGen = lvData;
-        state.currentLevel = levelIdx;
-
-        // 初始化棋盘存储
-        state.boardData = [];
-        for (let y = 0; y < lvData.size; y++) {
-            state.boardData[y] = [];
-            for (let x = 0; x < lvData.size; x++) {
-                state.boardData[y][x] = {
-                    cow: false, x: false, lock: false
-                };
-            }
-        }
-        // 设置初始锁定牛
-        lvData.initial.forEach(v => {
-            state.boardData[v.y][v.x] = { cow: true, x: false, lock: true };
-        });
-
-        // 开启计时器
-        startTimer(150); // 2分30秒
-        drawBoard();
-        updateUI();
-        closeModal('daily-modal');
-        state.history = [];
-    }
-
-    // --- 绘制棋盘 ---
-    function drawBoard() {
-        const boardEl = document.getElementById('board');
-        const lv = state.levelGen;
-        boardEl.style.gridTemplateColumns = `repeat(${lv.size}, 1fr)`;
-        boardEl.innerHTML = '';
-        let cowCnt = 0;
-
-        for (let y = 0; y < lv.size; y++) {
-            for (let x = 0; x < lv.size; x++) {
-                const div = document.createElement('div');
-                div.className = 'c';
-                // 检查是否为灰块 (不可放置)
-                if (!lv.validGrid[y][x]) {
-                    div.classList.add('invalid'); // 显示灰块样式
-                } else {
-                    div.style.background = lv.colors[y][x];
-                }
-
-                const cell = state.boardData[y][x];
-                if (cell.lock) div.classList.add('locked');
-                if (cell.cow) { div.innerHTML = '🐮'; cowCnt++; } 
-                else if (cell.x) div.innerHTML = `<div class="x-mark">✕</div>`;
-                div.dataset.x = x; div.dataset.y = y;
-                div.onclick = () => handleClick(x, y);
-                boardEl.appendChild(div);
-            }
-        }
-        document.getElementById('remain-cow').innerText = lv.size - cowCnt;
-    }
-
-    // --- 核心玩法点击交互 (修改了逻辑：允许放错并扣生命值) ---
-    function handleClick(x, y) {
-        const lv = state.levelGen;
-        // 边界检查
-        if (!lv.validGrid[y][x]) return;
-        if (state.boardData[y][x].lock) return;
-
-        // 保存历史栈用于撤回
-        state.history.push(JSON.stringify(state.boardData));
-
-        if (state.boardData[y][x].cow) {
-            // 已有牛，点击取消放置
-            state.boardData[y][x].cow = false;
-            drawBoard(); updateUI(); return;
-        }
-
-        // 检查冲突
-        const hasConflict = checkConflict(x, y);
-        if (hasConflict) {
-            // 图2核心机制：冲突则消耗生命值，不放置牛
-            state.lives--;
-            updateUI();
-            if (state.lives <= 0) {
-                showToast('💔 生命值耗尽，关卡失败！');
-                setTimeout(() => {
-                    resetLevel();
-                }, 1000);
-            } else {
-                // 出现图2底部的弹窗提示
-                showToast('❌ 双击错误消耗生命值哦！剩余 ❤️' + state.lives);
-            }
-            state.history.pop(); // 撤回栈回退，因为发生了失败操作
-            return;
-        }
-
-        // 正确放置
-        state.boardData[y][x].cow = true;
-        state.boardData[y][x].x = false;
-        drawBoard();
-        updateUI();
-        checkWin(); // 赢了就庆祝
-    }
-
-    // --- 冲突检测 ---
-    function checkConflict(x, y) {
-        const lv = state.levelGen;
-        const color = lv.colors[y][x];
-        const size = lv.size;
-
-        for (let i = 0; i < size; i++) {
-            if (state.boardData[y][i].cow || state.boardData[i][x].cow) return true; // 行列冲突
-        }
-        for (let yy = 0; yy < size; yy++) {
-            for (let xx = 0; xx < size; xx++) {
-                const cell = state.boardData[yy][xx];
-                if (cell.cow) {
-                    if (lv.colors[yy][xx] === color) return true; // 同色冲突
-                    if (Math.abs(xx - x) <= 1 && Math.abs(yy - y) <= 1) return true; // 九宫格相邻冲突
-                }
-            }
-        }
-        return false;
-    }
-
-    // --- 胜利判定 ---
-    function checkWin() {
-        const lv = state.levelGen;
-        let now = [];
-        for(let y=0; y<lv.size; y++) for(let x=0; x<lv.size; x++) if(state.boardData[y][x].cow) now.push({x,y});
-        if(now.length === lv.solution.length && now.every((v,i) => v.x === lv.solution[i].x && v.y === lv.solution[i].y)) {
-            clearInterval(state.timerInterval);
-            showToast('🎉 通关成功！');
-            
-            // 资源奖励
-            if(state.isDaily) {
-                state.energy += 30;
-                showToast('🎉 挑战成功！获得 ⚡+30');
-            } else {
-                state.stars += 20;
-                // 解锁下一关
-                if (state.currentLevel + 1 > state.maxLevelUnlocked) {
-                    state.maxLevelUnlocked = state.currentLevel + 1;
-                }
-            }
-            saveGameData();
-            updateUI();
-            setTimeout(() => {
-                // 如果是日常模式，回到正常关卡，否则进入下一关
-                if(state.isDaily) {
-                    loadLevel(state.maxLevelUnlocked, false);
-                } else {
-                    loadLevel(state.maxLevelUnlocked, false);
-                }
-            }, 1500);
-        }
-    }
-
-    // --- 计时器管理 ---
-    function startTimer(seconds) {
-        clearInterval(state.timerInterval);
-        state.secondsLeft = seconds;
-        updateTimerDisplay();
-        state.timerInterval = setInterval(() => {
-            state.secondsLeft--;
-            updateTimerDisplay();
-            if (state.secondsLeft <= 0) {
-                clearInterval(state.timerInterval);
-                showToast('⏱️ 挑战时间已到！');
-                setTimeout(() => resetLevel(), 1000);
-            }
-        }, 1000);
-    }
-
-    function updateTimerDisplay() {
-        const el = document.getElementById('timer-display');
-        const m = Math.floor(state.secondsLeft / 60);
-        const s = state.secondsLeft % 60;
-        el.innerText = `⏱️ ${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
-        if (state.secondsLeft <= 30) el.classList.add('warning'); else el.classList.remove('warning');
-    }
-
-    // --- 辅助功能 ---
-    function resetLevel() {
-        clearInterval(state.timerInterval);
-        if (state.isDaily) {
-            loadLevel(state.currentLevel, true);
-        } else {
-            loadLevel(state.currentLevel, false);
-        }
-    }
-
-    function triggerUndo() {
-        if (state.history.length > 0) {
-            state.boardData = JSON.parse(state.history.pop());
-            drawBoard(); updateUI();
-            showToast('↩️ 已撤回');
-        } else {
-            showToast('没有可撤回的操作');
-        }
-    }
-
-    function triggerHint() {
-        const lv = state.levelGen;
-        // 找第一个没放牛的正确位置，高亮提示
-        let hintPos = lv.solution.find(s => !state.boardData[s.y][s.x].cow);
-        if (hintPos) {
-            // 将提示标记为 "X" 
-            state.boardData[hintPos.y][hintPos.x].x = true;
-            drawBoard(); updateUI();
-            showToast('💡 已给你提示（叉叉位置）');
-            setTimeout(() => {
-                state.boardData[hintPos.y][hintPos.x].x = false;
-                drawBoard();
-            }, 2000);
-        } else {
-            showToast('已完成当前关卡！');
-        }
-    }
-
-    // --- UI与弹窗管理 ---
-    function updateUI() {
-        document.getElementById('lives-container').innerHTML = 
-            [...Array(3)].map((_, i) => `<span id="life-${i}" class="${i >= state.lives ? 'lost' : ''}">❤️</span>`).join('');
-        document.getElementById('stars-display').innerText = state.stars;
-        document.getElementById('energy-display').innerText = state.energy;
-        document.getElementById('level-display').innerText = state.isDaily ? '每日挑战' : (state.currentLevel + 1);
-    }
-
-    function showToast(text) {
-        const t = document.getElementById('toast');
-        t.innerText = text;
-        t.classList.add('show');
-        clearTimeout(t._timer);
-        t._timer = setTimeout(() => t.classList.remove('show'), 2000);
-    }
-
-    function openModal(id) { document.getElementById(id).classList.add('show'); }
-    function closeModal(id) { document.getElementById(id).classList.remove('show'); }
-
-    // --- 每日挑战弹窗逻辑 (图1) ---
-    function openDaily() {
-        // 生成预览用的种子
-        let seed = new Date().toDateString();
-        let previewLv = generate
+</html>

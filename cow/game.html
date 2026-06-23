@@ -1,0 +1,504 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+    <title>牛牛逻辑 - 完整运营版</title>
+    <style>
+        /* 基础重置与主题色 */
+        * { box-sizing: border-box; user-select: none; }
+        body {
+            margin: 0; padding: 0; background: #f2f7fb; font-family: 'PingFang SC', Arial, sans-serif;
+            display: flex; justify-content: center; height: 100vh; overflow: hidden;
+        }
+        #app {
+            width: 100%; max-width: 480px; height: 100%; background: #e3f2fd;
+            display: flex; flex-direction: column; position: relative;
+        }
+
+        /* 顶部状态栏 */
+        .status-bar {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 10px 15px; background: transparent;
+        }
+        .resource { display: flex; align-items: center; gap: 10px; font-size: 14px; font-weight: bold; }
+        .res-item { background: rgba(255,255,255,0.6); padding: 4px 12px 4px 4px; border-radius: 20px; display: flex; align-items: center; gap: 4px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+        .res-item span { margin-left: 4px; color: #333; }
+        .tool-btns { display: flex; gap: 6px; }
+        .tool-btns button { background: white; border: none; border-radius: 50%; width: 32px; height: 32px; font-size: 16px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+
+        /* 副标题与生命值 */
+        .sub-header {
+            text-align: center; font-size: 14px; font-weight: bold; color: #3a4a58; margin-top: 10px;
+        }
+        .lives { display: flex; justify-content: center; gap: 6px; font-size: 22px; margin: 8px 0 15px 0; }
+        .lives .lost { filter: grayscale(1) opacity(0.3); }
+
+        /* 规则提示区 */
+        .rule-area {
+            display: flex; justify-content: center; gap: 15px; margin: 0 15px 15px 15px; font-size: 11px; color: #555;
+        }
+        .rule-item { background: white; border-radius: 20px; padding: 6px 10px; display: flex; align-items: center; gap: 4px; box-shadow: 0 2px 4px rgba(0,0,0,0.04); }
+        .rule-item span { background: #e3f2fd; border-radius: 4px; padding: 2px; font-size: 14px; }
+
+        /* 游戏信息（剩余牛 & 计时器） */
+        .info-panel {
+            display: flex; justify-content: space-between; align-items: center; padding: 0 25px 10px 25px; font-size: 16px; color: #3a4a58;
+        }
+        .info-panel span { background: white; padding: 4px 12px; border-radius: 20px; display: flex; align-items: center; gap: 4px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+        .info-panel .timer.warning { color: #e74c3c; animation: pulse 1s infinite; }
+
+        /* 主棋盘 */
+        #board {
+            display: grid; width: 90%; margin: 10px auto; gap: 4px; flex: 1; align-content: center;
+        }
+        .c {
+            aspect-ratio: 1; border-radius: 8px; display: flex; justify-content: center; align-items: center;
+            font-size: 28px; position: relative; cursor: pointer; transition: all 0.1s;
+        }
+        .c:active { transform: scale(0.95); }
+        .c.invalid { background: #b0bec5 !important; opacity: 0.8; cursor: not-allowed; } /* 灰块 */
+        .c.locked::after { content: '🔒'; position: absolute; top: 2px; right: 2px; font-size: 12px; }
+        .c .x-mark { font-size: 20px; color: #e74c3c; font-weight: bold; background: rgba(255,255,255,0.7); border-radius: 50%; width: 24px; height: 24px; display: flex; justify-content: center; align-items: center; }
+
+        /* 底部按钮 */
+        .footer {
+            display: flex; justify-content: space-between; padding: 20px 30px; margin-bottom: env(safe-area-inset-bottom);
+        }
+        .footer-btn {
+            display: flex; flex-direction: column; align-items: center; font-size: 12px; color: #666; cursor: pointer;
+        }
+        .footer-btn .icon { background: white; width: 44px; height: 44px; border-radius: 50%; display: flex; justify-content: center; align-items: center; font-size: 20px; margin-bottom: 4px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
+
+        /* 弹窗遮罩 */
+        .modal-overlay {
+            position: absolute; inset: 0; background: rgba(0,0,0,0.5); backdrop-filter: blur(2px);
+            display: none; justify-content: center; align-items: center; z-index: 100; flex-direction: column;
+        }
+        .modal-overlay.show { display: flex; }
+        .modal-card {
+            background: #f2f7fb; width: 85%; border-radius: 24px; padding: 20px; box-shadow: 0 20px 40px rgba(0,0,0,0.2); display: flex; flex-direction: column; align-items: center; gap: 12px;
+        }
+        .modal-card h2 { font-size: 22px; margin: 0; color: #4a90e2; }
+        .modal-preview { display: grid; gap: 2px; width: 120px; height: 120px; margin: 10px 0; }
+        .modal-preview .c { border-radius: 2px; font-size: 12px; }
+        .modal-info-box {
+            background: #cce4fb; width: 100%; border-radius: 12px; padding: 12px; text-align: center; font-size: 14px; color: #333; line-height: 1.8;
+        }
+        .modal-btn {
+            background: #4cd964; color: white; border: none; border-radius: 30px; padding: 12px 0; width: 80%; font-size: 18px; font-weight: bold; margin: 5px 0; box-shadow: 0 4px 8px rgba(76, 217, 100, 0.3);
+        }
+        .modal-btn.gray { background: #e0e0e0; color: #666; box-shadow: none; }
+        .toast {
+            position: absolute; bottom: 100px; left: 50%; transform: translateX(-50%);
+            background: rgba(0,0,0,0.7); color: white; padding: 10px 20px; border-radius: 20px; font-size: 14px; display: none; z-index: 50; white-space: nowrap;
+        }
+        .toast.show { display: block; animation: slideUp 0.3s; }
+
+        @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.3; } 100% { opacity: 1; } }
+        @keyframes slideUp { from { transform: translateX(-50%) translateY(20px); opacity: 0; } to { transform: translateX(-50%) translateY(0); opacity: 1; } }
+    </style>
+</head>
+<body>
+<div id="app">
+    <!-- 顶部状态栏 -->
+    <div class="status-bar">
+        <div class="resource">
+            <div class="res-item"><span>⭐</span><span id="stars-display">200</span></div>
+            <div class="res-item"><span>⚡</span><span id="energy-display">8</span></div>
+        </div>
+        <div class="tool-btns">
+            <button>⚙️</button>
+        </div>
+    </div>
+
+    <!-- 标题与生命值 -->
+    <div class="sub-header">第<span id="level-display">1</span>关</div>
+    <div class="lives" id="lives-container">
+        <span id="life-0">❤️</span><span id="life-1">❤️</span><span id="life-2">❤️</span>
+    </div>
+
+    <!-- 规则提示 -->
+    <div class="rule-area">
+        <div class="rule-item"><span>🟨🟩</span> 每种颜色1头牛</div>
+        <div class="rule-item"><span>⬜⬜</span> 每行每列1头牛</div>
+        <div class="rule-item"><span>🚫</span> 牛四周不能有牛</div>
+    </div>
+
+    <!-- 剩余数与计时器 -->
+    <div class="info-panel">
+        <span>🐮 剩余: <b id="remain-cow">0</b></span>
+        <span class="timer" id="timer-display">⏱️ 02:30</span>
+    </div>
+
+    <!-- 主棋盘 -->
+    <div id="board"></div>
+
+    <!-- 底部按钮 -->
+    <div class="footer">
+        <div class="footer-btn" onclick="triggerHint()"><div class="icon">💡</div>提示</div>
+        <div class="footer-btn" onclick="triggerUndo()"><div class="icon">↩️</div>撤回</div>
+        <div class="footer-btn" onclick="openDaily()"><div class="icon">📅</div>挑战</div>
+        <div class="footer-btn" onclick="showToast('此为规则说明页面')"><div class="icon">📜</div>规则</div>
+    </div>
+
+    <!-- Toast 轻提示 -->
+    <div id="toast" class="toast">提示信息</div>
+
+    <!-- 每日挑战弹窗 (对应图1) -->
+    <div id="daily-modal" class="modal-overlay">
+        <div class="modal-card">
+            <h2>📅 每日挑战</h2>
+            <div style="font-size: 14px; color: #e74c3c;">来自策划哞哞哞的挑战邀请</div>
+            <div id="daily-preview" class="modal-preview"></div>
+            <div class="modal-info-box">
+                尺寸：10x10<br>模式：单牛挑战<br>限时：02:30<br>难度：⭐⭐⭐⭐⭐
+            </div>
+            <div style="color: #4a90e2; font-weight: bold;">挑战成功可获得 ⚡+30</div>
+            <button class="modal-btn" onclick="startDaily()">🌟 挑战</button>
+            <div style="font-size: 12px; color: #888;">剩余次数：<b>1</b></div>
+            <button class="modal-btn gray" onclick="closeModal('daily-modal')">关闭</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    // --- 调色板与基础配置 ---
+    const palette = ['#FFD54F','#81C784','#4DD0E1','#F48FB1','#BA68C8','#FFB74D','#A5D6A7','#EF5350','#42A5F5','#AB47BC'];
+    
+    // --- 游戏全局状态 ---
+    let state = {
+        currentLevel: 0,
+        lives: 3,
+        stars: 200,
+        energy: 8,
+        maxLevelUnlocked: 0,
+        isDaily: false, // 是否为每日挑战模式
+        timerInterval: null,
+        secondsLeft: 0,
+        boardData: [], // 当前棋盘状态 [{cow, x, lock}]
+        history: [], // 撤回栈
+        levelGen: null // 当前关卡生成器数据
+    };
+
+    // --- 核心关卡生成器 (支持异形/灰块棋盘) ---
+    function generateLevel(seedStr, size) {
+        // 伪随机算法
+        let seed = 12345;
+        for (let i = 0; i < seedStr.length; i++) seed = (seed * 31 + seedStr.charCodeAt(i)) & 0xFFFFFFFF;
+        function pseudoRandom() { seed = (seed * 9301 + 49297) % 233280; return seed / 233280; }
+
+        // 1. 生成合法解
+        let solution = [];
+        let row = 0;
+        let maxAttempts = 1000;
+        while (solution.length < size && maxAttempts-- > 0) {
+            let col = Math.floor(pseudoRandom() * size);
+            let y = row;
+            let valid = true;
+            for (let s of solution) {
+                if (s.x === col || s.y === y || (Math.abs(s.x - col) <= 1 && Math.abs(s.y - y) <= 1)) { valid = false; break; }
+            }
+            if (valid) { solution.push({x: col, y: row}); row++; }
+        }
+        // 容错：如果算法极端死循环，回退到简单对角线（参考前代码）
+        if (solution.length < size) {
+            solution = [];
+            for (let y = 0; y < size; y++) solution.push({x: y, y: y});
+        }
+
+        // 2. 生成颜色
+        let colors = [];
+        for (let y = 0; y < size; y++) {
+            colors[y] = [];
+            for (let x = 0; x < size; x++) {
+                let minD = Infinity, id = 0;
+                solution.forEach((s, i) => {
+                    let d = Math.abs(s.x - x) + Math.abs(s.y - y);
+                    if (d < minD) { minD = d; id = i; }
+                });
+                colors[y][x] = palette[id % palette.length];
+            }
+        }
+
+        // 3. 异形网格 (灰块) - 仅限 10x10 的每日挑战模式
+        let validGrid = [];
+        let isDailyMode = (size === 10);
+        for (let y = 0; y < size; y++) {
+            validGrid[y] = [];
+            for (let x = 0; x < size; x++) {
+                validGrid[y][x] = true;
+                // 图1：底部区域有一部分灰块 (模拟异形)
+                if (isDailyMode && y > 6 && x < 3) validGrid[y][x] = false;
+                if (isDailyMode && y > 7 && x > 6) validGrid[y][x] = false;
+            }
+        }
+
+        return {
+            size: size,
+            colors: colors,
+            solution: solution,
+            initial: [solution[0]], // 默认送第一头牛
+            validGrid: validGrid, // 布尔矩阵 true=可用 false=灰块
+            isDaily: isDailyMode
+        };
+    }
+
+    // --- 加载关卡逻辑 ---
+    function loadLevel(levelIdx, isDailyOverride = false) {
+        let lvData;
+        if (isDailyOverride) {
+            // 每日挑战，用当前日期生成种子，保证每天不一样
+            let seed = new Date().toDateString();
+            lvData = generateLevel(seed, 10); // 10x10
+            state.isDaily = true;
+            document.getElementById('level-display').innerText = '每日挑战';
+        } else {
+            let seed = 'normal_' + levelIdx;
+            // 正常流程，从小到大增加棋盘难度：1-10关(4x4), 11-25(5x5), 26-40(6x6), 41-50(7x7)
+            let size = levelIdx < 10 ? 4 : (levelIdx < 25 ? 5 : (levelIdx < 40 ? 6 : 7));
+            lvData = generateLevel(seed, size);
+            state.isDaily = false;
+            document.getElementById('level-display').innerText = levelIdx + 1;
+        }
+        state.levelGen = lvData;
+        state.currentLevel = levelIdx;
+
+        // 初始化棋盘存储
+        state.boardData = [];
+        for (let y = 0; y < lvData.size; y++) {
+            state.boardData[y] = [];
+            for (let x = 0; x < lvData.size; x++) {
+                state.boardData[y][x] = {
+                    cow: false, x: false, lock: false
+                };
+            }
+        }
+        // 设置初始锁定牛
+        lvData.initial.forEach(v => {
+            state.boardData[v.y][v.x] = { cow: true, x: false, lock: true };
+        });
+
+        // 开启计时器
+        startTimer(150); // 2分30秒
+        drawBoard();
+        updateUI();
+        closeModal('daily-modal');
+        state.history = [];
+    }
+
+    // --- 绘制棋盘 ---
+    function drawBoard() {
+        const boardEl = document.getElementById('board');
+        const lv = state.levelGen;
+        boardEl.style.gridTemplateColumns = `repeat(${lv.size}, 1fr)`;
+        boardEl.innerHTML = '';
+        let cowCnt = 0;
+
+        for (let y = 0; y < lv.size; y++) {
+            for (let x = 0; x < lv.size; x++) {
+                const div = document.createElement('div');
+                div.className = 'c';
+                // 检查是否为灰块 (不可放置)
+                if (!lv.validGrid[y][x]) {
+                    div.classList.add('invalid'); // 显示灰块样式
+                } else {
+                    div.style.background = lv.colors[y][x];
+                }
+
+                const cell = state.boardData[y][x];
+                if (cell.lock) div.classList.add('locked');
+                if (cell.cow) { div.innerHTML = '🐮'; cowCnt++; } 
+                else if (cell.x) div.innerHTML = `<div class="x-mark">✕</div>`;
+                div.dataset.x = x; div.dataset.y = y;
+                div.onclick = () => handleClick(x, y);
+                boardEl.appendChild(div);
+            }
+        }
+        document.getElementById('remain-cow').innerText = lv.size - cowCnt;
+    }
+
+    // --- 核心玩法点击交互 (修改了逻辑：允许放错并扣生命值) ---
+    function handleClick(x, y) {
+        const lv = state.levelGen;
+        // 边界检查
+        if (!lv.validGrid[y][x]) return;
+        if (state.boardData[y][x].lock) return;
+
+        // 保存历史栈用于撤回
+        state.history.push(JSON.stringify(state.boardData));
+
+        if (state.boardData[y][x].cow) {
+            // 已有牛，点击取消放置
+            state.boardData[y][x].cow = false;
+            drawBoard(); updateUI(); return;
+        }
+
+        // 检查冲突
+        const hasConflict = checkConflict(x, y);
+        if (hasConflict) {
+            // 图2核心机制：冲突则消耗生命值，不放置牛
+            state.lives--;
+            updateUI();
+            if (state.lives <= 0) {
+                showToast('💔 生命值耗尽，关卡失败！');
+                setTimeout(() => {
+                    resetLevel();
+                }, 1000);
+            } else {
+                // 出现图2底部的弹窗提示
+                showToast('❌ 双击错误消耗生命值哦！剩余 ❤️' + state.lives);
+            }
+            state.history.pop(); // 撤回栈回退，因为发生了失败操作
+            return;
+        }
+
+        // 正确放置
+        state.boardData[y][x].cow = true;
+        state.boardData[y][x].x = false;
+        drawBoard();
+        updateUI();
+        checkWin(); // 赢了就庆祝
+    }
+
+    // --- 冲突检测 ---
+    function checkConflict(x, y) {
+        const lv = state.levelGen;
+        const color = lv.colors[y][x];
+        const size = lv.size;
+
+        for (let i = 0; i < size; i++) {
+            if (state.boardData[y][i].cow || state.boardData[i][x].cow) return true; // 行列冲突
+        }
+        for (let yy = 0; yy < size; yy++) {
+            for (let xx = 0; xx < size; xx++) {
+                const cell = state.boardData[yy][xx];
+                if (cell.cow) {
+                    if (lv.colors[yy][xx] === color) return true; // 同色冲突
+                    if (Math.abs(xx - x) <= 1 && Math.abs(yy - y) <= 1) return true; // 九宫格相邻冲突
+                }
+            }
+        }
+        return false;
+    }
+
+    // --- 胜利判定 ---
+    function checkWin() {
+        const lv = state.levelGen;
+        let now = [];
+        for(let y=0; y<lv.size; y++) for(let x=0; x<lv.size; x++) if(state.boardData[y][x].cow) now.push({x,y});
+        if(now.length === lv.solution.length && now.every((v,i) => v.x === lv.solution[i].x && v.y === lv.solution[i].y)) {
+            clearInterval(state.timerInterval);
+            showToast('🎉 通关成功！');
+            
+            // 资源奖励
+            if(state.isDaily) {
+                state.energy += 30;
+                showToast('🎉 挑战成功！获得 ⚡+30');
+            } else {
+                state.stars += 20;
+                // 解锁下一关
+                if (state.currentLevel + 1 > state.maxLevelUnlocked) {
+                    state.maxLevelUnlocked = state.currentLevel + 1;
+                }
+            }
+            saveGameData();
+            updateUI();
+            setTimeout(() => {
+                // 如果是日常模式，回到正常关卡，否则进入下一关
+                if(state.isDaily) {
+                    loadLevel(state.maxLevelUnlocked, false);
+                } else {
+                    loadLevel(state.maxLevelUnlocked, false);
+                }
+            }, 1500);
+        }
+    }
+
+    // --- 计时器管理 ---
+    function startTimer(seconds) {
+        clearInterval(state.timerInterval);
+        state.secondsLeft = seconds;
+        updateTimerDisplay();
+        state.timerInterval = setInterval(() => {
+            state.secondsLeft--;
+            updateTimerDisplay();
+            if (state.secondsLeft <= 0) {
+                clearInterval(state.timerInterval);
+                showToast('⏱️ 挑战时间已到！');
+                setTimeout(() => resetLevel(), 1000);
+            }
+        }, 1000);
+    }
+
+    function updateTimerDisplay() {
+        const el = document.getElementById('timer-display');
+        const m = Math.floor(state.secondsLeft / 60);
+        const s = state.secondsLeft % 60;
+        el.innerText = `⏱️ ${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+        if (state.secondsLeft <= 30) el.classList.add('warning'); else el.classList.remove('warning');
+    }
+
+    // --- 辅助功能 ---
+    function resetLevel() {
+        clearInterval(state.timerInterval);
+        if (state.isDaily) {
+            loadLevel(state.currentLevel, true);
+        } else {
+            loadLevel(state.currentLevel, false);
+        }
+    }
+
+    function triggerUndo() {
+        if (state.history.length > 0) {
+            state.boardData = JSON.parse(state.history.pop());
+            drawBoard(); updateUI();
+            showToast('↩️ 已撤回');
+        } else {
+            showToast('没有可撤回的操作');
+        }
+    }
+
+    function triggerHint() {
+        const lv = state.levelGen;
+        // 找第一个没放牛的正确位置，高亮提示
+        let hintPos = lv.solution.find(s => !state.boardData[s.y][s.x].cow);
+        if (hintPos) {
+            // 将提示标记为 "X" 
+            state.boardData[hintPos.y][hintPos.x].x = true;
+            drawBoard(); updateUI();
+            showToast('💡 已给你提示（叉叉位置）');
+            setTimeout(() => {
+                state.boardData[hintPos.y][hintPos.x].x = false;
+                drawBoard();
+            }, 2000);
+        } else {
+            showToast('已完成当前关卡！');
+        }
+    }
+
+    // --- UI与弹窗管理 ---
+    function updateUI() {
+        document.getElementById('lives-container').innerHTML = 
+            [...Array(3)].map((_, i) => `<span id="life-${i}" class="${i >= state.lives ? 'lost' : ''}">❤️</span>`).join('');
+        document.getElementById('stars-display').innerText = state.stars;
+        document.getElementById('energy-display').innerText = state.energy;
+        document.getElementById('level-display').innerText = state.isDaily ? '每日挑战' : (state.currentLevel + 1);
+    }
+
+    function showToast(text) {
+        const t = document.getElementById('toast');
+        t.innerText = text;
+        t.classList.add('show');
+        clearTimeout(t._timer);
+        t._timer = setTimeout(() => t.classList.remove('show'), 2000);
+    }
+
+    function openModal(id) { document.getElementById(id).classList.add('show'); }
+    function closeModal(id) { document.getElementById(id).classList.remove('show'); }
+
+    // --- 每日挑战弹窗逻辑 (图1) ---
+    function openDaily() {
+        // 生成预览用的种子
+        let seed = new Date().toDateString();
+        let previewLv = generate

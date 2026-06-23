@@ -5,60 +5,48 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>牛牛逻辑</title>
     <style>
-        /* 全局重置，100%撑满手机屏 */
         * { box-sizing: border-box; user-select: none; -webkit-tap-highlight-color: transparent; }
         body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: #e8f4fd; font-family: 'PingFang SC', sans-serif; }
         
         #app {
-            width: 100%; max-width: 480px; height: 100dvh; /* dvh 是解决移动端地址栏变动的关键 */
-            margin: 0 auto; background: linear-gradient(180deg, #e3f2fd 0%, #f2f7fb 100%);
+            width: 100%; max-width: 480px; height: 100dvh; margin: 0 auto; 
+            background: linear-gradient(180deg, #e3f2fd 0%, #f2f7fb 100%);
             display: flex; flex-direction: column; align-items: center; position: relative;
         }
 
-        /* 顶部状态 */
         .header { width: 100%; padding: 15px 15px 0 15px; display: flex; justify-content: space-between; font-size: 14px; }
         .header .info { background: white; padding: 4px 12px; border-radius: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
         
         .title { margin-top: 5px; font-size: 16px; font-weight: bold; color: #3a4a58; }
-        
-        /* 心形 */
         .lives-box { display: flex; gap: 6px; font-size: 20px; margin: 8px 0; }
         .lives-box .lost { filter: grayscale(1) opacity: 0.3; }
 
-        /* 规则 */
         .rules { display: flex; gap: 8px; font-size: 11px; color: #555; }
         .rules span { background: white; padding: 4px 10px; border-radius: 15px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
 
-        /* 中间信息条 */
         .info-bar { width: 90%; display: flex; justify-content: space-between; margin: 12px 0; font-size: 14px; }
         .info-bar div { background: white; padding: 4px 12px; border-radius: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
 
-        /* ★ 核心棋盘：保证在任何屏幕上都是正方形并居中 */
-        .board-wrap {
-            flex: 1; width: 100%; display: flex; justify-content: center; align-items: center;
-            padding: 5px; /* 留出边距 */
-        }
-        #board {
-            display: grid; gap: 4px; width: 100%; aspect-ratio: 1; /* 强制1:1正方形 */
-            max-width: 420px; /* 限制最大宽度 */
-            background: transparent;
-        }
+        .board-wrap { flex: 1; width: 100%; display: flex; justify-content: center; align-items: center; padding: 5px; }
+        #board { display: grid; gap: 4px; width: 100%; aspect-ratio: 1; max-width: 420px; background: transparent; }
+        
+        /* ★ 格子及动画 */
         .cell {
             aspect-ratio: 1; border-radius: 8px; width: 100%;
             display: flex; justify-content: center; align-items: center;
-            font-size: min(6vw, 32px); /* 自适应牛的大小 */
-            box-shadow: inset 0 2px 4px rgba(0,0,0,0.05);
-            transition: transform 0.1s; touch-action: manipulation;
+            font-size: min(6vw, 32px); box-shadow: inset 0 2px 4px rgba(0,0,0,0.05);
+            transition: transform 0.1s; touch-action: manipulation; cursor: pointer;
         }
         .cell:active { transform: scale(0.92); }
-        .cell .cross { color: #e74c3c; font-weight: bold; font-size: 1.2em; }
+        .cell .cross {
+            color: #e74c3c; font-weight: bold; font-size: 1.2em;
+            text-shadow: 0 0 4px rgba(255,255,255,0.8);
+        }
 
-        /* 底部菜单 */
         .footer { width: 90%; display: flex; justify-content: space-between; padding: 15px 0 25px 0; }
         .btn { display: flex; flex-direction: column; align-items: center; font-size: 12px; color: #666; }
         .btn .icon { background: white; width: 44px; height: 44px; border-radius: 50%; display: flex; justify-content: center; align-items: center; font-size: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
 
-        /* 提示弹窗 */
         .toast {
             position: absolute; bottom: 20%; left: 50%; transform: translateX(-50%);
             background: rgba(0,0,0,0.7); color: white; padding: 10px 20px; border-radius: 20px;
@@ -69,41 +57,184 @@
 </head>
 <body>
 <div id="app">
-    <!-- 顶栏 -->
     <div class="header">
         <div class="info">⭐ <span id="star-txt">200</span></div>
         <div class="info">⚡ <span id="energy-txt">8</span></div>
     </div>
-    
-    <!-- 标题与生命 -->
     <div class="title">第<span id="level-txt">1</span>关</div>
-    <div class="lives-box" id="lives">
-        <span>❤️</span><span>❤️</span><span>❤️</span>
-    </div>
-    
-    <!-- 规则 -->
+    <div class="lives-box" id="lives"><span>❤️</span><span>❤️</span><span>❤️</span></div>
     <div class="rules">
         <span>🚫 周边无牛</span>
         <span>⬜ 行列唯一</span>
         <span>🎨 同色唯一</span>
     </div>
-    
-    <!-- 剩余和倒计时 -->
     <div class="info-bar">
         <div>🐮 剩余: <b id="remain-txt">0</b></div>
         <div id="timer-txt">⏱️ 02:30</div>
     </div>
     
-    <!-- ★★★ 这里装入棋盘 ★★★ -->
-    <div class="board-wrap">
-        <div id="board"></div>
-    </div>
+    <div class="board-wrap"><div id="board"></div></div>
     
-    <!-- 底部功能区 -->
     <div class="footer">
         <div class="btn" onclick="doHint()"><div class="icon">💡</div>提示</div>
         <div class="btn" onclick="doUndo()"><div class="icon">↩️</div>撤回</div>
         <div class="btn" onclick="doReset()"><div class="icon">🔄</div>重玩</div>
+    </div>
+    <div id="toast" class="toast"></div>
+</div>
+
+<script>
+    const COLORS = ['#FFD54F','#81C784','#4DD0E1','#F48FB1','#BA68C8','#FFB74D','#A5D6A7'];
+    let State = { curLevel: 0, lives: 3, stars: 200, energy: 8, board: [], hist: [], timer: 150, timeId: null, data: null };
+
+    function generateLv(seed, size) {
+        let solution = [];
+        for(let y=0; y<size; y++) for(let x=0; x<size; x++) {
+            let valid = true;
+            for(let s of solution) if(s.x===x || s.y===y || (Math.abs(s.x-x)<=1 && Math.abs(s.y-y)<=1)) { valid=false; break; }
+            if(valid) { solution.push({x:x, y:y}); break; }
+        }
+        let colors = [];
+        for(let y=0; y<size; y++) {
+            colors[y] = [];
+            for(let x=0; x<size; x++) {
+                let minD=999, id=0;
+                solution.forEach((s,i)=>{ let d = Math.abs(s.x-x) + Math.abs(s.y-y); if(d<minD){ minD=d; id=i; } });
+                colors[y][x] = COLORS[id % COLORS.length];
+            }
+        }
+        return {size, colors, solution, initial:[solution[0]]};
+    }
+
+    function loadLv(num) {
+        let size = num<15 ? 4 : (num<35 ? 5 : 6);
+        State.data = generateLv('se'+num, size); State.curLevel = num;
+        document.getElementById('level-txt').innerText = num + 1;
+        State.board = [];
+        let d = State.data;
+        for(let y=0; y<d.size; y++) {
+            State.board[y] = [];
+            for(let x=0; x<d.size; x++) State.board[y][x] = {c:false, x:false, l:false};
+        }
+        d.initial.forEach(v=>State.board[v.y][v.x] = {c:true, x:false, l:true});
+        State.hist = []; State.lives = 3; startTimer(); render(); updateUI();
+    }
+
+    // ★★★ 核心：修复渲染逻辑，确保 X 不会被牛覆盖 ★★★
+    function render() {
+        let d = State.data;
+        if(!d) return;
+        let b = document.getElementById('board');
+        b.style.gridTemplateColumns = `repeat(${d.size}, 1fr)`;
+        b.innerHTML = '';
+        let remain = 0;
+        
+        for(let y=0; y<d.size; y++) {
+            for(let x=0; x<d.size; x++) {
+                let div = document.createElement('div');
+                div.className = 'cell';
+                div.style.background = d.colors[y][x];
+                let cell = State.board[y][x];
+                
+                // ★ 使用 else if 严格判断优先级：牛 > X > 空
+                if(cell.c) { 
+                    div.innerText = '🐮'; remain++; 
+                } else if (cell.x) { 
+                    div.innerHTML = '<div class="cross">✕</div>'; 
+                } else {
+                    div.innerHTML = '';
+                }
+
+                // ★★★ 交互逻辑：支持长按打X ★★★
+                let pressTimer = null;
+                // 电脑右键打X
+                div.addEventListener('contextmenu', (e) => { 
+                    e.preventDefault(); 
+                    if(!cell.c && !cell.l) { cell.x = !cell.x; render(); updateUI(); } 
+                });
+                // 手机长按打X
+                div.addEventListener('touchstart', (e) => {
+                    pressTimer = setTimeout(() => {
+                        if(!cell.c && !cell.l) { cell.x = !cell.x; render(); updateUI(); }
+                    }, 500); // 长按0.5秒触发
+                });
+                div.addEventListener('touchend', () => clearTimeout(pressTimer));
+                div.addEventListener('touchmove', () => clearTimeout(pressTimer));
+                
+                // 普通点击（放牛）
+                div.addEventListener('click', (e) => { clickCell(x, y); });
+                b.appendChild(div);
+            }
+        }
+        document.getElementById('remain-txt').innerText = d.size - remain;
+        checkWin();
+    }
+
+    function clickCell(x, y) {
+        let cell = State.board[y][x];
+        if(cell.l) return;
+        if(cell.c) { State.hist.push(JSON.stringify(State.board)); cell.c = false; render(); updateUI(); return; }
+        // 如果之前画了X，放牛时自动清掉X
+        if(cell.x) cell.x = false;
+        
+        if(isConflict(x, y)) {
+            State.lives--; updateUI();
+            if(State.lives <= 0) { showToast('💔 生命耗尽，重置关卡'); setTimeout(()=>loadLv(State.curLevel), 1000); }
+            else { showToast('❌ 双击错误消耗生命值哦！'); }
+            return;
+        }
+        State.hist.push(JSON.stringify(State.board));
+        cell.c = true; render(); updateUI(); checkWin();
+    }
+
+    function isConflict(x, y) {
+        let d = State.data, sz = d.size, col = d.colors[y][x];
+        for(let i=0; i<sz; i++) if(State.board[y][i].c || State.board[i][x].c) return true;
+        for(let yy=0; yy<sz; yy++) for(let xx=0; xx<sz; xx++) {
+            let c = State.board[yy][xx];
+            if(c.c) {
+                if(d.colors[yy][xx] === col) return true;
+                if(Math.abs(xx-x)<=1 && Math.abs(yy-y)<=1) return true;
+            }
+        } return false;
+    }
+
+    function startTimer() { clearInterval(State.timeId); State.timer = 150; updateTimer(); State.timeId = setInterval(()=>{ State.timer--; updateTimer(); if(State.timer<=0){ clearInterval(State.timeId); showToast('⏱️ 超时重置'); setTimeout(()=>loadLv(State.curLevel), 1000); } }, 1000); }
+    function updateTimer() { let m=Math.floor(State.timer/60), s=State.timer%60; document.getElementById('timer-txt').innerText = `⏱️ ${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`; }
+
+    function checkWin() {
+        let d = State.data, win = d.solution.every(s=>State.board[s.y][s.x].c===true);
+        if(win) { clearInterval(State.timeId); showToast('🎉 恭喜通关！'); State.stars += 20; saveData(); setTimeout(()=>loadLv(State.curLevel+1), 1500); }
+    }
+
+    // 提示功能（打X位置，2秒后消失）
+    function doHint() {
+        let d = State.data, pos = d.solution.find(s=>!State.board[s.y][s.x].c);
+        if(pos) { State.board[pos.y][pos.x].x = true; render(); updateUI(); showToast('💡 提示在此(长按可自主画X)'); 
+        setTimeout(()=>{ State.board[pos.y][pos.x].x = false; render(); }, 2500); } 
+        else { showToast('牛都放完了'); }
+    }
+    function doUndo() { if(State.hist.length<=0) return; State.board = JSON.parse(State.hist.pop()); render(); updateUI(); showToast('↩️ 已撤回'); }
+    function doReset() { loadLv(State.curLevel); }
+
+    function updateUI() {
+        let livesEls = document.getElementById('lives').children;
+        for(let i=0; i<livesEls.length; i++) livesEls[i].className = i >= State.lives ? 'lost' : '';
+        document.getElementById('star-txt').innerText = State.stars;
+        document.getElementById('energy-txt').innerText = State.energy;
+    }
+    function showToast(t) {
+        let el = document.getElementById('toast'); el.innerText = t; el.className = 'toast show';
+        clearTimeout(el._t); el._t = setTimeout(()=>el.className = 'toast', 1500);
+    }
+
+    function saveData() { localStorage.setItem('cow_progress', JSON.stringify({lv:State.curLevel, star:State.stars})); }
+    function loadData() { try { let d = JSON.parse(localStorage.getItem('cow_progress')); if(d) { State.curLevel = d.lv; State.stars = d.star || 200; } } catch(e){} }
+
+    loadData(); loadLv(State.curLevel);
+</script>
+</body>
+</html>        <div class="btn" onclick="doReset()"><div class="icon">🔄</div>重玩</div>
     </div>
     
     <!-- Toast提示 -->

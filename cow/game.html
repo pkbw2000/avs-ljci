@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>数独牛 - 逻辑训练</title>
     <style>
-        * { box-sizing: border-box; user-select: none; -webkit-tap-highlight-color: transparent; font-family: 'PingFang SC', 'Helvetica Neue', sans-serif; }
+        * { box-sizing: border-box; user-select: none; -webkit-tap-highlight-color: transparent; font-family: 'PingFang SC', sans-serif; }
         body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: #f0f7fa; }
         
         #app {
@@ -14,7 +14,7 @@
             display: flex; flex-direction: column; align-items: center; position: relative; z-index: 1;
         }
 
-        /* 顶部与状态 */
+        /* 顶部状态 */
         .header { width: 100%; padding: 15px 15px 0 15px; display: flex; justify-content: space-between; align-items: center; font-size: 14px; }
         .level-title { font-size: 18px; font-weight: bold; color: #2c3e50; display: flex; flex-direction: column; align-items: flex-start; gap: 4px; }
         .level-title small { font-weight: normal; font-size: 12px; color: #7f8c8d; background: rgba(255,255,255,0.7); padding: 2px 8px; border-radius: 10px; }
@@ -23,14 +23,16 @@
         .lives-box .heart { transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
         .lives-box .lost { filter: grayscale(1) opacity: 0.2; transform: scale(0.8); }
 
+        /* 规则 */
         .rules-bar { width: 90%; display: flex; justify-content: center; gap: 10px; padding: 8px 0; color: #34495e; font-size: 12px; font-weight: 500; }
         .rules-bar span { background: white; padding: 4px 12px; border-radius: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
 
+        /* 状态栏 */
         .status-bar { width: 90%; display: flex; justify-content: space-between; margin: 5px 0 10px 0; font-size: 15px; color: #2c3e50; }
         .status-bar div { background: rgba(255,255,255,0.8); padding: 4px 14px; border-radius: 20px; box-shadow: 0 1px 4px rgba(0,0,0,0.03); }
         .timer.warning { color: #e74c3c; animation: pulse 1s infinite; }
 
-        /* 核心棋盘 */
+        /* 棋盘 */
         .board-wrap { flex: 1; width: 100%; display: flex; justify-content: center; align-items: center; padding: 5px; }
         #board { display: grid; gap: 5px; width: 100%; aspect-ratio: 1; max-width: 400px; background: transparent; }
         
@@ -41,20 +43,19 @@
             transition: all 0.15s; touch-action: manipulation; cursor: pointer;
         }
         .cell:active { transform: scale(0.92); }
-        
         .cell .cow { font-size: min(6vw, 32px); animation: popIn 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
-        .cell .cross { color: #e74c3c; font-weight: bold; font-size: min(5vw, 26px); background: none; animation: popIn 0.2s; }
+        .cell .cross { color: #e74c3c; font-weight: bold; font-size: min(5vw, 26px); animation: popIn 0.2s; }
         .cell.locked { border: 2px solid #e74c3c; } 
         .cell.highlight-hint { animation: glowPulse 0.8s infinite alternate; }
 
-        /* 底部功能按钮 */
+        /* 底部按钮 */
         .footer { width: 90%; display: flex; justify-content: space-between; padding: 15px 0 30px 0; }
         .btn { display: flex; flex-direction: column; align-items: center; font-size: 12px; color: #7f8c8d; cursor: pointer; transition: all 0.2s; }
         .btn:active { transform: scale(0.9); }
         .btn .icon { background: white; width: 44px; height: 44px; border-radius: 50%; display: flex; justify-content: center; align-items: center; font-size: 20px; margin-bottom: 4px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); transition: all 0.2s; }
-        .hint-btn .icon { background: #e3f2fd; } /* 引导提示 */
+        .hint-btn .icon { background: #e3f2fd; }
 
-        /* 全局提示 Toast */
+        /* 提示和弹窗 */
         .toast {
             position: absolute; bottom: 25%; left: 50%; transform: translateX(-50%) scale(0.8);
             background: rgba(0,0,0,0.75); backdrop-filter: blur(4px);
@@ -64,12 +65,10 @@
         }
         .toast.show { opacity: 1; transform: translateX(-50%) scale(1); bottom: 30%; }
 
-        /* ★★★ 框选教学系统遮罩 ★★★ */
+        /* 教学覆盖层 */
         .tutorial-overlay {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            z-index: 500; display: none; pointer-events: auto;
-            background: rgba(0,0,0,0.6); backdrop-filter: blur(2px);
-            transition: opacity 0.3s;
+            z-index: 500; display: none; pointer-events: none; /* 默认不阻止点击，盒子和指示器会拦截 */
         }
         .tutorial-box {
             position: absolute; border: 4px solid #ff5722; border-radius: 12px;
@@ -82,12 +81,13 @@
             color: #333; font-size: 14px; max-width: 85%; pointer-events: none;
             line-height: 1.5;
         }
+        .tutorial-highlight {
+            position: absolute; background: rgba(255, 87, 34, 0.2);
+            pointer-events: none; z-index: 501; border-radius: 8px; transition: all 0.3s;
+            box-shadow: 0 0 20px rgba(255, 87, 34, 0.4) inset;
+        }
 
-        /* 动画关键帧 */
-        @keyframes popIn { 0% { transform: scale(0); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
-        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
-        @keyframes glowPulse { 0% { box-shadow: 0 0 0 0 rgba(46, 204, 113, 0.4); } 100% { box-shadow: 0 0 15px 5px rgba(46, 204, 113, 0.2); } }
-
+        /* 胜利界面 */
         .win-modal {
             position: absolute; inset: 0; z-index: 200;
             display: none; justify-content: center; align-items: center; background: rgba(0,0,0,0.4); backdrop-filter: blur(2px);
@@ -97,13 +97,351 @@
             background: white; padding: 30px; border-radius: 30px; text-align: center; box-shadow: 0 20px 40px rgba(0,0,0,0.2);
             transform: scale(0.8); animation: popIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
         }
-        .win-card h2 { margin: 0 0 10px 0; color: #2c3e50; font-size: 24px; }
         .win-btn { margin-top: 15px; background: #4cd964; border: none; padding: 10px 40px; border-radius: 40px; color: white; font-size: 16px; font-weight: bold; cursor: pointer; }
+
+        @keyframes popIn { 0% { transform: scale(0); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
+        @keyframes glowPulse { 0% { box-shadow: 0 0 0 0 rgba(46, 204, 113, 0.4); } 100% { box-shadow: 0 0 15px 5px rgba(46, 204, 113, 0.2); } }
     </style>
 </head>
 <body>
 <div id="app">
     
+    <div class="header">
+        <div class="level-title">
+            <span id="level-txt">第 1 关</span>
+            <small id="lv-size-txt">(4x4 教学)</small>
+        </div>
+        <div class="lives-box" id="lives">
+            <span class="heart">❤️</span><span class="heart">❤️</span><span class="heart">❤️</span>
+        </div>
+    </div>
+    
+    <div class="rules-bar">
+        <span>🚫 牛周边不可有牛</span>
+        <span>⬜ 每行每列唯一</span>
+        <span>🎨 每种颜色唯一</span>
+    </div>
+    
+    <div class="status-bar">
+        <div>🐮 剩余: <b id="remain-txt">0</b></div>
+        <div id="timer-txt" class="timer">⏱️ 02:30</div>
+    </div>
+    
+    <div class="board-wrap"><div id="board"></div></div>
+    
+    <div class="footer">
+        <div class="btn hint-btn" id="hintBtn" onclick="doAction('hint')"><div class="icon">💡</div>提示</div>
+        <div class="btn" onclick="doAction('undo')"><div class="icon">↩️</div>撤回</div>
+        <div class="btn" onclick="doAction('reset')"><div class="icon">🔄</div>重玩</div>
+    </div>
+
+    <!-- 教学覆盖层 -->
+    <div id="tutorialOverlay" class="tutorial-overlay">
+        <div id="tutorialBox" class="tutorial-box"></div>
+        <div id="tutorialBubble" class="tutorial-bubble"></div>
+        <div id="tutorialHighlight" class="tutorial-highlight"></div>
+    </div>
+
+    <div id="toast" class="toast"></div>
+    
+    <div id="winModal" class="win-modal">
+        <div class="win-card">
+            <h2>🎉 闯关成功！</h2>
+            <p style="color:#7f8c8d; margin:0 0 10px 0;">逻辑推理很棒！</p>
+            <button class="win-btn" onclick="goToNextLevel()">进入下一关 ➜</button>
+        </div>
+    </div>
+
+</div>
+
+<script>
+    // ================= 核心配置 =================
+    const COLORS = ['#FFD54F','#81C784','#4DD0E1','#F48FB1','#BA68C8','#FFB74D','#A5D6A7','#42A5F5'];
+
+    // 保底硬编码解决算法（保证4x4到8x8绝对无相邻冲突）
+    const HARDCODED_SOLUTIONS = {
+        4: [{x:1,y:0},{x:3,y:1},{x:0,y:2},{x:2,y:3}],
+        5: [{x:1,y:0},{x:3,y:1},{x:0,y:2},{x:2,y:3},{x:4,y:4}],
+        6: [{x:1,y:0},{x:3,y:1},{x:5,y:2},{x:0,y:3},{x:2,y:4},{x:4,y:5}],
+        7: [{x:1,y:0},{x:3,y:1},{x:5,y:2},{x:0,y:3},{x:2,y:4},{x:4,y:5},{x:6,y:6}],
+        8: [{x:1,y:0},{x:3,y:1},{x:5,y:2},{x:7,y:3},{x:0,y:4},{x:2,y:5},{x:4,y:6},{x:6,y:7}]
+    };
+
+    let GameState = { 
+        curLv: 0, maxLv: 0, lives: 3, 
+        board: [], hist: [], timer: 150, timeId: null, data: null, isLocked: false,
+        // 教学系统状态
+        isTutorial: false, tStep: 0, tTargets: []
+    };
+
+    // ================= 1. 关卡生成器 =================
+    function generateLevel(size) {
+        let solution = HARDCODED_SOLUTIONS[size];
+        // 颜色映射：确保每种颜色只对应1头牛
+        let usedColors = COLORS.slice(0, size);
+        let colors = [];
+        for(let y=0; y<size; y++) {
+            colors[y] = [];
+            for(let x=0; x<size; x++) {
+                let minD=999, id=0;
+                solution.forEach((s,i) => {
+                    let d = Math.abs(s.x-x) + Math.abs(s.y-y);
+                    if(d<minD) { minD=d; id=i; }
+                });
+                colors[y][x] = usedColors[id];
+            }
+        }
+        return { size, colors, solution, initial: [solution[0]] };
+    }
+
+    // ================= 2. 加载关卡及教学匹配 =================
+    function loadLevel(num) {
+        // 难度规划：1-5关（从4x4到8x8教学平滑过渡）
+        let size;
+        if (num === 0) size = 4;
+        else if (num === 1) size = 4;
+        else if (num === 2) size = 5;
+        else if (num === 3) size = 6;
+        else if (num === 4) size = 7;
+        else size = 8; // 后续为8x8
+
+        let lvData = generateLevel(size);
+        GameState.data = lvData; GameState.curLv = num;
+
+        document.getElementById('level-txt').innerText = `第 ${num+1} 关`;
+        if (num === 0) document.getElementById('lv-size-txt').innerText = '(4x4 教学)';
+        else if (num === 1) document.getElementById('lv-size-txt').innerText = '(4x4 巩固)';
+        else if (num === 2) document.getElementById('lv-size-txt').innerText = '(5x5 进阶)';
+        else if (num === 3) document.getElementById('lv-size-txt').innerText = '(6x6 逻辑)';
+        else if (num === 4) document.getElementById('lv-size-txt').innerText = '(7x7 高手)';
+        else document.getElementById('lv-size-txt').innerText = `(${size}x${size})`;
+
+        GameState.board = [];
+        for(let y=0; y<lvData.size; y++) {
+            GameState.board[y] = [];
+            for(let x=0; x<lvData.size; x++) GameState.board[y][x] = {c:false, x:false, l:false};
+        }
+        lvData.initial.forEach(v=>GameState.board[v.y][v.x] = {c:true, x:false, l:true});
+
+        GameState.lives = 3; GameState.hist = []; GameState.isLocked = false;
+        document.getElementById('winModal').classList.remove('show');
+        document.getElementById('tutorialOverlay').style.display = 'none';
+        startTimer(150);
+        renderBoard();
+        updateUI();
+
+        // 关卡教学说明
+        setTimeout(() => {
+            if (num === 0) {
+                // 教学引导的步骤
+                GameState.isTutorial = true; GameState.tStep = 0;
+                triggerTutorial(0);
+            } else if (num === 1) {
+                showToast('💡 巩固练习！利用单/双击自己推理。');
+            } else if (num === 2) {
+                showToast('💡 5x5挑战！如果卡住，点击提示按钮闪烁指引。');
+            } else if (num === 3) {
+                showToast('💡 6x6进阶！玩转颜色和数独规则。');
+            } else if (num === 4) {
+                showToast('💡 7x7高手！这是最后一个教学关，相信自己！');
+            }
+        }, 800);
+    }
+
+    // ================= 3. 交互渲染 =================
+    function renderBoard() {
+        let d = GameState.data;
+        if(!d) return;
+        let b = document.getElementById('board');
+        b.style.gridTemplateColumns = `repeat(${d.size}, 1fr)`;
+        b.innerHTML = '';
+        let remain = 0;
+
+        for(let y=0; y<d.size; y++) for(let x=0; x<d.size; x++) {
+            let div = document.createElement('div');
+            div.className = 'cell';
+            div.style.background = d.colors[y][x];
+            let cell = GameState.board[y][x];
+
+            if(cell.l) div.classList.add('locked');
+            if(cell.c) { let sp=document.createElement('span'); sp.className='cow'; sp.innerText='🐮'; div.appendChild(sp); remain++; } 
+            else if (cell.x) { let sp=document.createElement('span'); sp.className='cross'; sp.innerText='✕'; div.appendChild(sp); }
+
+            // 绑定点击
+            let clickTimer = null;
+            div.addEventListener('click', function(e) {
+                if(GameState.isLocked) return;
+                if(clickTimer) { clearTimeout(clickTimer); clickTimer = null; handleDblClick(x,y); } 
+                else { clickTimer = setTimeout(() => { clickTimer = null; handleSingleClick(x,y); }, 300); }
+            });
+            b.appendChild(div);
+        }
+        document.getElementById('remain-txt').innerText = d.size - remain;
+        checkWin();
+    }
+
+    // ================= 4. 单/双击逻辑（带教学拦截） =================
+    function handleSingleClick(x, y) {
+        if(GameState.isTutorial) {
+            if(GameState.tStep === 0) {
+                if(x === 0 && y === 0) {
+                    let cell = GameState.board[0][0];
+                    cell.x = !cell.x;
+                    renderBoard(); updateUI();
+                    GameState.tStep = 1;
+                    triggerTutorial(1);
+                    return;
+                } else {
+                    showToast('👆 请先点击左上角高亮的格子画X');
+                    return;
+                }
+            } else {
+                showToast('请先完成当前的教学指引');
+                return;
+            }
+        }
+        let cell = GameState.board[y][x];
+        if(cell.l || cell.c) return;
+        cell.x = !cell.x;
+        renderBoard(); updateUI();
+    }
+
+    function handleDblClick(x, y) {
+        if(GameState.isTutorial) {
+            if(GameState.tStep === 1) {
+                // 教学第2步的牛位置：解中第2个位置
+                let target = GameState.data.solution[1];
+                if(x === target.x && y === target.y) {
+                    let cell = GameState.board[y][x];
+                    if(cell.c) return;
+                    cell.c = true;
+                    renderBoard(); updateUI();
+                    GameState.tStep = 2;
+                    triggerTutorial(2);
+                    return;
+                } else {
+                    showToast('🐮 请双击高亮提示的正确格子放牛');
+                    return;
+                }
+            } else {
+                showToast('请先完成当前的教学指引');
+                return;
+            }
+        }
+
+        let cell = GameState.board[y][x];
+        if(cell.l) return;
+        if(cell.c) { GameState.hist.push(JSON.stringify(GameState.board)); cell.c = false; renderBoard(); updateUI(); return; }
+        if(cell.x) cell.x = false;
+
+        if(checkConflict(x, y)) {
+            GameState.lives--;
+            updateUI();
+            if(GameState.lives <= 0) {
+                showToast('💔 生命耗尽，重置本关...');
+                setTimeout(()=>{ GameState.isLocked = true; loadLevel(GameState.curLv); }, 1200);
+            } else {
+                showToast('❌ 规则冲突，消耗 1 个爱心');
+            }
+            return;
+        }
+        GameState.hist.push(JSON.stringify(GameState.board));
+        cell.c = true; renderBoard(); updateUI(); checkWin();
+    }
+
+    // ================= 5. 冲突检测 =================
+    function checkConflict(x, y) {
+        let d = GameState.data, sz = d.size, col = d.colors[y][x];
+        for(let i=0; i<sz; i++) { if(GameState.board[y][i].c || GameState.board[i][x].c) return true; }
+        for(let yy=0; yy<sz; yy++) for(let xx=0; xx<sz; xx++) {
+            let c = GameState.board[yy][xx];
+            if(c.c) {
+                if(d.colors[yy][xx] === col) return true;
+                if(Math.abs(xx-x)<=1 && Math.abs(yy-y)<=1) return true;
+            }
+        }
+        return false;
+    }
+
+    // ================= 6. 核心框选教学系统（完美定位） =================
+    function triggerTutorial(step) {
+        const overlay = document.getElementById('tutorialOverlay');
+        const box = document.getElementById('tutorialBox');
+        const bubble = document.getElementById('tutorialBubble');
+        const highlight = document.getElementById('tutorialHighlight');
+        const app = document.getElementById('app');
+        const d = GameState.data;
+        if(!d) return;
+        let targetEl = null;
+        let text = '';
+        let isFinal = false;
+
+        if(step === 0) {
+            targetEl = document.querySelector('#board > div:nth-child(1)'); // 左上角(0,0)
+            text = '👆 单击这个格子，画上【X】排除不可能的位置。\n(点击格子即可操作)';
+        } else if(step === 1) {
+            let target = d.solution[1]; // 第二个正确的牛
+            targetEl = document.querySelector(`#board > div:nth-child(${target.y * d.size + target.x + 1})`);
+            text = '🐮 双击这个空位，正确放置第一头【牛】。\n(快速点两下即可)';
+        } else if(step === 2) {
+            targetEl = document.getElementById('hintBtn');
+            text = '💡 卡住时点击【提示】按钮，正确位置会闪烁引导你。';
+        } else if(step === 3) {
+            targetEl = document.getElementById('app');
+            text = '🎉 恭喜完成新手教学！\n自由完成剩下的牛即可过关。';
+            isFinal = true;
+        }
+
+        if(targetEl) {
+            overlay.style.display = 'block';
+            const rect = targetEl.getBoundingClientRect();
+            const appRect = app.getBoundingClientRect();
+
+            // 精确定位高亮框
+            const left = rect.left - appRect.left - 4;
+            const top = rect.top - appRect.top - 4;
+            const width = rect.width + 8;
+            const height = rect.height + 8;
+
+            if(isFinal) {
+                box.style.display = 'none'; highlight.style.display = 'none';
+                bubble.style.top = '40%'; bubble.style.left = '50%'; bubble.style.transform = 'translate(-50%, -50%)';
+                bubble.style.fontSize = '18px'; bubble.style.fontWeight = 'bold'; bubble.style.textAlign = 'center';
+                bubble.style.whiteSpace = 'pre-wrap'; bubble.innerText = text;
+                setTimeout(() => { overlay.style.display = 'none'; GameState.isTutorial = false; }, 3000);
+            } else {
+                box.style.display = 'block'; highlight.style.display = 'block';
+                box.style.left = left + 'px'; box.style.top = top + 'px'; box.style.width = width + 'px'; box.style.height = height + 'px';
+                highlight.style.left = left + 'px'; highlight.style.top = top + 'px'; highlight.style.width = width + 'px'; highlight.style.height = height + 'px';
+                
+                bubble.style.transform = 'none'; bubble.style.textAlign = 'left'; bubble.style.whiteSpace = 'pre-wrap';
+                bubble.style.top = (rect.bottom - appRect.top + 12) + 'px';
+                bubble.style.left = (rect.left - appRect.left) + 'px';
+                bubble.style.width = '80%'; bubble.innerText = text;
+            }
+        }
+    }
+
+    // ================= 7. 辅助功能 =================
+    function doAction(type) {
+        if(GameState.isLocked && type !== 'reset') return;
+        if(GameState.isTutorial) {
+            if(GameState.tStep === 2 && type === 'hint') {
+                triggerHintEffect();
+                GameState.tStep = 3;
+                triggerTutorial(3);
+                return;
+            } else {
+                showToast('请先完成当前的教学操作');
+                return;
+            }
+        }
+        if(type === 'hint') { triggerHintEffect(); }
+        else if(type === 'undo') {
+            if(GameState.hist.length<=0) return;
+            GameState.board = JSON.parse(GameState.hist.pop());
+            renderBoard(); updateUI(); showToast    
     <div class="header">
         <div class="level-title">
             <span id="level-txt">第 1 关</span>

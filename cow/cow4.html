@@ -36,7 +36,6 @@
             box-sizing: border-box;
         }
 
-        /* --- 狀態與規則欄 --- */
         header h1 { margin: 0 0 10px 0; font-size: 1.5rem; color: #333; }
         .status-bar {
             display: flex;
@@ -52,13 +51,9 @@
         }
         .status-bar.active { opacity: 1; }
 
-        .lives {
-            display: flex; gap: 4px; font-size: 20px; transition: all 0.3s;
-        }
+        .lives { display: flex; gap: 4px; font-size: 20px; transition: all 0.3s; }
         .lives .heart { transition: all 0.3s; }
-        .lives .heart.lost {
-            filter: grayscale(1); opacity: 0.3; transform: scale(0.7);
-        }
+        .lives .heart.lost { filter: grayscale(1); opacity: 0.3; transform: scale(0.7); }
 
         .rules-box {
             background: rgba(255,255,255,0.7); border-radius: 8px;
@@ -67,7 +62,6 @@
         }
         .rules-box.active { display: block; }
 
-        /* --- 遊戲網格 --- */
         #grid-wrapper {
             display: none;
             background: #fff;
@@ -98,7 +92,6 @@
         .cell[data-state="CROSS"]::after { content: "❌"; font-size: 1.5rem; opacity: 0.8; }
         .cell[data-state="EMPTY"]::after { content: ""; }
         
-        /* 教學高亮 */
         .highlight-ring {
             position: absolute;
             top: -6px; left: -6px; right: -6px; bottom: -6px;
@@ -118,10 +111,8 @@
         .cell.locked { opacity: 0.5; pointer-events: none; }
         .cell.locked.highlight-lock { opacity: 1; pointer-events: auto; }
 
-        /* 示範牛边框 */
         .cell.demo-cow { border: 2px solid #ff5722; box-shadow: 0 0 10px rgba(255,87,34,0.4); }
 
-        /* 提示與按鈕 */
         #msg-box {
             background: white; padding: 12px; border-radius: 12px;
             box-shadow: 0 2px 8px rgba(0,0,0,0.05); min-height: 50px;
@@ -144,7 +135,6 @@
         }
         .toast-msg.show { opacity: 1; }
 
-        /* 顏色定義 */
         .color-red { background-color: #ff6b6b; }
         .color-blue { background-color: #4dabf7; }
         .color-green { background-color: #69db7c; }
@@ -201,14 +191,11 @@
     let isProcessing = false;
     let isLevelComplete = false;
 
-    // 針對教學的狀態指引
     let currentStep = 0; 
     let stepInstructions = [];
-    let totalCowsInLevel = 0;
-    let demonstrationCow = null; // 示範牛坐標
+    let demonstrationCow = null; 
     let correctSolution = [];
 
-    // === N皇后 回溯算法 (生成嚴謹的唯一解) ===
     function solveNQueens(size) {
         let result = null;
         let board = Array(size).fill(-1);
@@ -235,7 +222,6 @@
         return result || [];
     }
 
-    // 生成關卡數據
     function generateLevelData(size) {
         let solution = solveNQueens(size);
         let colors = [];
@@ -254,15 +240,13 @@
         return { solution, colors };
     }
 
-    // 教學大綱
     const TUTORIALS = [
-        { size: 4 }, // 1. 基礎教學
-        { size: 4 }, // 2. 鞏固練習
-        { size: 5 }, // 3. 進階推理
-        { size: 6 }  // 4. 綜合挑戰
+        { size: 4 },
+        { size: 4 },
+        { size: 5 },
+        { size: 6 }
     ];
 
-    // === 核心渲染 ===
     function initLevel(level) {
         currentLevel = level;
         const data = TUTORIALS[level];
@@ -283,7 +267,6 @@
         document.getElementById('next-btn').style.display = 'none';
         document.getElementById('next-btn').innerText = '進入下一關 ➜';
         
-        // 初始化棋盤數據
         gridData = [];
         for(let r=0; r<gridSize; r++) {
             let row = [];
@@ -293,20 +276,16 @@
             gridData.push(row);
         }
 
-        // 設定「示範牛」並自動放置 (保證玩家一進來就有牛)
         demonstrationCow = correctSolution[0];
         gridData[demonstrationCow.y][demonstrationCow.x].state = STATE.COW;
 
         renderBoard();
         updateUI();
         startLevelGuide();
-    }
-
-    function renderBoard() {
+    }    function renderBoard() {
         const gridEl = document.getElementById('grid');
         gridEl.innerHTML = '';
         gridEl.style.gridTemplateColumns = `repeat(${gridSize}, 1fr)`;
-        // 解除滑動原生行為的阻擋
         gridEl.style.touchAction = 'none';
         
         for(let r=0; r<gridSize; r++) {
@@ -320,15 +299,12 @@
                 if (cellData.state === STATE.COW) cellEl.dataset.state = 'COW';
                 else if (cellData.state === STATE.CROSS) cellEl.dataset.state = 'CROSS';
 
-                // 標記示範牛
                 if (demonstrationCow && r === demonstrationCow.y && c === demonstrationCow.x) {
                     cellEl.classList.add('demo-cow');
                 }
 
-                // 教學鎖定系統
                 cellEl.classList.add('locked'); 
 
-                // ---- 事件綁定 (單擊/雙擊) ----
                 let clickTimer = null;
                 cellEl.addEventListener('click', function(e) {
                     if (isGameLocked || isProcessing) return;
@@ -346,29 +322,19 @@
                     }
                 });
 
-                // ---- 連續滑動連續打叉 ---- 
-                // 處理 touch 事件：手指在螢幕上滑動，連續標記排除
-                cellEl.addEventListener('touchstart', function() {
-                    // 由 click 處理，這裡只用於避免突發事件
-                });
-
-                // 使用 document 層級的 touchmove 提高滑動偵測準確性
                 cellEl.addEventListener('touchmove', function(e) {
-                    e.preventDefault(); // 防止頁面被拖動
+                    e.preventDefault();
                     if (isGameLocked || isProcessing) return;
                     
-                    // 取得手指劃過的目標元素
                     const touch = e.touches[0];
                     const elementUnderTouch = document.elementFromPoint(touch.clientX, touch.clientY);
                     
                     if (elementUnderTouch && elementUnderTouch.classList.contains('cell')) {
                         const tr = parseInt(elementUnderTouch.dataset.r);
                         const tc = parseInt(elementUnderTouch.dataset.c);
-                        // 教學階段：只能滑動高亮目標
                         if (currentStepLockIsTarget(tr, tc)) {
                             handleSlideInteraction(tr, tc);
                         } else if (!cellEl.classList.contains('locked')) {
-                            // 自由階段：允許隨意滑動
                             handleSlideInteraction(tr, tc);
                         }
                     }
@@ -379,7 +345,6 @@
         }
     }
 
-    // 判斷當前是否為教學鎖定目標
     function currentStepLockIsTarget(r, c) {
         if (currentStep < stepInstructions.length) {
             const target = stepInstructions[currentStep];
@@ -388,23 +353,17 @@
         return false;
     }
 
-    // === 引導教學循環 ===
     function startLevelGuide() {
-        // 設計 3 個教學步驟, 引導玩家放置第一頭牛，然後解鎖自由模式
         let target1 = correctSolution[1];
-        let target2 = {r:0, c:0}; // 打叉的示範
-        // 確保打叉目標沒跟示範牛重疊
-        if (target2.r === demonstrationCow.y && target2.c === demonstrationCow.x) target2 = {r:0, c:1};
+        let target2 = {y: 0, x: 0}; 
+        if (target2.y === demonstrationCow.y && target2.x === demonstrationCow.x) target2 = {y:0, x:1};
 
-        // 覆蓋下一步
         if (gridSize === 4) {
-            // 4x4 的專屬打叉練習
             stepInstructions = [
                 { r: target1.y, c: target1.x, type: 'COW', msg: `請**雙擊**高亮的 ${COLOR_NAMES[gridData[target1.y][target1.x].color]} 色格子，放置你的第一頭牛！` },
                 { r: target2.y, c: target2.x, type: 'CROSS', msg: `試試 **單擊** 這個格子打叉 ❌ 排除它，因為它不符合行列規則。` },
             ];
         } else {
-            // 大於4x4的直接進入
             stepInstructions = [];
         }
         
@@ -416,37 +375,28 @@
         const cells = document.querySelectorAll('.cell');
         cells.forEach(el => el.classList.add('locked'));
         
-        // 解鎖示範牛（不可移動，但不影響點擊體驗）
-        // 但教學中，我們應該鼓勵玩家點擊其他地方，所以先鎖定示範牛
-
-        // 解鎖當前步驟的目標
         if (currentStep < stepInstructions.length) {
             const target = stepInstructions[currentStep];
-            const targetEl = document.querySelector(`.cell[data-r='${target.r}'][data-c='${target.c}']`);
+            const targetEl = document.querySelector(`.cell[data-r="${target.r}"][data-c="${target.c}"]`);
             if (targetEl) {
                 targetEl.classList.remove('locked');
                 document.getElementById('hint-text').innerText = target.msg;
-                // 高亮圈
-                document.querySelectorAll('.highlight-ring').forEach(el => el.remove());
-                const ring = document.createElement('div');
-                ring.className = 'highlight-ring';
-                targetEl.appendChild(ring);
+            } else {
+                cells.forEach(el => el.classList.remove('locked'));
+                document.getElementById('hint-text').innerText = "無法定位目標，已自動解鎖棋盤，請自由推理！";
             }
         } else {
-            // 步驟結束：解鎖全部
             cells.forEach(el => el.classList.remove('locked'));
             document.querySelectorAll('.highlight-ring').forEach(el => el.remove());
             document.getElementById('hint-text').innerText = "🎯 教學指引完成！推理並找出剩下的所有牛，完成關卡！";
         }
     }
 
-    // === 交互事件處理 ===
     function handleSlideInteraction(r, c) {
         const cell = gridData[r][c];
         const cellEl = document.querySelector(`.cell[data-r='${r}'][data-c='${c}']`);
         if (!cellEl || isGameLocked || isProcessing) return;
 
-        // 連續打叉功能：如果是空格則打叉，是叉則清除，是牛則跳過
         if (cell.state === STATE.EMPTY) {
             cell.state = STATE.CROSS;
             cellEl.dataset.state = 'CROSS';
@@ -461,14 +411,12 @@
         const cell = gridData[r][c];
         const cellEl = document.querySelector(`.cell[data-r='${r}'][data-c='${c}']`);
 
-        // 教學強制擋住：必須先過引導。
         if (currentStep < stepInstructions.length) {
             const target = stepInstructions[currentStep];
             if (r !== target.r || c !== target.c) {
                 showToast("👆 請先點擊藍色高亮的格子操作！");
                 return;
             }
-            // 檢查正確動作
             let success = false;
             if (target.type === 'COW' && type === 'DOUBLE' && cell.state === STATE.COW) success = true;
             if (target.type === 'CROSS' && type === 'SINGLE' && cell.state === STATE.CROSS) success = true;
@@ -479,16 +427,14 @@
                 setTimeout(() => {
                     isProcessing = false;
                     currentStep++;
-                    applyStepLock(); // 進入下一步或解鎖全盤
+                    applyStepLock();
                 }, 600);
             } else {
-                // 操作不匹配
                 showToast(target.type === 'COW' ? "💡 這一步需要【双击】放牛喔！" : "💡 這一步需要【单击】打叉喔！");
             }
-            return; // 結束教學處理
+            return;
         }
 
-        // ---- 自由遊戲階段邏輯 ----
         if (type === 'SINGLE') {
             if (cell.state === STATE.EMPTY) {
                 cell.state = STATE.CROSS; cellEl.dataset.state = 'CROSS';
@@ -499,14 +445,12 @@
             }
         } else if (type === 'DOUBLE') {
             if (cell.state === STATE.EMPTY) {
-                // 重要：如果有示範牛鎖定，防止玩家誤放。但代碼允許
                 if (checkConflict(r, c)) {
                     loseLife("❌ 規則衝突！消耗 1 顆愛心");
                     return;
                 }
                 cell.state = STATE.COW; cellEl.dataset.state = 'COW';
             } else if (cell.state === STATE.COW) {
-                // 如果玩家想取消自己的牛
                 cell.state = STATE.EMPTY; cellEl.dataset.state = 'EMPTY';
             } else {
                 showToast("❌ 已打叉，不能放牛，先點擊叉取消吧！");
@@ -516,7 +460,6 @@
         checkLevelComplete();
     }
 
-    // === 規則與生命系統 ===
     function checkConflict(r, c) {
         const targetColor = gridData[r][c].color;
         for (let yy=0; yy<gridSize; yy++) {
@@ -541,12 +484,11 @@
             isGameLocked = true;
             setTimeout(() => {
                 alert("💔 生命耗盡！關卡重置，重新開始推理！");
-                initLevel(currentLevel); // 重置當前關卡
+                initLevel(currentLevel);
             }, 1500);
         }
     }
 
-    // === 關卡完成檢測 ===
     function checkLevelComplete() {
         if (isLevelComplete) return;
         const cows = gridData.flat().filter(c => c.state === STATE.COW).length;
@@ -554,64 +496,58 @@
             isLevelComplete = true;
             isGameLocked = true;
             document.getElementById('hint-text').innerText = "🎉 太棒了！你解開了所有邏輯！";
-                 document.getElementById('next-btn').style.display = 'block';
-                document.getElementById('msg-box').style.borderLeftColor = 'var(--success-color)';
-            }
-        }
-
-        // === UI 更新 ===
-        function updateUI() {
-            const cowCount = gridData.flat().filter(c => c.state === STATE.COW).length;
-            document.getElementById('statusBar').querySelector('.status-bar').style.display = 'flex';
-            
-            const hearts = document.getElementById('livesDisplay').children;
-            for (let i=0; i<3; i++) {
-                hearts[i].className = i >= lives ? 'heart lost' : 'heart';
-            }
-        }
-
-        function showToast(msg) {
-            const toast = document.getElementById('toast');
-            toast.innerText = msg;
-            toast.classList.add('show');
-            clearTimeout(toast._timer);
-            toast._timer = setTimeout(() => toast.classList.remove('show'), 2000);
-        }
-
-        // === 啟動流程 ===
-        window.onload = function() {
-            document.getElementById('next-btn').innerText = "開始學習";
             document.getElementById('next-btn').style.display = 'block';
-            document.getElementById('hint-text').innerText = "歡迎來到找牛世界！點擊按鈕進入教學。";
-            document.getElementById('next-btn').onclick = startTutorial;
-        };
-
-        function startTutorial() {
-            document.getElementById('next-btn').style.display = 'none';
-            document.getElementById('grid-wrapper').classList.add('active');
-            document.getElementById('statusBar').classList.add('active');
-            document.getElementById('rulesBox').classList.add('active');
-            initLevel(0);
-            
-            // 綁定下一關按鈕事件
-            document.getElementById('next-btn').onclick = function() {
-                if (this.innerText === '進入下一關 ➜') {
-                    if (currentLevel + 1 < TUTORIALS.length) {
-                        initLevel(currentLevel + 1);
-                        document.getElementById('next-btn').style.display = 'none';
-                    } else {
-                        document.getElementById('hint-text').innerText = "🎊 恭喜！你完成了所有找牛教學！";
-                        document.getElementById('next-btn').innerText = "開始冒險";
-                        document.getElementById('grid-wrapper').classList.remove('active');
-                        document.getElementById('statusBar').classList.remove('active');
-                        document.getElementById('next-btn').style.display = 'block';
-                        document.getElementById('next-btn').onclick = function() {
-                            alert("正式冒險模式開發中！敬請期待！");
-                        };
-                    }
-                }
-            };
+            document.getElementById('msg-box').style.borderLeftColor = 'var(--success-color)';
         }
-    </script>
+    }
+
+    function updateUI() {
+        const hearts = document.getElementById('livesDisplay').children;
+        for (let i=0; i<3; i++) {
+            hearts[i].className = i >= lives ? 'heart lost' : 'heart';
+        }
+    }
+
+    function showToast(msg) {
+        const toast = document.getElementById('toast');
+        toast.innerText = msg;
+        toast.classList.add('show');
+        clearTimeout(toast._timer);
+        toast._timer = setTimeout(() => toast.classList.remove('show'), 2000);
+    }
+
+    window.onload = function() {
+        document.getElementById('next-btn').innerText = "開始學習";
+        document.getElementById('next-btn').style.display = 'block';
+        document.getElementById('hint-text').innerText = "歡迎來到找牛世界！點擊按鈕進入教學。";
+        document.getElementById('next-btn').onclick = startTutorial;
+    };
+
+    function startTutorial() {
+        document.getElementById('next-btn').style.display = 'none';
+        document.getElementById('grid-wrapper').classList.add('active');
+        document.getElementById('statusBar').classList.add('active');
+        document.getElementById('rulesBox').classList.add('active');
+        initLevel(0);
+        
+        document.getElementById('next-btn').onclick = function() {
+            if (this.innerText === '進入下一關 ➜') {
+                if (currentLevel + 1 < TUTORIALS.length) {
+                    initLevel(currentLevel + 1);
+                    document.getElementById('next-btn').style.display = 'none';
+                } else {
+                    document.getElementById('hint-text').innerText = "🎊 恭喜！你完成了所有找牛教學！";
+                    document.getElementById('next-btn').innerText = "開始冒險";
+                    document.getElementById('grid-wrapper').classList.remove('active');
+                    document.getElementById('statusBar').classList.remove('active');
+                    document.getElementById('next-btn').style.display = 'block';
+                    document.getElementById('next-btn').onclick = function() {
+                        alert("正式冒險模式開發中！敬請期待！");
+                    };
+                }
+            }
+        };
+    }
+</script>
 </body>
 </html>

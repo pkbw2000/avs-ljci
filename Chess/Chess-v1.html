@@ -856,71 +856,72 @@
                 }
             };
 
-            // ---------- executeMove（含将帅判负） ----------
-            const executeMove = useCallback((fromRow, fromCol, toRow, toCol) => {
-                if (gameOver) return;
-                const newBoard = cloneBoard(board);
-                const attacker = newBoard[fromRow][fromCol];
-                const target = newBoard[toRow][toCol];
-                if (target) playSound('capture');
-                else playSound('move');
-                newBoard[toRow][toCol] = attacker;
-                newBoard[fromRow][fromCol] = null;
+			// ========== 2. 再定义 executeMove（依赖 checkWinCondition） ==========
+			const executeMove = useCallback((fromRow, fromCol, toRow, toCol) => {
+				if (gameOver) return;
+				const newBoard = cloneBoard(board);
+				const attacker = newBoard[fromRow][fromCol];
+				const target = newBoard[toRow][toCol];
+				if (target) playSound('capture');
+				else playSound('move');
+				newBoard[toRow][toCol] = attacker;
+				newBoard[fromRow][fromCol] = null;
 
-                // 将帅被吃即负
-                if (target && target.rank === 1) {
-                    setBoard(newBoard);
-                    setGameOver(true);
-                    setWinner(attacker.color === 'red' ? 'red' : 'black');
-                    setSelectedPos(null);
-                    setHighlightCells([]);
-                    playSound('win');
-                    return;
-                }
+				// 将帅被吃即负
+				if (target && target.rank === 1) {
+					setBoard(newBoard);
+					setGameOver(true);
+					setWinner(attacker.color === 'red' ? 'red' : 'black');
+					setSelectedPos(null);
+					setHighlightCells([]);
+					playSound('win');
+					return;
+				}
 
-                // 原有胜负检查（无子可走）
-                if (checkWinCondition(newBoard)) {
-                    setBoard(newBoard);
-                    setSelectedPos(null);
-                    setHighlightCells([]);
-                    return;
-                }
+				// 原有胜负检查（无子可走）
+				if (checkWinCondition(newBoard)) {
+					setBoard(newBoard);
+					setSelectedPos(null);
+					setHighlightCells([]);
+					return;
+				}
 
-                const nextTurn = currentTurn === 'red' ? 'black' : 'red';
-                setBoard(newBoard);
-                setCurrentTurn(nextTurn);
-                setSelectedPos(null);
-                setHighlightCells([]);
-            }, [board, currentTurn, gameOver, checkWinCondition]);
+				const nextTurn = currentTurn === 'red' ? 'black' : 'red';
+				setBoard(newBoard);
+				setCurrentTurn(nextTurn);
+				setSelectedPos(null);
+				setHighlightCells([]);
+			}, [board, currentTurn, gameOver, checkWinCondition]); // 依赖 checkWinCondition
 
-            const checkWinCondition = useCallback((newBoard) => {
-                let hasUnrevealed = false;
-                for (let r = 0; r < 4; r++) {
-                    for (let c = 0; c < 8; c++) {
-                        if (newBoard[r][c] && !newBoard[r][c].faceUp) {
-                            hasUnrevealed = true;
-                            break;
-                        }
-                    }
-                    if (hasUnrevealed) break;
-                }
-                if (hasUnrevealed) return false;
+			// ========== 1. 先定义 checkWinCondition ==========
+			const checkWinCondition = useCallback((newBoard) => {
+				let hasUnrevealed = false;
+				for (let r = 0; r < 4; r++) {
+					for (let c = 0; c < 8; c++) {
+						if (newBoard[r][c] && !newBoard[r][c].faceUp) {
+							hasUnrevealed = true;
+							break;
+						}
+					}
+					if (hasUnrevealed) break;
+				}
+				if (hasUnrevealed) return false;
 
-                let redPieces = 0, blackPieces = 0;
-                let redMoves = 0, blackMoves = 0;
-                for (let r = 0; r < 4; r++) {
-                    for (let c = 0; c < 8; c++) {
-                        const p = newBoard[r][c];
-                        if (!p) continue;
-                        const moves = generateMoves(newBoard, r, c);
-                        if (p.color === 'red') { redPieces++; redMoves += moves.length; }
-                        else { blackPieces++; blackMoves += moves.length; }
-                    }
-                }
-                if (redPieces === 0 || redMoves === 0) { setGameOver(true); setWinner('black'); return true; }
-                if (blackPieces === 0 || blackMoves === 0) { setGameOver(true); setWinner('red'); return true; }
-                return false;
-            }, []);
+				let redPieces = 0, blackPieces = 0;
+				let redMoves = 0, blackMoves = 0;
+				for (let r = 0; r < 4; r++) {
+					for (let c = 0; c < 8; c++) {
+						const p = newBoard[r][c];
+						if (!p) continue;
+						const moves = generateMoves(newBoard, r, c);
+						if (p.color === 'red') { redPieces++; redMoves += moves.length; }
+						else { blackPieces++; blackMoves += moves.length; }
+					}
+				}
+				if (redPieces === 0 || redMoves === 0) { setGameOver(true); setWinner('black'); return true; }
+				if (blackPieces === 0 || blackMoves === 0) { setGameOver(true); setWinner('red'); return true; }
+				return false;
+			}, []);
 
             // ---------- 玩家交互 ----------
             const handleCellClick = useCallback((row, col) => {

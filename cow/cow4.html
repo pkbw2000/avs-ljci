@@ -173,6 +173,11 @@
     // === 遊戲狀態與引擎 ===
     const STATE = { EMPTY: 0, COW: 1, CROSS: 2 };
     const COLORS = ['red', 'blue', 'green', 'yellow', 'purple', 'orange', 'brown'];
+    // ★ 增加颜色转中文名称的映射，解决提示语与格子颜色不匹配的问题 ★
+    const COLOR_NAMES = {
+        'red': '紅', 'blue': '藍', 'green': '綠', 'yellow': '黃',
+        'purple': '紫', 'orange': '橘', 'brown': '棕'
+    };
     
     let currentLevelIdx = 0;
     let gridData = [];
@@ -208,43 +213,43 @@
         return result || [];
     }
 
-    // === 修復後的教學腳本與關卡佈局 ===
+    // === 教學腳本與關卡佈局 (移除了硬编码的颜色文字) ===
     const TUTORIAL_STEPS = [
         {
             level: 1, size: 4, desc: "1. 行列規則",
             steps: [
-                { r:0, c:0, type:'COW', msg:"🖱️ **双击**红色格子，放置第一头牛 🐮" },
-                { r:0, c:1, type:'CROSS', msg:"🐮 的旁边不能有牛。**单击**蓝色格子打叉 ❌" },
-                { r:1, c:0, type:'CROSS', msg:"上下左右对角线都不能有牛。**单击**这里也打叉 ❌" },
-                { r:1, c:3, type:'COW', msg:"现在利用同行同列排除法，**双击**放第二头牛！" }
+                { r:0, c:0, type:'COW' },
+                { r:0, c:1, type:'CROSS' },
+                { r:1, c:0, type:'CROSS' },
+                { r:1, c:3, type:'COW' }
             ]
         },
         {
             level: 2, size: 4, desc: "2. 顏色規則",
             steps: [
-                { r:0, c:0, type:'COW', msg:"复习：每行每列只能有一头牛。**双击**左上角放牛。" },
-                { r:0, c:1, type:'CROSS', msg:"注意！同一行已经有牛了，**单击**这里打叉。" },
-                { r:1, c:0, type:'CROSS', msg:"同一列也不能有牛，**单击**打叉。" },
-                { r:3, c:2, type:'COW', msg:"用颜色排除逻辑，**双击**右下角试试！" } // 核心修復：原本錯誤的 (3,3) 已改為正確的 (3,2)
+                { r:0, c:0, type:'COW' },
+                { r:0, c:1, type:'CROSS' },
+                { r:1, c:0, type:'CROSS' },
+                { r:3, c:2, type:'COW' }
             ]
         },
         {
             level: 3, size: 5, desc: "3. 進階排除",
             steps: [
-                { r:2, c:2, type:'COW', msg:"进阶挑战：5x5。正中间**双击**放牛。" },
-                { r:1, c:1, type:'CROSS', msg:"对角线相邻也不行！**单击**这里打叉。" },
-                { r:1, c:2, type:'CROSS', msg:"正上方相邻也不行！**单击**打叉。" },
-                { r:0, c:0, type:'COW', msg:"现在角落安全了，**双击**尝试放置。" }
+                { r:2, c:2, type:'COW' },
+                { r:1, c:1, type:'CROSS' },
+                { r:1, c:2, type:'CROSS' },
+                { r:0, c:0, type:'COW' }
             ]
         },
         {
             level: 4, size: 6, desc: "4. 綜合大師",
             steps: [
-                { r:0, c:0, type:'COW', msg:"终极测试：6x6 大棋盘。起点在左上角**双击**。" },
-                { r:0, c:1, type:'CROSS', msg:"右边**单击**打叉。" },
-                { r:1, c:0, type:'CROSS', msg:"下边**单击**打叉。" },
-                { r:1, c:1, type:'CROSS', msg:"对角线**单击**打叉。" },
-                { r:2, c:3, type:'COW', msg:"**双击**这里，放下你的决胜牛吧！" }
+                { r:0, c:0, type:'COW' },
+                { r:0, c:1, type:'CROSS' },
+                { r:1, c:0, type:'CROSS' },
+                { r:1, c:1, type:'CROSS' },
+                { r:2, c:3, type:'COW' }
             ]
         }
     ];
@@ -281,14 +286,13 @@
                 cellEl.dataset.r = r;
                 cellEl.dataset.c = c;
                 cellEl.dataset.state = 'EMPTY';
-                // 初始全部鎖定，防止亂點
                 cellEl.classList.add('locked');
 
                 let clickTimer = null;
                 cellEl.addEventListener('click', function(e) {
                     if(cellEl.classList.contains('locked') || isProcessingStep) return;
-
-                    // ★★★ 核心修复：教学模式下，如果点错格子，直接拦截并提示，绝不执行任何操作 ★★★
+                    
+                    // 教学限制：只能操作高亮的格子
                     if (currentStepObj && (r !== currentStepObj.r || c !== currentStepObj.c)) {
                         showToast("👆 请点击高亮引导的正确格子！");
                         return; 
@@ -343,22 +347,37 @@
         document.getElementById('progress-display').innerText = `剩餘: ${gridSize - cowsPlaced}`;
     }
 
-    // === 教學引導邏輯 ===
+    // === 教學引導邏輯 (核心修復) ===
     function nextStep() {
         const steps = TUTORIAL_STEPS[currentLevelIdx].steps;
-        if (!steps || !steps.length) return;
+        if (!steps || !steps.length) {
+            // 步骤完结 -> 解除锁定，关闭指引
+            unlockAllCells();
+            document.getElementById('tutorial-text').innerText = "🎉 教學完成！自己試試推完整盤棋吧！";
+            document.getElementById('next-btn').style.display = 'block';
+            document.getElementById('next-btn').innerText = "進入下一關 ➜";
+            return;
+        }
         currentStepObj = steps.shift();
 
-        document.querySelectorAll('.highlight-ring').forEach(el => el.remove());
+        // 重新锁定所有格子，然后只解锁目标格子
         document.querySelectorAll('.cell.locked').forEach(el => el.classList.add('locked'));
+        document.querySelectorAll('.highlight-ring').forEach(el => el.remove());
 
         const targetEl = document.querySelector(`.cell[data-r='${currentStepObj.r}'][data-c='${currentStepObj.c}']`);
         if (targetEl) {
-            targetEl.classList.remove('locked'); 
+            targetEl.classList.remove('locked');
             const ring = document.createElement('div'); ring.className = 'highlight-ring';
             targetEl.appendChild(ring);
         }
-        document.getElementById('tutorial-text').innerText = currentStepObj.msg;
+
+        // ★ 实时判断格子颜色生成中文提示，解决指引文字错乱问题 ★
+        let targetColor = gridData[currentStepObj.r][currentStepObj.c].color;
+        let colorName = COLOR_NAMES[targetColor] || targetColor;
+        let actionText = currentStepObj.type === 'COW' ? '**双击**' : '**单击**';
+        let itemText = currentStepObj.type === 'COW' ? '放牛 🐮' : '打叉 ❌';
+        
+        document.getElementById('tutorial-text').innerText = `请 ${actionText} ${colorName}色格子 ${itemText}`;
         document.getElementById('tutorial-text').style.color = 'var(--text-color)';
     }
 
@@ -377,23 +396,18 @@
             
             setTimeout(() => {
                 isProcessingStep = false;
-                if (TUTORIAL_STEPS[currentLevelIdx].steps.length > 0) {
-                    nextStep();
-                } else {
-                    unlockAllCells();
-                    document.getElementById('tutorial-text').innerText = "🎉 教學完成！自己試試推完整盤棋吧！";
-                    document.getElementById('next-btn').style.display = 'block';
-                    document.getElementById('next-btn').innerText = "進入下一關 ➜";
-                }
+                nextStep(); // 自动进入下一步或结束
             }, 1000);
         } else if (r === currentStepObj.r && c === currentStepObj.c) {
             showToast("💡 請注意看提示，是「单击」還是「双击」？");
         }
     }
 
+    // ★ 彻底解锁全盘并清空教学指针，解决图二卡死无法点击问题 ★
     function unlockAllCells() {
         document.querySelectorAll('.cell.locked').forEach(el => el.classList.remove('locked'));
         document.querySelectorAll('.highlight-ring').forEach(el => el.remove());
+        currentStepObj = null; // 必须清空，否则拦截器依然会阻挡点击！
     }
 
     // === 系統輔助功能 ===

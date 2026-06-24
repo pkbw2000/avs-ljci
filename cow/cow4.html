@@ -118,7 +118,7 @@
 
         .cell.demo-cow { border: 2px solid #ff5722; box-shadow: 0 0 10px rgba(255,87,34,0.4); }
 
-        /* ★ 规则演示动画：在格子上面叠加闪烁的 ❌ */
+        /* ★ 规则演示动画 */
         .floating-cross {
             position: absolute;
             top: 0; left: 0; right: 0; bottom: 0;
@@ -137,17 +137,18 @@
 
         #msg-box {
             background: white; padding: 12px; border-radius: 12px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.05); min-height: 50px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05); min-height: 60px;
             display: flex; flex-direction: column; justify-content: center; align-items: center;
             border-left: 5px solid var(--primary-color); margin-top: 5px;
             font-size: 14px; line-height: 1.5;
         }
         
-        #next-btn {
-            background: var(--success-color); color: white; border: none;
-            padding: 10px 24px; border-radius: 20px; font-size: 1rem; font-weight: bold;
-            cursor: pointer; display: none; margin-top: 10px;
+        #next-btn, #understood-btn {
+            padding: 6px 16px; border-radius: 20px; font-size: 0.9rem; font-weight: bold;
+            cursor: pointer; display: none; margin-top: 8px; border: none;
         }
+        #next-btn { background: var(--success-color); color: white; }
+        #understood-btn { background: #ff9800; color: white; } /* 橙色按钮，吸引点击 */
 
         .toast-msg {
             position: fixed; top: 20px; left: 50%; transform: translateX(-50%);
@@ -195,6 +196,7 @@
     <div id="msg-box">
         <div id="hint-text">歡迎來到找牛世界，點擊下方按鈕開始教學。</div>
         <button id="next-btn" onclick="startTutorial()">開始學習</button>
+        <button id="understood-btn" onclick="handleUnderstood()">了解 ✅</button>
     </div>
 </div>
 <div id="toast" class="toast-msg"></div>
@@ -218,6 +220,9 @@
     let demonstrationCow = null; 
     let correctSolution = [];
 
+    // 供“了解”按钮使用的 Promise 解析器
+    let onUnderstoodResolve = null;
+    
     // === N皇后 回溯算法 ===
     function solveNQueens(size) {
         let result = null;
@@ -280,6 +285,7 @@
         isGameLocked = false;
         currentStep = 0;
         stepInstructions = [];
+        document.getElementById('understood-btn').style.display = 'none';
 
         const lvData = generateLevelData(gridSize);
         correctSolution = lvData.solution;
@@ -306,7 +312,7 @@
         renderBoard();
         updateUI();
 
-        // 显示演示牛后，立即开始规则闪动教学
+        // 显示示范牛，稍后进入演示动画
         setTimeout(() => startRuleDemonstration(), 800);
     }
 
@@ -381,42 +387,46 @@
         return false;
     }
 
-    // === 🆕 规则闪动教学演示 ===
-    function startRuleDemonstration() {
+    // === 🆕 手动点击控制的规则演示 ===
+    function waitForUnderstood() {
+        return new Promise((resolve) => {
+            onUnderstoodResolve = resolve;
+            document.getElementById('understood-btn').style.display = 'block';
+        });
+    }
+
+    function handleUnderstood() {
+        document.getElementById('understood-btn').style.display = 'none';
+        if (onUnderstoodResolve) {
+            onUnderstoodResolve();
+            onUnderstoodResolve = null;
+        }
+    }
+
+    async function startRuleDemonstration() {
         const cow = demonstrationCow;
         if (!cow) return;
         
-        let stepIdx = 0;
         const steps = [
             { 
-                msg: "🚫 规则①：牛的上下左右及斜角不能有牛！周边格子会闪烁 ❌", 
+                msg: "🚫 规则①：牛的上下左右及斜角不能有牛！周边格子会闪烁 ❌（请仔细观看后点击【了解】）", 
                 cells: getNeighbors(cow.y, cow.x)
             },
             { 
-                msg: "⬜ 规则②：每行、每列只能有 1 頭牛！同行同列格子会闪烁 ❌", 
+                msg: "⬜ 规则②：每行、每列只能有 1 頭牛！同行同列格子会闪烁 ❌（请仔细观看后点击【了解】）", 
                 cells: getRowAndCol(cow.y, cow.x)
             },
             { 
-                msg: "🎨 规则③：每種顏色只能對應 1 頭牛！相同颜色区域会闪烁 ❌", 
+                msg: "🎨 规则③：每種顏色只能對應 1 頭牛！相同颜色区域会闪烁 ❌（请仔细观看后点击【了解】）", 
                 cells: getSameColor(cow.y, cow.x)
             }
         ];
 
-        function execStep() {
-            if (stepIdx >= steps.length) {
-                document.getElementById('hint-text').innerText = "📖 规则演示结束！跟着蓝色高亮指引开始操作吧！";
-                clearFlash(); // 清除所有残留闪烁
-                // 正式进入交互式教学环节
-                setTimeout(() => startLevelGuide(), 800);
-                return;
-            }
-            const s = steps[stepIdx];
-            clearFlash(); // 清除上一轮闪烁
-            
-            // 在指定格子绝对覆盖闪烁 ❌
+        for (let i = 0; i < steps.length; i++) {
+            clearFlash();
+            const s = steps[i];
             s.cells.forEach(pos => {
                 let el = document.querySelector(`.cell[data-r="${pos.r}"][data-c="${pos.c}"]`);
-                // 即使格子里原本有牛也不影响叠加显示
                 if (el) {
                     let span = document.createElement('span');
                     span.className = 'floating-cross';
@@ -424,16 +434,20 @@
                     el.appendChild(span);
                 }
             });
-            
             document.getElementById('hint-text').innerText = s.msg;
-            stepIdx++;
-            setTimeout(execStep, 2800); // 每条规则演示 2.8 秒
+            
+            // 等待玩家点击【了解】
+            await waitForUnderstood();
         }
-        execStep();
+        
+        clearFlash();
+        document.getElementById('hint-text').innerText = "📖 规则演示结束！跟着蓝色高亮指引开始操作吧！";
+        setTimeout(() => startLevelGuide(), 800);
     }
 
     function clearFlash() {
         document.querySelectorAll('.floating-cross').forEach(el => el.remove());
+        document.getElementById('understood-btn').style.display = 'none';
     }
 
     // === 辅助计算函数 ===
@@ -472,7 +486,7 @@
         return res;
     }
 
-    // === 交互式教学引导（原教学步骤） ===
+    // === 交互式教学引导 ===
     function startLevelGuide() {
         let target1 = correctSolution[1];
         let target2 = {y: 0, x: 0}; 
@@ -528,7 +542,7 @@
         updateUI();
     }
 
-    function handleInteraction(r, c, type) {
+        function handleInteraction(r, c, type) {
         const cell = gridData[r][c];
         const cellEl = document.querySelector(`.cell[data-r='${r}'][data-c='${c}']`);
 
@@ -614,21 +628,20 @@
         }
     }
 
-    // ★★★ 过关检测（彻底修复兼容性） ★★★
+    // === 核心修复：实时判断牛的数量 ===
     function checkLevelComplete() {
         if (isLevelComplete) return;
-        
         let cows = 0;
-        for(let r=0; r<gridSize; r++) {
-            for(let c=0; c<gridSize; c++) {
-                if(gridData[r][c].state === STATE.COW) cows++;
+        for (let r=0; r<gridSize; r++) {
+            for (let c=0; c<gridSize; c++) {
+                if (gridData[r][c].state === STATE.COW) cows++;
             }
         }
-
+        // 如果所有牛都已找到
         if (cows === gridSize) {
             isLevelComplete = true;
             isGameLocked = true;
-            document.getElementById('hint-text').innerText = "🎉 太棒了！你解開了所有邏輯！";
+            document.getElementById('hint-text').innerText = "🎉 太棒了！你成功解開了這個邏輯謎題！";
             document.getElementById('next-btn').style.display = 'block';
             document.getElementById('msg-box').style.borderLeftColor = 'var(--success-color)';
         }
@@ -639,6 +652,18 @@
         for (let i=0; i<3; i++) {
             hearts[i].className = i >= lives ? 'heart lost' : 'heart';
         }
+        
+        // 计算当前已找出牛的数量，用于显示剩余数
+        let cows = 0;
+        for (let r=0; r<gridSize; r++) {
+            for (let c=0; c<gridSize; c++) {
+                if (gridData[r][c].state === STATE.COW) cows++;
+            }
+        }
+        document.getElementById('progress-display').innerText = `剩餘: ${gridSize - cows}`;
+        
+        // ★★★ 每一帧/每次更新UI时立即检测是否通关 ★★★
+        checkLevelComplete();
     }
 
     function showToast(msg) {

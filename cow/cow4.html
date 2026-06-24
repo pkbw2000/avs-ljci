@@ -1,9 +1,14 @@
 <!DOCTYPE html>
 <html lang="zh-TW">
 <head>
+    <!-- 强制清除旧缓存 -->
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+    <meta http-equiv="Pragma" content="no-cache" />
+    <meta http-equiv="Expires" content="0" />
+    
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>找牛邏輯推理 - 完全教學版</title>
+    <title>找牛邏輯推理 - 進階教學版</title>
     <style>
         :root {
             --bg-color: #f0f4f8;
@@ -113,6 +118,23 @@
 
         .cell.demo-cow { border: 2px solid #ff5722; box-shadow: 0 0 10px rgba(255,87,34,0.4); }
 
+        /* ★ 规则演示动画：在格子上面叠加闪烁的 ❌ */
+        .floating-cross {
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            display: flex; justify-content: center; align-items: center;
+            font-size: 1.5rem; font-weight: bold;
+            color: #ff0000; text-shadow: 0 0 5px rgba(255, 255, 255, 0.9);
+            animation: blinkCross 0.5s ease-in-out infinite alternate;
+            pointer-events: none; z-index: 20;
+            background-color: rgba(255, 0, 0, 0.25);
+            border-radius: 8px;
+        }
+        @keyframes blinkCross {
+            0% { opacity: 0.3; transform: scale(0.8); }
+            100% { opacity: 1; transform: scale(1.1); }
+        }
+
         #msg-box {
             background: white; padding: 12px; border-radius: 12px;
             box-shadow: 0 2px 8px rgba(0,0,0,0.05); min-height: 50px;
@@ -196,6 +218,7 @@
     let demonstrationCow = null; 
     let correctSolution = [];
 
+    // === N皇后 回溯算法 ===
     function solveNQueens(size) {
         let result = null;
         let board = Array(size).fill(-1);
@@ -247,6 +270,7 @@
         { size: 6 }
     ];
 
+    // === 核心渲染 ===
     function initLevel(level) {
         currentLevel = level;
         const data = TUTORIALS[level];
@@ -281,7 +305,9 @@
 
         renderBoard();
         updateUI();
-        startLevelGuide();
+
+        // 显示演示牛后，立即开始规则闪动教学
+        setTimeout(() => startRuleDemonstration(), 800);
     }
 
     function renderBoard() {
@@ -355,6 +381,98 @@
         return false;
     }
 
+    // === 🆕 规则闪动教学演示 ===
+    function startRuleDemonstration() {
+        const cow = demonstrationCow;
+        if (!cow) return;
+        
+        let stepIdx = 0;
+        const steps = [
+            { 
+                msg: "🚫 规则①：牛的上下左右及斜角不能有牛！周边格子会闪烁 ❌", 
+                cells: getNeighbors(cow.y, cow.x)
+            },
+            { 
+                msg: "⬜ 规则②：每行、每列只能有 1 頭牛！同行同列格子会闪烁 ❌", 
+                cells: getRowAndCol(cow.y, cow.x)
+            },
+            { 
+                msg: "🎨 规则③：每種顏色只能對應 1 頭牛！相同颜色区域会闪烁 ❌", 
+                cells: getSameColor(cow.y, cow.x)
+            }
+        ];
+
+        function execStep() {
+            if (stepIdx >= steps.length) {
+                document.getElementById('hint-text').innerText = "📖 规则演示结束！跟着蓝色高亮指引开始操作吧！";
+                clearFlash(); // 清除所有残留闪烁
+                // 正式进入交互式教学环节
+                setTimeout(() => startLevelGuide(), 800);
+                return;
+            }
+            const s = steps[stepIdx];
+            clearFlash(); // 清除上一轮闪烁
+            
+            // 在指定格子绝对覆盖闪烁 ❌
+            s.cells.forEach(pos => {
+                let el = document.querySelector(`.cell[data-r="${pos.r}"][data-c="${pos.c}"]`);
+                // 即使格子里原本有牛也不影响叠加显示
+                if (el) {
+                    let span = document.createElement('span');
+                    span.className = 'floating-cross';
+                    span.innerText = '❌';
+                    el.appendChild(span);
+                }
+            });
+            
+            document.getElementById('hint-text').innerText = s.msg;
+            stepIdx++;
+            setTimeout(execStep, 2800); // 每条规则演示 2.8 秒
+        }
+        execStep();
+    }
+
+    function clearFlash() {
+        document.querySelectorAll('.floating-cross').forEach(el => el.remove());
+    }
+
+    // === 辅助计算函数 ===
+    function getNeighbors(r, c) {
+        let res = [];
+        for (let dr = -1; dr <= 1; dr++) {
+            for (let dc = -1; dc <= 1; dc++) {
+                if (dr === 0 && dc === 0) continue;
+                let nr = r + dr, nc = c + dc;
+                if (nr >= 0 && nr < gridSize && nc >= 0 && nc < gridSize) {
+                    res.push({r: nr, c: nc});
+                }
+            }
+        }
+        return res;
+    }
+    function getRowAndCol(r, c) {
+        let res = [];
+        for (let i = 0; i < gridSize; i++) {
+            if (i !== c) res.push({r: r, c: i});
+            if (i !== r) res.push({r: i, c: c});
+        }
+        return res;
+    }
+    function getSameColor(r, c) {
+        let col = gridData[r][c].color;
+        let res = [];
+        for (let rr = 0; rr < gridSize; rr++) {
+            for (let cc = 0; cc < gridSize; cc++) {
+                if (rr === r && cc === c) continue;
+                if (gridData[rr][cc].color === col) {
+                    res.push({r: rr, c: cc});
+                }
+            }
+        }
+        return res;
+    }
+
+    // === 交互式教学引导（原教学步骤） ===
     function startLevelGuide() {
         let target1 = correctSolution[1];
         let target2 = {y: 0, x: 0}; 
@@ -362,8 +480,8 @@
 
         if (gridSize === 4) {
             stepInstructions = [
-                { r: target1.y, c: target1.x, type: 'COW', msg: `請**雙擊**高亮的 ${COLOR_NAMES[gridData[target1.y][target1.x].color]} 色格子，放置你的第一頭牛！` },
-                { r: target2.y, c: target2.x, type: 'CROSS', msg: `試試 **單擊** 這個格子打叉 ❌ 排除它，因為它不符合行列規則。` },
+                { r: target1.y, c: target1.x, type: 'COW', msg: `请**双击**高亮的 ${COLOR_NAMES[gridData[target1.y][target1.x].color]} 色格子，放置你的第一头牛！` },
+                { r: target2.y, c: target2.x, type: 'CROSS', msg: `试试 **单击** 这个格子打叉 ❌ 排除它，因为它不符合行列规则。` },
             ];
         } else {
             stepInstructions = [];
@@ -390,10 +508,11 @@
         } else {
             cells.forEach(el => el.classList.remove('locked'));
             document.querySelectorAll('.highlight-ring').forEach(el => el.remove());
-            document.getElementById('hint-text').innerText = "🎯 教學指引完成！推理並找出剩下的所有牛，完成關卡！";
+            document.getElementById('hint-text').innerText = "🎯 教学指引完成！推理并找出剩下的所有牛，完成关卡！";
         }
     }
 
+    // === 核心交互处理 ===
     function handleSlideInteraction(r, c) {
         const cell = gridData[r][c];
         const cellEl = document.querySelector(`.cell[data-r='${r}'][data-c='${c}']`);
@@ -495,11 +614,10 @@
         }
     }
 
-    // ★★★ 核心修复区域：解决了 `gridData.flat()` 导致部分旧手机无法过关的 Bug ★★★
+    // ★★★ 过关检测（彻底修复兼容性） ★★★
     function checkLevelComplete() {
         if (isLevelComplete) return;
         
-        // 使用最原始稳定的双层循环来统计牛的数量，彻底杜绝 ES6 语法的兼容性问题
         let cows = 0;
         for(let r=0; r<gridSize; r++) {
             for(let c=0; c<gridSize; c++) {

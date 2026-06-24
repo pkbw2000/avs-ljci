@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>找牛邏輯推理 - 互動教學系統</title>
+    <style>
+        :root {
+            --primary-color: #4CAF50;
+            --bg-color: #f9f9f9;
+            --grid-line: #ddd;
+            --highlight: rgba(255, 193, 7, 0.4);
+            --cow-size: 40px;
+        }
+
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: var(--bg-color); display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; flex-direction: column; }
+        
+        /* --- 首頁樣式 --- */
+        #home-screen { text-align: center; animation: fadeIn 0.5s; }
+        #home-screen h1 { font-size: 2.5rem; color: #333; margin-bottom: 10px; }
+        #home-screen p { color: #666; margin-bottom: 30px; }
+        .btn { padding: 15px 30px; font-size: 1.2rem; border: none; border-radius: 8px; cursor: pointer; margin: 10px; transition: 0.3s; }
+        .btn-primary { background: var(--primary-color); color: white; box-shadow: 0 4px 6px rgba(76, 175, 80, 0.3); }
+        .btn-primary:hover { background: #43a047; transform: translateY(-2px); }
+        .btn-secondary { background: #e0e0e0; color: #666; }
+        .btn-secondary:hover { background: #d5d5d5; }
+
+        /* --- 遊戲介面樣式 --- */
+        #game-screen { display: none; text-align: center; animation: fadeIn 0.5s; }
+        .grid-container { 
+            display: inline-grid; gap: 2px; background: var(--grid-line); padding: 2px; border-radius: 4px; margin-bottom: 20px; 
+        }
+        .cell { 
+            width: var(--cow-size); height: var(--cow-size); background: white; display: flex; justify-content: center; align-items: center; 
+            font-size: 1.5rem; cursor: pointer; user-select: none; transition: 0.2s;
+        }
+        .cell:hover { filter: brightness(0.95); }
+        .cell.highlight { background: var(--highlight); animation: pulse 1.5s infinite; }
+        .cell.marked::after { content: '✖'; color: #ccc; font-size: 1.2rem; }
+        .cell.cow::after { content: '🐮'; }
+
+        /* --- 教學對話框樣式 --- */
+        .tutorial-box { 
+            background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); 
+            max-width: 400px; margin: 0 auto; text-align: left; line-height: 1.6;
+        }
+        .tutorial-box h3 { margin: 0 0 10px 0; color: var(--primary-color); }
+        .tutorial-box p { margin: 0 0 15px 0; color: #555; }
+        .tutorial-btn { width: 100%; padding: 10px; background: var(--primary-color); color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 1rem; }
+
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(255, 193, 7, 0.7); } 70% { box-shadow: 0 0 0 10px rgba(255, 193, 7, 0); } 100% { box-shadow: 0 0 0 0 rgba(255, 193, 7, 0); } }
+    </style>
+</head>
+<body>
+
+    <!-- 首頁 -->
+    <div id="home-screen">
+        <h1>🐮 找牛邏輯推理</h1>
+        <p>掌握 N-Queens 變體的核心邏輯</p>
+        <button class="btn btn-primary" onclick="startTutorial()">📚 邏輯教學</button>
+         
+        <button class="btn btn-secondary" onclick="alert('正式牧場即將開放，請先完成邏輯教學以掌握找牛技巧！')">🎮 開始遊戲</button>
+    </div>
+
+    <!-- 遊戲與教學介面 -->
+    <div id="game-screen">
+        <div id="grid" class="grid-container"></div>
+        <div id="tutorial-box" class="tutorial-box">
+            <h3 id="tut-title">歡迎</h3>
+            <p id="tut-desc">準備好開始了嗎？</p>
+            <button id="tut-btn" class="tutorial-btn" onclick="nextTutorialStep()">下一步</button>
+        </div>
+    </div>
+
+<script>
+    // 教學狀態機與關卡數據
+    const tutorialSteps = [
+        {
+            title: "Step 1: 顏色唯一性",
+            desc: "每種顏色只能有 1 頭小牛。請觀察黃色區域，它只剩下一個空格。點擊該空格放置小牛。",
+            size: 4,
+            colors: ['#FFEB3B', '#FFEB3B', '#FFEB3B', '#FFEB3B', '#FFEB3B', '#FFEB3B', '#FFEB3B', '#FFEB3B', '#FFEB3B', '#FFEB3B', '#FFEB3B', '#FFEB3B', '#FFEB3B', '#FFEB3B', '#FFEB3B', '#FFEB3B'], // 全黃
+            target: [0, 0], // 預期玩家點擊的座標 [row, col]
+            highlight: [0, 0],
+            action: 'place'
+        },
+        {
+            title: "Step 2: 行列與鄰居排斥",
+            desc: "小牛不能在同一行、同一列，也不能相鄰（含對角線）。點擊旁邊的格子試試看，系統會自動幫你打叉。",
+            size: 4,
+            colors: ['#FFEB3B', '#FFEB3B', '#FFEB3B', '#FFEB3B', '#FFEB3B', '#FFEB3B', '#FFEB3B', '#FFEB3B', '#FFEB3B', '#FFEB3B', '#FFEB3B', '#FFEB3B', '#FFEB3B', '#FFEB3B', '#FFEB3B', '#FFEB3B'],
+            preCows: [[0, 0]], // 預設已經有的牛
+            target: null, // 這一關不需要點對特定格子，點錯的格子會被標記
+            highlight: [],
+            action: 'explore'
+        },
+        {
+            title: "Step 3: 連鎖反應",
+            desc: "太棒了！因為剛剛的排斥規則，藍色區域現在也只剩下一個空格。點擊藍色格子找出第二頭牛！",
+            size: 4,
+            colors: ['#FFEB3B', '#FFEB3B', '#FFEB3B', '#FFEB3B', '#FFEB3B', '#FFEB3B', '#FFEB3B', '#FFEB3B', '#FFEB3B', '#FFEB3B', '#FFEB3B', '#FFEB3B', '#2196F3', '#2196F3', '#2196F3', '#2196F3'],
+            preCows: [[0, 0]],
+            preMarks: [[0,1], [0,2], [0,3], [1,0], [1,1], [1,2], [2,0], [2,1], [3,0], [3,1], [3,2], [3,3]], // 預設打叉
+            target: [2, 2], 
+            highlight: [2, 2],
+            action: 'place'
+        },
+        {
+            title: "🎉 教學完成！",
+            desc: "你已經掌握了找牛的核心邏輯：觀察顏色、利用行列與鄰居排除、引發連鎖反應。現在你可以挑戰正式遊戲了！",
+            size: 4,
+            colors: [],
+            target: null,
+            highlight: [],
+            action: 'finish'
+        }
+    ];
+
+    let currentStep = 0;
+    let gridState = []; // 儲存當前棋盤狀態: 0=空, 1=牛, 2=叉
+
+    // 初始化與切換畫面
+    function startTutorial() {
+        document.getElementById('home-screen').style.display = 'none';
+        document.getElementById('game-screen').style.display = 'block';
+        currentStep = 0;
+        loadStep();
+    }
+
+    // 載入當前教學步驟
+    function loadStep() {
+        const step = tutorialSteps[currentStep];
+        document.getElementById('tut-title').innerText = step.title;
+        document.getElementById('tut-desc').innerText = step.desc;
+        
+        // 按鈕文字切換
+        const btn = document.getElementById('tut-btn');
+        if (step.action === 'finish') {
+            btn.innerText = "返回首頁";
+            btn.onclick = () => location.reload();
+        } else {
+            btn.innerText = currentStep === tutorialSteps.length - 2 ? "完成教學" : "下一步";
+            btn.onclick = nextTutorialStep;
+        }
+
+        // 渲染棋盤
+        renderGrid(step);
+    }
+
+    // 渲染網格
+    function renderGrid(step) {
+        const gridEl = document.getElementById('grid');
+        gridEl.innerHTML = '';
+        gridEl.style.gridTemplateColumns = `repeat(${step.size}, var(--cow-size))`;
+        gridState = Array(step.size * step.size).fill(0);
+
+        // 應用預設狀態
+        if (step.preCows) step.preCows.forEach(([r, c]) => gridState[r * step.size + c] = 1);
+        if (step.preMarks) step.preMarks.forEach(([r, c]) => gridState[r * step.size + c] = 2);
+
+        for (let i = 0; i < step.size * step.size; i++) {
+            const cell = document.createElement('div');
+            cell.className = 'cell';
+            cell.style.backgroundColor = step.colors[i] || 'white';
+            
+            if (gridState[i] === 1) cell.classList.add('cow');
+            if (gridState[i] === 2) cell.classList.add('marked');
+            
+            // 高亮提示
+            if (step.highlight && step.highlight[0] * step.size + step.highlight[1] === i && gridState[i] === 0) {
+                cell.classList.add('highlight');
+            }
+
+            // 點擊事件
+            cell.onclick = () => handleCellClick(i, step);
+            gridEl.appendChild(cell);
+        }
+    }
+
+    // 處理格子點擊
+    function handleCellClick(index, step) {
+        if (step.action === 'finish') return;
+
+        const row = Math.floor(index / step.size);
+        const col = index % step.size;
+
+        // 探索模式：點錯自動打叉
+        if (step.action === 'explore') {
+            if (gridState[index] === 0) {
+                gridState[index] = 2;
+                renderGrid(step); // 刷新顯示
+            }
+            return;
+        }
+
+        // 放置模式：檢查是否點擊了目標
+        if (step.action === 'place') {
+            if (row === step.target[0] && col === step.target[1]) {
+                gridState[index] = 1;
+                renderGrid(step);
+                // 自動進入下一步
+                setTimeout(() => {
+                    currentStep++;
+                    loadStep();
+                }, 800);
+            } else {
+                // 點錯的溫和提示
+                const cells = document.querySelectorAll('.cell');
+                cells[index].style.backgroundColor = '#ffcdd2';
+                setTimeout(() => cells[index].style.backgroundColor = step.colors[index] || 'white', 300);
+            }
+        }
+    }
+
+    // 教學對話框按鈕邏輯
+    function nextTutorialStep() {
+        if (currentStep < tutorialSteps.length - 1) {
+            currentStep++;
+            loadStep();
+        }
+    }
+</script>
+</body>
+</html>

@@ -495,9 +495,18 @@
         }
     }
 
+    // ★★★ 核心修复区域：解决了 `gridData.flat()` 导致部分旧手机无法过关的 Bug ★★★
     function checkLevelComplete() {
         if (isLevelComplete) return;
-        const cows = gridData.flat().filter(c => c.state === STATE.COW).length;
+        
+        // 使用最原始稳定的双层循环来统计牛的数量，彻底杜绝 ES6 语法的兼容性问题
+        let cows = 0;
+        for(let r=0; r<gridSize; r++) {
+            for(let c=0; c<gridSize; c++) {
+                if(gridData[r][c].state === STATE.COW) cows++;
+            }
+        }
+
         if (cows === gridSize) {
             isLevelComplete = true;
             isGameLocked = true;

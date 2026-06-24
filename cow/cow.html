@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>数独牛 - 逻辑训练</title>
+    <style>
+        * { box-sizing: border-box; user-select: none; }
+        body, html { margin: 0; padding: 0; width: 100%; height: 100%; background: #e3f2fd; font-family: sans-serif; }
+        #app { width: 100%; max-width: 480px; height: 100dvh; margin: 0 auto; display: flex; flex-direction: column; align-items: center; }
+        
+        .top-bar { width: 100%; display: flex; justify-content: space-between; padding: 10px; background: #e3f2fd; }
+        .lives { font-size: 20px; }
+        
+        .rules-bar { font-size: 12px; color: #333; margin: 10px 0; display: flex; gap: 10px; }
+        .status { display: flex; justify-content: space-between; width: 90%; font-size: 14px; background: white; padding: 8px; border-radius: 20px; margin-bottom: 10px; }
+
+        /* 棋盘区 */
+        .board-wrap { flex: 1; width: 100%; display: flex; justify-content: center; align-items: center; padding: 10px; }
+        #board { display: grid; gap: 4px; width: 100%; max-width: 400px; aspect-ratio: 1; }
+        .cell {
+            aspect-ratio: 1; border-radius: 6px; width: 100%;
+            display: flex; justify-content: center; align-items: center; font-size: 24px;
+        }
+
+        .footer { width: 100%; display: flex; justify-content: space-around; padding: 10px; background: white; border-radius: 20px 20px 0 0; }
+
+        /* 错误提示 */
+        #error-box {
+            display: none; color: red; font-size: 18px; font-weight: bold;
+            text-align: center; padding: 20px; margin: 20px; background: white; border-radius: 10px; border: 2px solid red;
+        }
+    </style>
+</head>
+<body>
+<div id="app">
+    <div class="top-bar"><span>第 1 关</span><div class="lives">❤️❤️❤️</div></div>
+    <div class="rules-bar"><span>🚫 周边无牛</span><span>⬜ 行列唯一</span><span>🎨 颜色唯一</span></div>
+    <div class="status"><span>🐮 剩余: <b id="remain">0</b></span><span>⏱️ 02:30</span></div>
+
+    <div class="board-wrap"><div id="board"><div id="error-box">⚠️ 手机未执行JS代码。<br>请长按刷新按钮选择【清空缓存并强制刷新】</div></div></div>
+
+    <div class="footer"><div style="text-align:center">💡提示</div><div>↩️撤回</div><div>🔄重玩</div></div>
+</div>
+
+<script>
+    // 极简硬编码 4x4 数据，杜绝任何变量读取错误
+    const COLORS = ['#FF3B30', '#007AFF', '#34C759', '#FFCC00']; // 红蓝绿黄
+    const SOLUTIONS = [{x:1,y:0}, {x:3,y:1}, {x:0,y:2}, {x:2,y:3}]; // 4头牛的坐标
+    let boardState = [
+        [{c:false},{c:false},{c:false},{c:false}],
+        [{c:false},{c:false},{c:false},{c:false}],
+        [{c:false},{c:false},{c:false},{c:false}],
+        [{c:false},{c:false},{c:false},{c:false}]
+    ];
+    // 放入系统初始教学牛（第二个位置）
+    boardState[0][1] = {c:true, l:true}; 
+
+    function renderSimpleBoard() {
+        try {
+            let boardEl = document.getElementById('board');
+            boardEl.innerHTML = ''; // 清空默认的错误提示
+            boardEl.style.gridTemplateColumns = 'repeat(4, 1fr)';
+
+            for(let y=0; y<4; y++) {
+                for(let x=0; x<4; x++) {
+                    let div = document.createElement('div');
+                    div.className = 'cell';
+                    
+                    // 生成颜色 (Voronoi)
+                    let minD=999, id=0;
+                    SOLUTIONS.forEach((s,i) => {
+                        let d = Math.abs(s.x-x) + Math.abs(s.y-y);
+                        if(d < minD) { minD = d; id = i; }
+                    });
+                    div.style.background = COLORS[id];
+
+                    let cell = boardState[y][x];
+                    if(cell.c) div.innerText = '🐮';
+                    
+                    boardEl.appendChild(div);
+                }
+            }
+            document.getElementById('remain').innerText = 3; // 剩余3只
+        } catch(e) {
+            document.getElementById('error-box').style.display = 'block';
+            document.getElementById('error-box').innerText += "\n报错: " + e.message;
+        }
+    }
+
+    // 延迟执行，确保DOM完全加载
+    window.onload = function() {
+        renderSimpleBoard();
+    }
+</script>
+</body>
+</html>

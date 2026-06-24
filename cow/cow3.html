@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>数独牛 - 逻辑训练</title>
+    <style>
+        * { box-sizing: border-box; user-select: none; -webkit-tap-highlight-color: transparent; font-family: 'PingFang SC', sans-serif; }
+        body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: #e3f2fd; }
+        
+        #app {
+            width: 100%; max-width: 480px; height: 100dvh; margin: 0 auto; 
+            background: linear-gradient(180deg, #e9f5fa 0%, #ffffff 100%);
+            display: flex; flex-direction: column; align-items: center; position: relative;
+        }
+
+        /* ---- 使用强制 Display 切换 ---- */
+        #mainMenu {
+            display: flex; /* 初始显示 */
+            flex-direction: column; align-items: center;
+            width: 100%; height: 100%; background: rgba(255,255,255,0.85); 
+            backdrop-filter: blur(4px); z-index: 10;
+            position: absolute; top: 0; left: 0;
+        }
+        
+        #gameContainer {
+            display: none; /* 初始隐藏 */
+            flex-direction: column; align-items: center;
+            width: 100%; height: 100%; z-index: 5;
+            position: absolute; top: 0; left: 0; background: transparent;
+        }
+
+        .menu-title { font-size: 36px; font-weight: bold; color: #2c3e50; margin-bottom: 10px; display: flex; align-items: center; gap: 10px; margin-top: 10vh; }
+        .menu-subtitle { font-size: 14px; color: #7f8c8d; margin-bottom: 30px; }
+        
+        .rule-cards { width: 90%; display: flex; flex-direction: column; gap: 12px; margin-bottom: 30px; }
+        .rule-card { background: white; padding: 12px 16px; border-radius: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); display: flex; align-items: center; gap: 12px; }
+        .rule-card .icon { font-size: 24px; }
+        .rule-card .title { font-weight: bold; color: #2c3e50; }
+        .rule-card .desc { font-size: 12px; color: #7f8c8d; margin-top: 2px; }
+
+        .btn-start {
+            width: 80%; padding: 16px; background: #4cd964; color: white; font-size: 20px; font-weight: bold;
+            border: none; border-radius: 40px; box-shadow: 0 8px 20px rgba(76, 217, 100, 0.3); cursor: pointer;
+            transition: all 0.2s;
+        }
+        .btn-start:active { transform: scale(0.95); }
+
+        /* ---- 游戏主界面 ---- */
+        .top-bar { width: 100%; padding: 15px 15px 0 15px; display: flex; justify-content: space-between; align-items: center; font-size: 14px; }
+        .level-title { font-size: 18px; font-weight: bold; color: #2c3e50; }
+        .level-title small { font-weight: normal; font-size: 12px; color: #7f8c8d; background: rgba(255,255,255,0.7); padding: 2px 8px; border-radius: 10px; margin-left: 4px; }
+        
+        .lives-box { display: flex; gap: 6px; font-size: 24px; transition: all 0.3s; }
+        .lives-box .heart { transition: all 0.4s; }
+        .lives-box .broken { animation: heartBreak 0.5s forwards; }
+        @keyframes heartBreak {
+            0% { transform: scale(1); filter: grayscale(0); }
+            50% { transform: scale(1.4); }
+            100% { transform: scale(0.8); filter: grayscale(1); opacity: 0.3; }
+        }
+
+        .rules-bar { width: 90%; display: flex; justify-content: center; gap: 10px; padding: 8px 0; color: #34495e; font-size: 12px; font-weight: 500; }
+        .rules-bar span { background: white; padding: 4px 12px; border-radius: 20px; }
+
+        .status-bar { width: 90%; display: flex; justify-content: space-between; margin: 5px 0 10px 0; font-size: 15px; color: #2c3e50; }
+        .status-bar div { background: rgba(255,255,255,0.8); padding: 4px 14px; border-radius: 20px; }
+        
+        .legend-area { width: 90%; display: flex; justify-content: center; gap: 10px; flex-wrap: wrap; margin-bottom: 10px; }
+        .legend-item { display: flex; align-items: center; gap: 6px; font-size: 12px; color: #2c3e50; background: white; padding: 4px 10px; border-radius: 20px; }
+        .color-box { width: 14px; height: 14px; border-radius: 4px; }
+
+        .board-wrap { flex: 1; width: 100%; display: flex; justify-content: center; align-items: center; padding: 5px; }
+        #board { display: grid; gap: 5px; width: 100%; aspect-ratio: 1; max-width: 400px; background: transparent; }
+        
+        .cell {
+            aspect-ratio: 1; border-radius: 10px; width: 100%;
+            display: flex; justify-content: center; align-items: center;
+            transition: all 0.15s; touch-action: manipulation; cursor: pointer;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+        }
+        .cell:active { transform: scale(0.92); }
+        .cell .cow { font-size: min(8vw, 42px); animation: popIn 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+        .cell .cross { color: #000; font-weight: 900; font-size: min(7vw, 36px); animation: popIn 0.2s; }
+        .cell.locked { border: 3px solid #e74c3c; } 
+        .cell.highlight-hint { animation: glowPulse 0.8s infinite alternate; border: 3px solid #2ecc71; }
+
+        .footer { width: 90%; display: flex; justify-content: space-between; padding: 15px 0 30px 0; }
+        .btn { display: flex; flex-direction: column; align-items: center; font-size: 12px; color: #7f8c8d; cursor: pointer; transition: all 0.2s; }
+        .btn:active { transform: scale(0.9); }
+        .btn .icon { background: white; width: 44px; height: 44px; border-radius: 50%; display: flex; justify-content: center; align-items: center; font-size: 20px; margin-bottom: 4px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
+
+        .toast {
+            position: absolute; top: 5%; left: 50%; transform: translateX(-50%) scale(0.8);
+            background: rgba(0,0,0,0.75); color: white; padding: 12px 24px; border-radius: 30px; font-size: 14px; 
+            z-index: 200; pointer-events: none; opacity: 0; transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        .toast.show { opacity: 1; transform: translateX(-50%) scale(1); top: 8%; }
+
+        .tutorial-overlay {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            z-index: 500; display: none; pointer-events: none;
+        }
+        .tutorial-box { position: absolute; border: 3px solid #ff5722; border-radius: 12px; box-shadow: 0 0 20px rgba(255, 87, 34, 0.6); pointer-events: none; transition: all 0.4s; }
+        .tutorial-bubble { position: absolute; background: white; padding: 14px 20px; border-radius: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.3); color: #333; font-size: 14px; max-width: 85%; pointer-events: none; line-height: 1.5; }
+        .tutorial-highlight { position: absolute; background: rgba(255, 87, 34, 0.15); pointer-events: none; z-index: 501; border-radius: 8px; transition: all 0.3s; box-shadow: 0 0 20px rgba(255, 87, 34, 0.4) inset; }
+
+        .modal-overlay {
+            position: absolute; inset: 0; z-index: 300;
+            display: none; justify-content: center; align-items: center; background: rgba(0,0,0,0.4); backdrop-filter: blur(2px);
+        }
+        .modal-overlay.show { display: flex; }
+        .modal-card { background: white; padding: 30px; border-radius: 30px; text-align: center; box-shadow: 0 20px 40px rgba(0,0,0,0.2); animation: popIn 0.5s forwards; min-width: 80%; }
+        
+        .modal-buttons { display: flex; gap: 12px; justify-content: center; margin-top: 15px; }
+        .modal-btn { padding: 10px 20px; border-radius: 40px; border: none; font-size: 14px; font-weight: bold; cursor: pointer; }
+        .btn-success { background: #4cd964; color: white; }
+        .btn-danger { background: #ff3b30; color: white; }
+        .btn-home { background: #f0f0f0; color: #333; }
+
+        @keyframes popIn { 0% { transform: scale(0); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
+        @keyframes glowPulse { 0% { box-shadow: 0 0 0 0 rgba(46, 204, 113, 0.4); } 100% { box-shadow: 0 0 15px 5px rgba(46, 204, 113, 0.2); } }
+    </style>
+</head>
+<body>
+<div id="app">
+
+    <!-- 主菜单界面 -->
+    <div id="mainMenu">
+        <div class="menu-title">🐮 数独牛</div>
+        <div class="menu-subtitle">逻辑推理 · 益智训练</div>
+        
+        <div class="rule-cards">
+            <div class="rule-card">
+                <div class="icon">⬜</div>
+                <div><div class="title">行列数独规则</div><div class="desc">每行、每列**只能有且只有 1 头牛**，排除其他位置。</div></div>
+            </div>
+            <div class="rule-card">
+                <div class="icon">🎨</div>
+                <div><div class="title">颜色独占规则</div><div class="desc">每种颜色的色块区域**只能对应 1 头牛**。图例告诉你牛在哪块颜色里。</div></div>
+            </div>
+            <div class="rule-card">
+                <div class="icon">🚫</div>
+                <div><div class="title">牛周边禁忌规则</div><div class="desc">牛的**上下左右及斜对角** 8 个格子内**不能有其他牛**。</div></div>
+            </div>
+        </div>
+        
+        <button class="btn-start" onclick="startGame()">开始挑战</button>
+    </div>
+
+    <!-- 游戏界面 -->
+    <div id="gameContainer">
+        <div class="top-bar">
+            <div class="level-title">
+                <span id="level-txt">第 1 关</span>
+                <small id="lv-size-txt">(4x4 教学)</small>
+            </div>
+            <div class="lives-box" id="lives">
+                <span class="heart">❤️</span><span class="heart">❤️</span><span class="heart">❤️</span>
+            </div>
+        </div>
+        
+        <div class="rules-bar">
+            <span>🚫 牛周边不可有牛</span>
+            <span>⬜ 每行每列唯一</span>
+            <span>🎨 每种颜色唯一</span>
+        </div>
+        
+        <div class="status-bar">
+            <div>🐮 剩余: <b id="remain-txt">0</b></div>
+            <div id="timer-txt">⏱️ 02:30</div>
+        </div>
+
+        <div id="legend-area" class="legend-area"></div>
+        
+        <div class="board-wrap"><div id="board"></div></div>
+        
+        <div class="footer">
+            <div class="btn" id="hintBtn" onclick="doAction('hint')"><div class="icon">💡</div>提示</div>
+            <div class="btn" onclick="doAction('undo')"><div class="icon">↩️</div>撤回</div>
+            <div class="btn" onclick="doAction('reset')"><div class="icon">🔄</div>重玩</div>
+        </div>
+    </div>
+
+    <!-- 教学引导层 -->
+    <div id="tutorialOverlay" class="tutorial-overlay">
+        <div id="tutorialBox" class="tutorial-box"></div>
+        <div id="tutorialBubble" class="tutorial-bubble"></div>
+        <div id="tutorialHighlight" class="tutorial-highlight"></div>
+    </div>
+
+    <div id="toast" class="toast"></div>
+    
+    <!-- 弹窗 -->
+    <div id="modalOverlay" class="modal-overlay">
+        <div class="modal-card">
+            <h2 id="modalTitle">🎉 闯关成功！</h2>
+            <p id="modalDesc" style="color:#7f8c8d; margin:0 0 10px 0;">逻辑推理很棒！</p>
+            <div id="modalButtons" class="modal-buttons">
+                <button id="modalBtn1" class="modal-btn btn-success" onclick="goToNextLevel()">进入下一关 ➜</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    const COLORS = ['#FF3B30', '#007AFF', '#34C759', '#FFCC00', '#AF52DE', '#FF9500', '#5AC8FA', '#FF2D55'];
+    const HARDCODED_SOLUTIONS = {
+        4: [{x:1,y:0},{x:3,y:1},{x:0,y:2},{x:2,y:3}],
+        5: [{x:1,y:0},{x:3,y:1},{x:0,y:2},{x:2,y:3},{x:4,y:4}],
+        6: [{x:1,y:0},{x:3,y:1},{x:5,y:2},{x:0,y:3},{x:2,y:4},{x:4,y:5}],
+        7: [{x:1,y:0},{x:3,y:1},{x:5,y:2},{x:0,y:3},{x:2,y:4},{x:4,y:5},{x:6,y:6}],
+        8: [{x:1,y:0},{x:3,y:1},{x:5,y:2},{x:7,y:3},{x:0,y:4},{x:2,y:5},{x:4,y:6},{x:6,y:7}]
+    };
+
+    let GameState = { curLv: 0, maxLv: 0, lives: 3, board: [], hist: [], data: null, isLocked: false, isTutorial: false, tStep: 0, hintsLeft: 5, hintTimer: null };
+
+    function generateLevel(size, seed) {
+        let solution = HARDCODED_SOLUTIONS[size] || HARDCODED_SOLUTIONS[4];
+        let shift = seed % size;
+        let shiftedSolution = solution.map((s, idx) => {
+            let newY = (s.y + idx * shift) % size;
+            let newX = (s.x + idx * shift) % size;
+            return {x: newX, y: newY};
+        });
+        let colors = [];
+        for(let y=0; y<size; y++) {
+            colors[y] = [];
+            for(let x=0; x<size; x++) {
+                let minD=999, id=0;
+                shiftedSolution.forEach((s,i) => { let d = Math.abs(s.x-x) + Math.abs(s.y-y); if(d < minD) { minD=d; id=i; } });
+                colors[y][x] = COLORS[id % COLORS.length]; 
+            }
+        }
+        return { size, colors, solution: shiftedSolution, initial: [shiftedSolution[0]] };
+    }
+
+    // ★★★ 终极修复：直接通过 JS 强制修改 DOM Display 属性 ★★★
+    function startGame() {
+        const menu = document.getElementById('mainMenu');
+        const game = document.getElementById('gameContainer');
+        
+        menu.style.display = 'none';
+        game.style.display = 'flex';
+        
+        // 强制触发浏览器强制重绘 (彻底解决切换不渲染问题)
+        void game.offsetHeight;
+
+        try {
+            loadData();
+            loadLevel(GameState.maxLv);
+        } catch (e) {
+            console.error("遇到致命错误:", e);
+            // 绝不退回到菜单，直接显示错误
+            const board = document.getElementById('board');
+            board.style.display = 'flex';
+            board.style.justifyContent = 'center'; board.style.alignItems = 'center';
+            board.style.background = '#fff'; board.style.borderRadius = '12px';
+            board.style.padding = '20px'; board.style.textAlign = 'center';
+            board.style.color = '#e74c3c'; board.style.fontSize = '14px';
+            board.style.flexDirection = 'column';
+            board.innerHTML = `<b>⚠️ 加载失败</b><br><br><button onclick="location.reload()" style="padding:10px 30px;background:#007AFF;color:#fff;border:none;border-radius:20px;font-weight:bold;">点我重新加载</button>`;
+        }
+    }
+
+    function loadLevel(num) {
+        let size = num < 12 ? 4 : (num < 25 ? 5 : (num < 38 ? 6 : 7));
+        let lvData = generateLevel(size, num);
+        GameState.data = lvData; 
+        GameState.curLv = num;
+        GameState.hintsLeft = 5;
+        GameState.lives = 3; 
+
+        document.getElementById('level-txt').innerText = `第 ${num+1} 关`;
+        document.getElementById('lv-size-txt').innerText = `(${size}x${size})`;
+
+        GameState.board = [];
+        for(let y=0; y<lvData.size; y++) {
+            GameState.board[y] = [];
+            for(let x=0; x<lvData.size; x++) GameState.board[y][x] = {c:false, x:false, l:false};
+        }
+        lvData.initial.forEach(v=>GameState.board[v.y][v.x] = {c:true, x:false, l:true});
+
+        GameState.hist = []; GameState.isLocked = false;
+        document.getElementById('modalOverlay').classList.remove('show');
+        document.getElementById('tutorialOverlay').style.display = 'none';
+        if(GameState.hintTimer) clearTimeout(GameState.hintTimer);
+        
+        renderLegend(lvData.size);
+        renderBoard();
+        updateUI();
+
+        if (num === 0) { 
+            GameState.isTutorial = true; GameState.tStep = 0; 
+            setTimeout(() => {
+                try {
+                    triggerTutorial(0);
+                } catch (tErr) {
+                    console.warn("教学引导跳过", tErr);
+                    GameState.isTutorial = false; 
+                }
+            }, 800); 
+        }
+    }
+
+    // ================= 渲染与图例 =================
+    function renderLegend(size) {
+        const el = document.getElementById('legend-area');
+        el.innerHTML = '';
+        for(let i=0; i<size; i++) {
+            let div = document.createElement('div');
+            div.className = 'legend-item';
+            div.innerHTML = `<div class="color-box" style="background:${COLORS[i]};"></div>`;
+            el.appendChild(div);
+        }
+    }
+
+    function renderBoard() {
+        let d = GameState.data; if(!d) return;
+        let b = document.getElementById('board');
+        b.style.display = 'grid';
+        b.style.gridTemplateColumns = `repeat(${d.size}, 1fr)`;
+        b.innerHTML = '';
+        let remain = 0;
+
+        for(let y=0; y<d.size; y++) {
+            for(let x=0; x<d.size; x++) {
+                let div = document.createElement('div');
+                div.className = 'cell';
+                div.style.background = d.colors[y][x] || '#ccc';
+                let cell = GameState.board[y][x];
+
+                if(cell.l) div.classList.add('locked');
+                if(cell.c) { let sp=document.createElement('span'); sp.className='cow'; sp.innerText='🐮'; div.appendChild(sp); remain++; } 
+                else if (cell.x) { let sp=document.createElement('span'); sp.className='cross'; sp.innerText='✕'; div.appendChild(sp); }
+
+                let clickTimer = null;
+                div.addEventListener('click', function(e) {
+                    if(GameState.isLocked) return;
+                    if(clickTimer) { clearTimeout(clickTimer); clickTimer = null; handleDblClick(x,y); } 
+                    else { clickTimer = setTimeout(() => { clickTimer = null; handleSingleClick(x,y); }, 300); }
+                });
+                b.appendChild(div);
+            }
+        }
+        document.getElementById('remain-txt').innerText = d.size - remain;
+        checkWin();
+    }
+
+    function handleSingleClick(x, y) {
+        if(GameState.isTutorial && GameState.tStep === 0) {
+            if(x === 0 && y === 0) { GameState.board[0][0].x = !GameState.board[0][0].x; renderBoard(); updateUI(); GameState.tStep = 1; setTimeout(()=>triggerTutorial(1), 300); return; } 
+            else { showToast('👆 请先点击左上角格子画X'); return; }
+        }
+        let cell = GameState.board[y][x];
+        if(cell.l || cell.c) return;
+        cell.x = !cell.x;
+        renderBoard(); updateUI();
+    }
+
+    function handleDblClick(x, y) {
+        if(GameState.isTutorial && GameState.tStep === 1) {
+            let target = GameState.data.solution[1];
+            if(x === target.x && y === target.y) { GameState.board[y][x].c = true; renderBoard(); updateUI(); GameState.tStep = 2; setTimeout(()=>triggerTutorial(2), 300); return; } 
+            else { showToast('🐮 必须双击高亮的正确位置！'); return; }
+        }
+        let cell = GameState.board[y][x];
+        if(cell.l) return;
+        if(cell.c) { GameState.hist.push(JSON.stringify(GameState.board)); cell.c = false; renderBoard(); updateUI(); return; }
+        if(cell.x) cell.x = false;
+
+        if(checkConflict(x, y)) {
+            GameState.lives--; 
+            let hearts = document.getElementById('lives').children;
+            let brokenIdx = GameState.lives; 
+            if(hearts[brokenIdx]) hearts[brokenIdx].className = 'heart broken';
+            updateUI();
+            if(GameState.lives <= 0) { setTimeout(() => gameOver(), 800); } 
+            else { showToast('❌ 规则冲突，消耗 1 个爱心'); }
+            return;
+        }
+        GameState.hist.push(JSON.stringify(GameState.board));
+        cell.c = true; renderBoard(); updateUI(); checkWin();
+    }
+
+    function checkConflict(x, y) {
+        let d = GameState.data, sz = d.size, col = d.colors[y][x];
+        for(let i=0; i<sz; i++) { if(GameState.board[y][i].c || GameState.board[i][x].c) return true; }
+        for(let yy=0; yy<sz; yy++) for(let xx=0; xx<sz; xx++) {
+            let c = GameState.board[yy][xx];
+            if(c.c) {
+                if(d.colors[yy][xx] === col) return true;
+                if(Math.abs(xx-x)<=1 && Math.abs(yy-y)<=1) return true;
+            }
+        }
+        return false;
+    }
+
+    function triggerTutorial(step) {
+        const overlay = document.getElementById('tutorialOverlay');
+        const box = document.getElementById('tutorialBox');
+        const bubble = document.getElementById('tutorialBubble');
+        const highlight = document.getElementById('tutorialHighlight');
+        const app = document.getElementById('app');
+        if(!overlay) return;
+        
+        let targetEl = null, text = '';
+        if(step === 0) { targetEl = document.querySelector('#board > div:nth-child(1)'); text = '👆 **第1步：排除法打 X**\n单击这个左上角格子。'; } 
+        else if(step === 1) { let target = GameState.data.

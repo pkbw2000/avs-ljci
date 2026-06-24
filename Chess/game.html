@@ -23,7 +23,7 @@
         }
     </script>
     <style>
-        /* 所有样式与原代码完全一致，此处省略以节省篇幅，实际使用时请保留原样式 */
+        /* 所有样式与原代码完全一致，此处省略以节省篇幅，实际使用请保留完整样式 */
         * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; outline: none; }
         html, body { margin:0; padding:0; height:100%; overflow:hidden; font-family:'Inter',system-ui,sans-serif; background:#1a120e; touch-action:none; -webkit-user-select:none; user-select:none; }
         #root { height:100%; display:flex; align-items:center; justify-content:center; background:radial-gradient(ellipse at 50% 30%, #2d1e14, #120c08); padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left); }
@@ -55,6 +55,25 @@
         .victory-sub { font-size:clamp(0.9rem,3vw,1.2rem); color:rgba(255,255,255,0.6); }
         .victory-overlay button { padding:10px 28px; background:#b88f66; border:none; border-radius:40px; font-weight:700; color:#1a120e; font-size:1rem; box-shadow:0 4px 16px rgba(0,0,0,0.4); cursor:pointer; transition:transform 0.1s; }
         .victory-overlay button:active { transform:scale(0.95); }
+        /* 新增夺帅开关样式 */
+        .toggle-king {
+            background: rgba(60,44,32,0.5);
+            border: 1px solid rgba(200,170,130,0.2);
+            color: #d0c0a8;
+            padding: 2px 10px;
+            border-radius: 12px;
+            font-size: 0.7rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s;
+            line-height: 1.4;
+        }
+        .toggle-king.active {
+            background: #8a6240;
+            border-color: #fbbf24;
+            color: #fff;
+            box-shadow: 0 0 12px rgba(251,191,36,0.3);
+        }
     </style>
 </head>
 <body>
@@ -68,7 +87,7 @@
 
         const html = htm.bind(React.createElement);
 
-        // ========================= 音效（完整实现，与原代码一致） =========================
+        // ========================= 音效（优化版） =========================
         let globalAudioCtx = null;
         function getAudioCtx() {
             try {
@@ -83,12 +102,176 @@
                 return globalAudioCtx;
             } catch (_) { return null; }
         }
-        // 各音效函数与之前完全相同，此处省略（实际请保留完整实现）
-        function playFlip() { /* ... */ }
-        function playMove() { /* ... */ }
-        function playCapture() { /* ... */ } 
-        function playWin() { /* ... */ }
-        function playError() { /* ... */ }
+
+        function playFlip() {
+            const ctx = getAudioCtx();
+            if (!ctx) return;
+            try {
+                // 更清脆的翻牌音效：短促的高频扫频 + 轻微噪声
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(1000, ctx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(1500, ctx.currentTime + 0.05);
+                gain.gain.setValueAtTime(0.25, ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.07);
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+                osc.start(ctx.currentTime);
+                osc.stop(ctx.currentTime + 0.07);
+
+                const bufferSize = ctx.sampleRate * 0.025;
+                const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+                const data = buffer.getChannelData(0);
+                for (let i = 0; i < bufferSize; i++) {
+                    data[i] = (Math.random() * 2 - 1) * Math.exp(-i / bufferSize * 4);
+                }
+                const noise = ctx.createBufferSource();
+                noise.buffer = buffer;
+                const gain2 = ctx.createGain();
+                gain2.gain.setValueAtTime(0.1, ctx.currentTime);
+                gain2.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.03);
+                noise.connect(gain2);
+                gain2.connect(ctx.destination);
+                noise.start(ctx.currentTime);
+                noise.stop(ctx.currentTime + 0.03);
+            } catch (_) {}
+        }
+
+        function playMove() {
+            const ctx = getAudioCtx();
+            if (!ctx) return;
+            try {
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(300, ctx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(180, ctx.currentTime + 0.12);
+                gain.gain.setValueAtTime(0.2, ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.14);
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+                osc.start(ctx.currentTime);
+                osc.stop(ctx.currentTime + 0.14);
+
+                const bufferSize = ctx.sampleRate * 0.04;
+                const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+                const data = buffer.getChannelData(0);
+                for (let i = 0; i < bufferSize; i++) {
+                    data[i] = (Math.random() * 2 - 1) * Math.exp(-i / bufferSize * 2);
+                }
+                const noise = ctx.createBufferSource();
+                noise.buffer = buffer;
+                const gain2 = ctx.createGain();
+                gain2.gain.setValueAtTime(0.08, ctx.currentTime);
+                gain2.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.04);
+                const filter = ctx.createBiquadFilter();
+                filter.type = 'lowpass';
+                filter.frequency.value = 500;
+                noise.connect(filter);
+                filter.connect(gain2);
+                gain2.connect(ctx.destination);
+                noise.start(ctx.currentTime);
+                noise.stop(ctx.currentTime + 0.04);
+            } catch (_) {}
+        }
+
+        function playCapture() {
+            const ctx = getAudioCtx();
+            if (!ctx) return;
+            try {
+                // 更具冲击力的吃子音效：低频扫频 + 高频尖刺 + 噪声
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(200, ctx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(50, ctx.currentTime + 0.18);
+                gain.gain.setValueAtTime(0.35, ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.2);
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+                osc.start(ctx.currentTime);
+                osc.stop(ctx.currentTime + 0.2);
+
+                const osc2 = ctx.createOscillator();
+                const gain2 = ctx.createGain();
+                osc2.type = 'sine';
+                osc2.frequency.setValueAtTime(2000, ctx.currentTime);
+                osc2.frequency.exponentialRampToValueAtTime(1400, ctx.currentTime + 0.06);
+                gain2.gain.setValueAtTime(0.25, ctx.currentTime);
+                gain2.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.08);
+                osc2.connect(gain2);
+                gain2.connect(ctx.destination);
+                osc2.start(ctx.currentTime);
+                osc2.stop(ctx.currentTime + 0.08);
+
+                const bufferSize = ctx.sampleRate * 0.06;
+                const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+                const data = buffer.getChannelData(0);
+                for (let i = 0; i < bufferSize; i++) {
+                    data[i] = (Math.random() * 2 - 1) * Math.exp(-i / bufferSize * 6);
+                }
+                const noise = ctx.createBufferSource();
+                noise.buffer = buffer;
+                const gain3 = ctx.createGain();
+                gain3.gain.setValueAtTime(0.2, ctx.currentTime);
+                gain3.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.06);
+                noise.connect(gain3);
+                gain3.connect(ctx.destination);
+                noise.start(ctx.currentTime);
+                noise.stop(ctx.currentTime + 0.06);
+            } catch (_) {}
+        }
+
+        function playWin() {
+            const ctx = getAudioCtx();
+            if (!ctx) return;
+            try {
+                // 胜利音效：上行和弦，更饱满
+                const notes = [523, 659, 784, 1047, 1319];
+                notes.forEach((freq, i) => {
+                    const osc = ctx.createOscillator();
+                    const gain = ctx.createGain();
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(freq, ctx.currentTime + i * 0.1);
+                    gain.gain.setValueAtTime(0.2, ctx.currentTime + i * 0.1);
+                    gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + i * 0.1 + 0.2);
+                    osc.connect(gain);
+                    gain.connect(ctx.destination);
+                    osc.start(ctx.currentTime + i * 0.1);
+                    osc.stop(ctx.currentTime + i * 0.1 + 0.2);
+                });
+                // 添加一点低音衬托
+                const oscBass = ctx.createOscillator();
+                const gainBass = ctx.createGain();
+                oscBass.type = 'sine';
+                oscBass.frequency.setValueAtTime(130, ctx.currentTime);
+                gainBass.gain.setValueAtTime(0.15, ctx.currentTime);
+                gainBass.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.5);
+                oscBass.connect(gainBass);
+                gainBass.connect(ctx.destination);
+                oscBass.start(ctx.currentTime);
+                oscBass.stop(ctx.currentTime + 0.5);
+            } catch (_) {}
+        }
+
+        function playError() {
+            const ctx = getAudioCtx();
+            if (!ctx) return;
+            try {
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                osc.type = 'square';
+                osc.frequency.setValueAtTime(180, ctx.currentTime);
+                gain.gain.setValueAtTime(0.12, ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.15);
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+                osc.start(ctx.currentTime);
+                osc.stop(ctx.currentTime + 0.15);
+            } catch (_) {}
+        }
+
         const playSound = (type) => {
             switch(type) {
                 case 'flip': playFlip(); break;
@@ -100,7 +283,7 @@
             }
         };
 
-        // ========================= 游戏逻辑 =========================
+        // ========================= 游戏逻辑（保持不变） =========================
         const NAMES = { red: ['', '帥', '仕', '相', '俥', '傌', '炮', '兵'], black: ['', '將', '士', '象', '車', '馬', '砲', '卒'] };
         function getPieceName(color, rank) { return NAMES[color]?.[rank] || '?'; }
         function canCapture(attackerRank, defenderRank) {
@@ -237,8 +420,11 @@
             const [highlightCells, setHighlightCells] = useState([]);
             const [gameOver, setGameOver] = useState(false);
             const [winner, setWinner] = useState(null);
+            const [victoryReason, setVictoryReason] = useState(''); // 'captureKing' 或 'default'
             const [gameMode, setGameMode] = useState('pvp');
             const [aiColor, setAiColor] = useState(null);
+            // 新增夺帅开关
+            const [allowCaptureKing, setAllowCaptureKing] = useState(false);
 
             // ---------- 增强评估与搜索 ----------
             const PIECE_VALUES = { 1: 10000, 2: 500, 3: 450, 4: 400, 5: 350, 6: 300, 7: 100 };
@@ -445,12 +631,12 @@
                         else { blackPieces++; blackMoves += moves.length; }
                     }
                 }
-                if (redPieces === 0 || redMoves === 0) { setGameOver(true); setWinner('black'); return true; }
-                if (blackPieces === 0 || blackMoves === 0) { setGameOver(true); setWinner('red'); return true; }
+                if (redPieces === 0 || redMoves === 0) { setGameOver(true); setWinner('black'); setVictoryReason('default'); return true; }
+                if (blackPieces === 0 || blackMoves === 0) { setGameOver(true); setWinner('red'); setVictoryReason('default'); return true; }
                 return false;
             }, []);
 
-            // ---------- 执行走法（依赖 checkWinCondition） ----------
+            // ---------- 执行走法（依赖 checkWinCondition，并处理夺帅逻辑） ----------
             const executeMove = useCallback((fromRow, fromCol, toRow, toCol) => {
                 if (gameOver) return;
                 const newBoard = cloneBoard(board);
@@ -461,18 +647,25 @@
                 newBoard[toRow][toCol] = attacker;
                 newBoard[fromRow][fromCol] = null;
 
-                // 将帅被吃即负
+                // 检查是否吃掉将帅
                 if (target && target.rank === 1) {
-                    setBoard(newBoard);
-                    setGameOver(true);
-                    setWinner(attacker.color === 'red' ? 'red' : 'black');
-                    setSelectedPos(null);
-                    setHighlightCells([]);
-                    playSound('win');
-                    return;
+                    if (allowCaptureKing) {
+                        // 夺帅胜利
+                        setBoard(newBoard);
+                        setGameOver(true);
+                        setWinner(attacker.color === 'red' ? 'red' : 'black');
+                        setVictoryReason('captureKing');
+                        setSelectedPos(null);
+                        setHighlightCells([]);
+                        playSound('win');
+                        return;
+                    } else {
+                        // 不夺帅：继续游戏，只是普通吃子
+                        // 不做特殊处理，走后续流程
+                    }
                 }
 
-                // 原有胜负检查（无子可走）
+                // 原有胜负检查（无子可走或全歼）
                 if (checkWinCondition(newBoard)) {
                     setBoard(newBoard);
                     setSelectedPos(null);
@@ -485,9 +678,9 @@
                 setCurrentTurn(nextTurn);
                 setSelectedPos(null);
                 setHighlightCells([]);
-            }, [board, currentTurn, gameOver, checkWinCondition]);
+            }, [board, currentTurn, gameOver, checkWinCondition, allowCaptureKing]);
 
-            // ---------- AI 决策（使用 useCallback 确保依赖最新） ----------
+            // ---------- AI 决策 ----------
             const aiDecide = useCallback(() => {
                 const unrevealed = [];
                 let myCount = 0, enemyCount = 0;
@@ -594,7 +787,7 @@
                         setCurrentTurn(nextTurn);
                     }
                 }
-            }, [board, aiColor, executeMove]); // 依赖 executeMove
+            }, [board, aiColor, executeMove]);
 
             // ---------- 玩家交互 ----------
             const handleCellClick = useCallback((row, col) => {
@@ -671,12 +864,19 @@
                 setHighlightCells([]);
                 setGameOver(false);
                 setWinner(null);
+                setVictoryReason('');
             };
 
             const toggleMode = () => {
                 playSound('move');
                 setGameMode(prev => prev === 'pvp' ? 'ai' : 'pvp');
                 handleRestart();
+            };
+
+            // 切换夺帅开关
+            const toggleCaptureKing = () => {
+                setAllowCaptureKing(prev => !prev);
+                // 重置游戏状态? 不重置，让用户在当前对局中即时生效
             };
 
             // ---------- 渲染 ----------
@@ -709,13 +909,29 @@
             const turnLabel = currentTurn ? (currentTurn === 'red' ? '紅方' : '黑方') : '翻牌開局';
             const turnColor = currentTurn === 'red' ? 'bg-red-500' : (currentTurn === 'black' ? 'bg-stone-600' : 'bg-wood-500');
 
+            // 胜利信息
+            let victoryTitle = winner === 'red' ? '紅方獲勝' : '黑方獲勝';
+            let victorySub = '因對手無子可走或被全殲';
+            if (victoryReason === 'captureKing') {
+                victoryTitle = winner === 'red' ? '紅方奪帥' : '黑方奪將';
+                victorySub = winner === 'red' ? '紅方吃掉黑方主將，取得勝利！' : '黑方吃掉紅方主帥，取得勝利！';
+            }
+
             return html`
                 <div className="app-container">
                     <div className="top-bar">
                         <span className="text-wood-300 text-sm font-black tracking-wider">♟ 暗棋</span>
-                        <div className="flex items-center gap-2 text-sm text-wood-300 font-bold">
-                            <span>${turnLabel}</span>
-                            <div className="w-3 h-3 rounded-full ${turnColor} transition-all duration-300 shadow-lg"></div>
+                        <div className="flex items-center gap-2">
+                            <button 
+                                className=${`toggle-king ${allowCaptureKing ? 'active' : ''}`}
+                                onClick=${toggleCaptureKing}
+                            >
+                                奪帥: ${allowCaptureKing ? '開' : '關'}
+                            </button>
+                            <div className="flex items-center gap-2 text-sm text-wood-300 font-bold">
+                                <span>${turnLabel}</span>
+                                <div className="w-3 h-3 rounded-full ${turnColor} transition-all duration-300 shadow-lg"></div>
+                            </div>
                         </div>
                     </div>
 
@@ -728,9 +944,9 @@
                                 ${gameOver && winner && html`
                                     <div className="victory-overlay">
                                         <div className="victory-text ${winner === 'red' ? 'victory-red' : 'victory-black'}">
-                                            ${winner === 'red' ? '紅方獲勝' : '黑方獲勝'}
+                                            ${victoryTitle}
                                         </div>
-                                        <div className="victory-sub">因對手無子可走或被全殲</div>
+                                        <div className="victory-sub">${victorySub}</div>
                                         <button onClick=${handleRestart}>重新新局</button>
                                     </div>
                                 `}
@@ -753,7 +969,6 @@
         const root = ReactDOM.createRoot(document.getElementById('root'));
         root.render(html`<${React.StrictMode}><${App} /><//>`);
 
-        // 注册 ServiceWorker（若在本地 file:// 协议下会失败，但不影响游戏）
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
                 navigator.serviceWorker.register('./sw.js')

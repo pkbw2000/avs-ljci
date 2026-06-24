@@ -348,9 +348,8 @@
 
                 // ---- 連續滑動連續打叉 ---- 
                 // 處理 touch 事件：手指在螢幕上滑動，連續標記排除
-                let isSliding = false;
                 cellEl.addEventListener('touchstart', function() {
-                    isSliding = false; // 重置
+                    // 由 click 處理，這裡只用於避免突發事件
                 });
 
                 // 使用 document 層級的 touchmove 提高滑動偵測準確性
@@ -554,4 +553,65 @@
         if (cows === gridSize) {
             isLevelComplete = true;
             isGameLocked = true;
-            document.getElementById('hint-te
+            document.getElementById('hint-text').innerText = "🎉 太棒了！你解開了所有邏輯！";
+                 document.getElementById('next-btn').style.display = 'block';
+                document.getElementById('msg-box').style.borderLeftColor = 'var(--success-color)';
+            }
+        }
+
+        // === UI 更新 ===
+        function updateUI() {
+            const cowCount = gridData.flat().filter(c => c.state === STATE.COW).length;
+            document.getElementById('statusBar').querySelector('.status-bar').style.display = 'flex';
+            
+            const hearts = document.getElementById('livesDisplay').children;
+            for (let i=0; i<3; i++) {
+                hearts[i].className = i >= lives ? 'heart lost' : 'heart';
+            }
+        }
+
+        function showToast(msg) {
+            const toast = document.getElementById('toast');
+            toast.innerText = msg;
+            toast.classList.add('show');
+            clearTimeout(toast._timer);
+            toast._timer = setTimeout(() => toast.classList.remove('show'), 2000);
+        }
+
+        // === 啟動流程 ===
+        window.onload = function() {
+            document.getElementById('next-btn').innerText = "開始學習";
+            document.getElementById('next-btn').style.display = 'block';
+            document.getElementById('hint-text').innerText = "歡迎來到找牛世界！點擊按鈕進入教學。";
+            document.getElementById('next-btn').onclick = startTutorial;
+        };
+
+        function startTutorial() {
+            document.getElementById('next-btn').style.display = 'none';
+            document.getElementById('grid-wrapper').classList.add('active');
+            document.getElementById('statusBar').classList.add('active');
+            document.getElementById('rulesBox').classList.add('active');
+            initLevel(0);
+            
+            // 綁定下一關按鈕事件
+            document.getElementById('next-btn').onclick = function() {
+                if (this.innerText === '進入下一關 ➜') {
+                    if (currentLevel + 1 < TUTORIALS.length) {
+                        initLevel(currentLevel + 1);
+                        document.getElementById('next-btn').style.display = 'none';
+                    } else {
+                        document.getElementById('hint-text').innerText = "🎊 恭喜！你完成了所有找牛教學！";
+                        document.getElementById('next-btn').innerText = "開始冒險";
+                        document.getElementById('grid-wrapper').classList.remove('active');
+                        document.getElementById('statusBar').classList.remove('active');
+                        document.getElementById('next-btn').style.display = 'block';
+                        document.getElementById('next-btn').onclick = function() {
+                            alert("正式冒險模式開發中！敬請期待！");
+                        };
+                    }
+                }
+            };
+        }
+    </script>
+</body>
+</html>

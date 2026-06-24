@@ -118,6 +118,435 @@
 
         .cell.demo-cow { border: 2px solid #ff5722; box-shadow: 0 0 10px rgba(255,87,34,0.4); }
 
+        .floating-cross {
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            display: flex; justify-content: center; align-items: center;
+            font-size: 1.5rem; font-weight: bold;
+            color: #ff0000; text-shadow: 0 0 5px rgba(255, 255, 255, 0.9);
+            animation: blinkCross 0.5s ease-in-out infinite alternate;
+            pointer-events: none; z-index: 20;
+            background-color: rgba(255, 0, 0, 0.25);
+            border-radius: 8px;
+        }
+        @keyframes blinkCross {
+            0% { opacity: 0.3; transform: scale(0.8); }
+            100% { opacity: 1; transform: scale(1.1); }
+        }
+
+        #msg-box {
+            background: white; padding: 12px; border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05); min-height: 60px;
+            display: flex; flex-direction: column; justify-content: center; align-items: center;
+            border-left: 5px solid var(--primary-color); margin-top: 5px;
+            font-size: 14px; line-height: 1.5;
+        }
+        
+        #next-btn, #understood-btn {
+            padding: 6px 16px; border-radius: 20px; font-size: 0.9rem; font-weight: bold;
+            cursor: pointer; display: none; margin-top: 8px; border: none;
+        }
+        #next-btn { background: var(--success-color); color: white; }
+        #understood-btn { background: #ff9800; color: white; }
+
+        .toast-msg {
+            position: fixed; top: 20px; left: 50%; transform: translateX(-50%);
+            background: rgba(0,0,0,0.8); color: white; padding: 10px 20px;
+            border-radius: 20px; z-index: 999; font-weight: bold; pointer-events: none;
+            opacity: 0; transition: opacity 0.3s;
+        }
+        .toast-msg.show { opacity: 1; }
+
+        .color-red { background-color: #ff6b6b; }
+        .color-blue { background-color: #4dabf7; }
+        .color-green { background-color: #69db7c; }
+        .color-yellow { background-color: #ffd43b; }
+        .color-purple { background-color: #cc5de8; }
+        .color-orange { background-color: #ff922b; }
+        .color-brown { background-color: #a08b76; }
+
+        @media (max-width: 400px) {
+            :root { --cell-size: 45px; }
+        }
+    </style>
+</head>
+<body>
+<div id="game-container">
+    <header>
+        <h1>🐮 找牛邏輯教學</h1>
+        <div class="status-bar" id="statusBar">
+            <span id="level-display">關卡: 1/4</span>
+            <div class="lives" id="livesDisplay"><span class="heart">❤️</span><span class="heart">❤️</span><span class="heart">❤️</span></div>
+        </div>
+    </header>
+    
+    <div class="rules-box" id="rulesBox">
+        <b>💡 過關規則：</b><br>
+        ① 🚫 牛的上下左右及斜角不能有牛<br>
+        ② ⬜ 每行、每列只能有 1 頭牛<br>
+        ③ 🎨 每種顏色只能對應 1 頭牛<br>
+        <span style="color: #e74c3c;">❤️ 放錯扣除 1 顆心，三顆用完重來。</span>
+    </div>
+
+    <div id="grid-wrapper">
+        <div id="grid" class="grid"></div>
+    </div>
+
+    <div id="msg-box">
+        <div id="hint-text">歡迎來到找牛世界，點擊下方按鈕開始教學。</div>
+        <button id="next-btn" onclick="startTutorial()">開始學習</button>
+        <button id="understood-btn" onclick="handleUnderstood()">了解 ✅</button>
+    </div>
+</div>
+<div id="toast" class="toast-msg"></div>
+
+<script>
+    const STATE = { EMPTY: 0, COW: 1, CROSS: 2 };
+    const COLORS = ['red', 'blue', 'green', 'yellow', 'purple', 'orange', 'brown'];
+    const COLOR_NAMES = { 'red': '紅', 'blue': '藍', 'green': '綠', 'yellow': '黃', 'purple': '紫', 'orange': '橘', 'brown': '棕' };
+    
+    let currentLevel = 0;
+    let gridData = [];
+    let gridSize = 4;
+    let lives = 3;
+    let isGameLocked = false;
+    let isProcessing = false;
+    let isLevelComplete = false;
+    let currentStep = 0; 
+    let stepInstructions = [];
+    let demonstrationCow = null; 
+    let correctSolution = [];
+    let onUnderstoodResolve = null;
+    
+    function solveNQueens(size) {
+        let result = null;
+        let board = Array(size).fill(-1);
+        function isSafe(row, col) {
+            for (let prevRow = 0; prevRow < row; prevRow++) {
+                let prevCol = board[prevRow];
+                if (prevCol === col) return false;
+                if (Math.abs(prevCol - col) === Math.abs(prevRow - row)) return false;
+            }
+            return true;
+        }
+        function backtrack(row) {
+            if (row === size) { result = board.map((c, r) => ({x: c, y: r})); return true; }
+            for (let col = 0; col < size; col++) {
+                if (isSafe(row, col)) {
+                    board[row] = col;
+                    if (backtrack(row + 1)) return true;
+                    board[row] = -1;
+                }
+            }
+            return false;
+        }
+        backtrack(0);
+        return result || [];
+    }
+
+    function generateLevelData(size) {
+        let solution = solveNQueens(size);
+        let colors = [];
+        for(let r=0; r<size; r++) {
+            let row = [];
+            for(let c=0; c<size; c++) {
+                let minDist = 999; let colorId = 0;
+                solution.forEach((s, i) => {
+                    let dist = Math.abs(s.x - c) + Math.abs(s.y - r);
+                    if(dist < minDist) { minDist = dist; colorId = i; }
+                });
+                row.push(COLORS[colorId % COLORS.length]);
+            }
+            colors.push(row);
+        }
+        return { solution, colors };
+    }
+
+    const TUTORIALS = [ { size: 4 }, { size: 4 }, { size: 5 }, { size: 6 } ];
+
+    function initLevel(level) {
+        currentLevel = level;
+        const data = TUTORIALS[level];
+        gridSize = data.size;
+        lives = 3;
+        isLevelComplete = false;
+        isGameLocked = false;
+        currentStep = 0;
+        stepInstructions = [];
+        document.getElementById('understood-btn').style.display = 'none';
+
+        const lvData = generateLevelData(gridSize);
+        correctSolution = lvData.solution;
+        
+        document.getElementById('level-display').innerText = `關卡: ${level+1}/${TUTORIALS.length}`;
+        document.getElementById('rulesBox').classList.add('active');
+        document.getElementById('msg-box').style.borderLeftColor = 'var(--primary-color)';
+        document.getElementById('hint-text').innerText = `第 ${level+1} 關開始！請找出 ${gridSize} 頭牛。`;
+        document.getElementById('next-btn').style.display = 'none';
+        document.getElementById('next-btn').innerText = '進入下一關 ➜';
+        
+        gridData = [];
+        for(let r=0; r<gridSize; r++) {
+            let row = [];
+            for(let c=0; c<gridSize; c++) {
+                row.push({ state: STATE.EMPTY, color: lvData.colors[r][c] });
+            }
+            gridData.push(row);
+        }
+
+        demonstrationCow = correctSolution[0];
+        gridData[demonstrationCow.y][demonstrationCow.x].state = STATE.COW;
+
+        renderBoard();
+        updateUI();
+        setTimeout(() => startRuleDemonstration(), 800);
+    }
+
+    function renderBoard() {
+        const gridEl = document.getElementById('grid');
+        gridEl.innerHTML = '';
+        gridEl.style.gridTemplateColumns = `repeat(${gridSize}, 1fr)`;
+        gridEl.style.touchAction = 'none';
+        
+        for(let r=0; r<gridSize; r++) {
+            for(let c=0; c<gridSize; c++) {
+                const cellData = gridData[r][c];
+                const cellEl = document.createElement('div');
+                cellEl.className = `cell color-${cellData.color}`;
+                cellEl.dataset.r = r;
+                cellEl.dataset.c = c;
+                cellEl.dataset.state = 'EMPTY';
+                if (cellData.state === STATE.COW) cellEl.dataset.state = 'COW';
+                else if (cellData.state === STATE.CROSS) cellEl.dataset.state = 'CROSS';
+
+                if (demonstrationCow && r === demonstrationCow.y && c === demonstrationCow.x) {
+                    cellEl.classList.add('demo-cow');
+                }
+
+                cellEl.classList.add('locked'); 
+
+                let clickTimer = null;
+                cellEl.addEventListener('click', function(e) {
+                    if (isGameLocked || isProcessing) return;
+                    if(cellEl.classList.contains('locked') && !currentStepLockIsTarget(r,c)) return;
+
+                    if(clickTimer) {
+                        clearTimeout(clickTimer);
+                        clickTimer = null;
+                        handleInteraction(r, c, 'DOUBLE');
+                    } else {
+                        clickTimer = setTimeout(() => {
+                            clickTimer = null;
+                            handleInteraction(r, c, 'SINGLE');
+                        }, 300);
+                    }
+                });
+
+                cellEl.addEventListener('touchmove', function(e) {
+                    e.preventDefault();
+                    if (isGameLocked || isProcessing) return;
+                    
+                    const touch = e.touches[0];
+                    const elementUnderTouch = document.elementFromPoint(touch.clientX, touch.clientY);
+                    
+                    if (elementUnderTouch && elementUnderTouch.classList.contains('cell')) {
+                        const tr = parseInt(elementUnderTouch.dataset.r);
+                        const tc = parseInt(elementUnderTouch.dataset.c);
+                        if (currentStepLockIsTarget(tr, tc)) {
+                            handleSlideInteraction(tr, tc);
+                        } else if (!cellEl.classList.contains('locked')) {
+                            handleSlideInteraction(tr, tc);
+                        }
+                    }
+                }, { passive: false });
+
+                gridEl.appendChild(cellEl);
+            }
+        }
+    }
+
+    function currentStepLockIsTarget(r, c) {
+        if (currentStep < stepInstructions.length) {
+            const target = stepInstructions[currentStep];
+            if (target.r === r && target.c === c) return true;
+        }
+        return false;
+    }
+
+    function waitForUnderstood() {
+        return new Promise((resolve) => {
+            onUnderstoodResolve = resolve;
+            document.getElementById('understood-btn').style.display = 'block';
+        });
+    }
+
+    function handleUnderstood() {
+        document.getElementById('understood-btn').style.display = 'none';
+        if (onUnderstoodResolve) {
+            onUnderstoodResolve();
+            onUnderstoodResolve = null;
+        }
+    }
+
+    async function startRuleDemonstration() {
+        const cow = demonstrationCow;
+        if (!cow) return;
+        
+        const steps = [
+            { msg: "🚫 规则①：牛的上下左右及斜角不能有牛！周边格子会闪烁 ❌（请仔细观看后点击【了解】）", cells: getNeighbors(cow.y, cow.x) },
+            { msg: "⬜ 规则②：每行、每列只能有 1 頭牛！同行同列格子会闪烁 ❌（请仔细观看后点击【了解】）", cells: getRowAndCol(cow.y, cow.x) },
+            { msg: "🎨 规则③：每種顏色只能對應 1 頭牛！相同颜色区域会闪烁 ❌（请仔细观看后点击【了解】）", cells: getSameColor(cow.y, cow.x) }
+        ];
+
+        for (let i = 0; i < steps.length; i++) {
+            clearFlash();
+            const s = steps[i];
+            s.cells.forEach(pos => {
+                let el = document.querySelector(`.cell[data-r="${pos.r}"][data-c="${pos.c}"]`);
+                if (el) {
+                    let span = document.createElement('span');
+                    span.className = 'floating-cross';
+                    span.innerText = '❌';
+                    el.appendChild(span);
+                }
+            });
+            document.getElementById('hint-text').innerText = s.msg;
+            await waitForUnderstood();
+        }
+        
+        clearFlash();
+        document.getElementById('hint-text').innerText = "📖 规则演示结束！跟着蓝色高亮指引开始操作吧！";
+        setTimeout(() => startLevelGuide(), 800);
+    }
+
+    function clearFlash() {
+        document.querySelectorAll('.floating-cross').forEach(el => el.remove());
+        document.getElementById('understood-btn').style.display = 'none';
+    }
+
+    function getNeighbors(r, c) {
+        let res = [];
+        for (let dr = -1; dr <= 1; dr++) {
+            for (let dc = -1; dc <= 1; dc++) {
+                if (dr === 0 && dc === 0) continue;
+                let nr = r + dr, nc = c + dc;
+                if (nr >= 0 && nr < gridSize && nc >= 0 && nc < gridSize) {
+                    res.push({r: nr, c: nc});
+                }
+            }
+        }
+        return res;
+    }
+    function getRowAndCol(r, c) {
+        let res = [];
+        for (let i = 0; i < gridSize; i++) {
+            if (i !== c) res.push({r: r, c: i});
+            if (i !== r) res.push({r: i, c: c});
+        }
+        return res;
+    }
+    function getSameColor(r, c) {
+        let col = gridData[r][c].color;
+        let res = [];
+        for (let rr = 0; rr < gridSize; rr++) {
+            for (let cc = 0; cc < gridSize; cc++) {
+                if (rr === r && cc === c) continue;
+                if (gridData[rr][cc].color === col) {
+                    res.push({r: rr, c: cc});
+                }
+            }
+        }
+        return res;
+    }
+
+    function startLevelGuide() {
+        let target1 = correctSolution[1];
+        let target2 = {y: 0, x: 0}; 
+        if (target2.y === demonstrationCow.y && target2.x === demonstrationCow.x) target2 = {y:0, x:1};
+
+        if (gridSize === 4) {
+            stepInstructions = [
+                { r: target1.y, c: target1.x, type: 'COW', msg: `请**双击**高亮的 ${COLOR_NAMES[gridData[target1.y][target1.x].color]} 色格子，放置你的第一头牛！` },
+                { r: target2.y, c: target2.x, type: 'CROSS', msg: `试试 **单击** 这个格子打叉 ❌ 排除它，因为它不符合行列规则。` },
+            ];
+        } else {
+            stepInstructions = [];
+        }
+        
+        currentStep = 0;
+        applyStepLock();
+    }
+
+    function applyStepLock() {
+        const cells = document.querySelectorAll('.cell');
+        cells.forEach(el => el.classList.add('locked'));
+        
+        if (currentStep < stepInstructions.length) {
+            const target = stepInstructions[currentStep];
+            const targetEl = document.querySelector(`.cell[data-r="${target.r}"][data-c="${target.c}"]`);
+            if (targetEl) {
+                targetEl.classList.remove('locked');
+                document.getElementById('hint-text').innerText = target.msg;
+            } else {
+                cells.forEach(el => el.classList.remove('locked'));
+                document.getElementById('hint-text').innerText = "無法定位目標，已自動解鎖棋盤，請自由推理！";
+            }
+        } else {
+            cells.forEach(el => el.classList.remove('locked'));
+            document.querySelectorAll('.highlight-ring').forEach(el => el.remove());
+            document.getElementById('hint-text').innerText = "🎯 教学指引完成！推理并找出剩下的所有牛，完成关卡！";
+        }
+    }
+
+    function handleSlideInteraction(r, c) {
+        const cell = gridData[r][c];
+        const cellEl = document.querySelector(`.cell[data-r='${r}'][data-c='${c}']`);
+        if (!cellEl || isGameLocked || isProcessing) return;
+
+        if (cell.state === STATE.EMPTY) {
+            cell.state = STATE.CROSS;
+            cellEl.dataset.state = 'CROSS';
+        } else if (cell.state === STATE.CROSS) {
+            cell.state = STATE.EMPTY;
+            cellEl.dataset.state = 'EMPTY';
+        }
+        updateUI();
+    }
+
+    function handleInteraction(r, c, type) {
+        const cell = gridData[r][c];
+        const cellEl = document.querySelector(`.cell[data-r='${r}'][data-c='${c}']`);
+
+        if (type === 'DOUBLE') {
+            if (cell.state === STATE.EMPTY) {
+                if (!(currentStep < stepInstructions.length) && checkConflict(r, c)) {
+                    loseLife("❌ 規則衝突！消耗 1 顆愛心");
+                    return;
+                }
+                cell.state = STATE.COW;
+                cellEl.dataset.state = 'COW';
+            } else if (cell.state === STATE.COW) {
+                cell.state = STATE.EMPTY;
+                cellEl.dataset.state = 'EMPTY';
+            } else {
+                showToast("❌ 已打叉，不能放牛，先點擊叉取消吧！");
+                return;
+            }
+        } else if (type =            z-index: 10;
+            pointer-events: none;
+            background: rgba(52, 152, 219, 0.15);
+        }
+        @keyframes pulse {
+            0% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.1); opacity: 0.6; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+
+        .cell.locked { opacity: 0.5; pointer-events: none; }
+        .cell.locked.highlight-lock { opacity: 1; pointer-events: auto; }
+
+        .cell.demo-cow { border: 2px solid #ff5722; box-shadow: 0 0 10px rgba(255,87,34,0.4); }
+
         /* ★ 规则演示动画 */
         .floating-cross {
             position: absolute;

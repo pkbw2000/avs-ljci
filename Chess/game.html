@@ -9,7 +9,6 @@
     <title>暗棋 · 極簡 PWA</title>
     <link rel="manifest" href="./manifest.json" />
     <link rel="apple-touch-icon" href="https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/265f.png" />
-    
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
         tailwind.config = {
@@ -24,7 +23,6 @@
         }
     </script>
     <style>
-        /* 全域重置 */
         * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; outline: none; }
         html, body { 
             margin: 0; padding: 0; 
@@ -44,7 +42,6 @@
             padding: env(safe-area-inset-top) env(safe-area-inset-right) 
                      env(safe-area-inset-bottom) env(safe-area-inset-left);
         }
-
         .app-container {
             width: 100%;
             max-width: 450px;
@@ -56,7 +53,6 @@
             gap: 8px;
             overflow: hidden;
         }
-
         .top-bar, .bottom-bar {
             flex-shrink: 0;
             z-index: 10;
@@ -102,7 +98,6 @@
             background: rgba(30,22,16,0.5);
             color: #c9b89c;
         }
-
         .board-area {
             flex: 1;
             min-height: 0;
@@ -111,7 +106,6 @@
             justify-content: center;
             width: 100%;
         }
-
         .board-wrapper {
             width: 100%;
             max-height: 100%;
@@ -123,7 +117,6 @@
             border: 1px solid rgba(200,170,130,0.12);
             box-shadow: 0 8px 32px rgba(0,0,0,0.5);
         }
-
         .board-inner {
             width: 100%;
             height: 100%;
@@ -133,7 +126,6 @@
             box-shadow: inset 0 2px 12px rgba(255,215,140,0.05);
             position: relative;
         }
-
         .board-grid {
             display: grid;
             grid-template-columns: repeat(4, 1fr);
@@ -142,7 +134,6 @@
             width: 100%;
             height: 100%;
         }
-
         .cell {
             background: radial-gradient(circle at 30% 30%, rgba(200,170,130,0.2), rgba(140,110,80,0.08));
             border-radius: 8px;
@@ -153,10 +144,8 @@
             transition: box-shadow 0.15s;
             position: relative;
         }
-
         .cell-highlight-move { box-shadow: inset 0 0 0 2px rgba(120,200,120,0.6), 0 0 20px rgba(120,200,120,0.15); }
         .cell-highlight-capture { box-shadow: inset 0 0 0 2px rgba(230,120,120,0.6), 0 0 20px rgba(230,120,120,0.15); }
-
         .piece {
             width: 88%;
             height: 88%;
@@ -203,7 +192,6 @@
             ring-offset: 2px;
             ring-offset-color: rgba(20,14,10,0.6);
         }
-
         .victory-overlay {
             position: absolute;
             inset: 0;
@@ -255,7 +243,7 @@
 
         const html = htm.bind(React.createElement);
 
-        // ========================= 全新音效設計（保留） =========================
+        // ========================= 音效（完整实现） =========================
         let globalAudioCtx = null;
 
         function getAudioCtx() {
@@ -434,10 +422,9 @@
             }
         };
 
-        // ========================= 遊戲邏輯 =========================
+        // ========================= 游戏逻辑（保持不变） =========================
         const NAMES = { red: ['', '帥', '仕', '相', '俥', '傌', '炮', '兵'], black: ['', '將', '士', '象', '車', '馬', '砲', '卒'] };
         function getPieceName(color, rank) { return NAMES[color]?.[rank] || '?'; }
-
         function canCapture(attackerRank, defenderRank) {
             if (attackerRank === 1 && defenderRank === 7) return false;
             if (attackerRank === 7) {
@@ -445,7 +432,6 @@
             }
             return attackerRank <= defenderRank;
         }
-
         function createInitialBoard() {
             const pieces = [];
             pieces.push({ id: 'r1', color: 'red', rank: 1 });
@@ -462,12 +448,10 @@
             for (let i = 0; i < 2; i++) pieces.push({ id: `b5-${i}`, color: 'black', rank: 5 });
             for (let i = 0; i < 2; i++) pieces.push({ id: `b6-${i}`, color: 'black', rank: 6 });
             for (let i = 0; i < 5; i++) pieces.push({ id: `b7-${i}`, color: 'black', rank: 7 });
-
             for (let i = pieces.length - 1; i > 0; i--) {
                 const j = Math.floor(Math.random() * (i + 1));
                 [pieces[i], pieces[j]] = [pieces[j], pieces[i]];
             }
-
             const board = [];
             let idx = 0;
             for (let r = 0; r < 4; r++) {
@@ -479,7 +463,6 @@
             }
             return board;
         }
-
         function generateMoves(board, row, col) {
             const piece = board[row]?.[col];
             if (!piece || !piece.faceUp) return [];
@@ -488,7 +471,6 @@
             const rank = piece.rank;
             const isCannon = rank === 6;
             const dirs = [[-1,0],[1,0],[0,-1],[0,1]];
-
             for (const [dr, dc] of dirs) {
                 if (isCannon) {
                     const nr = row + dr, nc = col + dc;
@@ -526,12 +508,11 @@
             }
             return moves;
         }
-
         function cloneBoard(board) {
             return board.map(row => row.map(cell => cell ? { ...cell } : null));
         }
 
-        // ========================= React 元件 =========================
+        // ========================= React 组件（不变） =========================
         const Piece = memo(({ piece, isSelected, onClick }) => {
             if (!piece) return null;
             const { color, rank, faceUp } = piece;
@@ -554,7 +535,6 @@
                 <//>
             `;
         });
-
         const Cell = memo(({ row, col, piece, isHighlight, highlightType, isSelected, onCellClick, index }) => {
             const handleClick = (e) => {
                 e.preventDefault();
@@ -575,7 +555,7 @@
             `;
         });
 
-        // ========================= 主 App =========================
+        // ========================= 主 App（仅保留增强版 AI） =========================
         function App() {
             const [board, setBoard] = useState(() => createInitialBoard());
             const [currentTurn, setCurrentTurn] = useState(null);
@@ -587,62 +567,9 @@
             const [gameMode, setGameMode] = useState('pvp');
             const [aiColor, setAiColor] = useState(null);
 
-            const checkWinCondition = useCallback((newBoard) => {
-                let hasUnrevealed = false;
-                for (let r = 0; r < 4; r++) {
-                    for (let c = 0; c < 8; c++) {
-                        if (newBoard[r][c] && !newBoard[r][c].faceUp) {
-                            hasUnrevealed = true;
-                            break;
-                        }
-                    }
-                    if (hasUnrevealed) break;
-                }
-                if (hasUnrevealed) return false;
-
-                let redPieces = 0, blackPieces = 0;
-                let redMoves = 0, blackMoves = 0;
-                for (let r = 0; r < 4; r++) {
-                    for (let c = 0; c < 8; c++) {
-                        const p = newBoard[r][c];
-                        if (!p) continue;
-                        const moves = generateMoves(newBoard, r, c);
-                        if (p.color === 'red') { redPieces++; redMoves += moves.length; }
-                        else { blackPieces++; blackMoves += moves.length; }
-                    }
-                }
-                if (redPieces === 0 || redMoves === 0) { setGameOver(true); setWinner('black'); return true; }
-                if (blackPieces === 0 || blackMoves === 0) { setGameOver(true); setWinner('red'); return true; }
-                return false;
-            }, []);
-
-            const executeMove = useCallback((fromRow, fromCol, toRow, toCol) => {
-                if (gameOver) return;
-                const newBoard = cloneBoard(board);
-                const attacker = newBoard[fromRow][fromCol];
-                const target = newBoard[toRow][toCol];
-                if (target) playSound('capture');
-                else playSound('move');
-                newBoard[toRow][toCol] = attacker;
-                newBoard[fromRow][fromCol] = null;
-                const nextTurn = currentTurn === 'red' ? 'black' : 'red';
-                if (checkWinCondition(newBoard)) {
-                    setBoard(newBoard);
-                    setSelectedPos(null);
-                    setHighlightCells([]);
-                    return;
-                }
-                setBoard(newBoard);
-                setCurrentTurn(nextTurn);
-                setSelectedPos(null);
-                setHighlightCells([]);
-            }, [board, currentTurn, gameOver, checkWinCondition]);
-
-            // ===================== 全新 AI 核心（攻守兼備） =====================
-            // 棋子價值表（rank 越小越有價值）
+            // ---------- 增强评估与搜索 ----------
             const PIECE_VALUES = { 1: 10000, 2: 500, 3: 450, 4: 400, 5: 350, 6: 300, 7: 100 };
 
-            // 檢測將帥是否被威脅（被敵方棋子攻擊）
             const isKingInDanger = (board, color) => {
                 let kingPos = null;
                 for (let r = 0; r < 4; r++) {
@@ -653,7 +580,7 @@
                         }
                     }
                 }
-                if (!kingPos) return true; // 已被吃
+                if (!kingPos) return true;
                 const enemy = color === 'red' ? 'black' : 'red';
                 for (let r = 0; r < 4; r++) {
                     for (let c = 0; c < 8; c++) {
@@ -669,26 +596,59 @@
                 return false;
             };
 
-            // 評估函數：靜態評估 + 位置獎勵 + 威脅懲罰
             const evaluateBoard = (board, color) => {
                 let score = 0;
                 const enemy = color === 'red' ? 'black' : 'red';
-                // 計算雙方所有棋子的價值
                 for (let r = 0; r < 4; r++) {
                     for (let c = 0; c < 8; c++) {
                         const p = board[r][c];
                         if (!p || !p.faceUp) continue;
                         const val = PIECE_VALUES[p.rank] || 0;
-                        // 位置獎勵：越靠近敵方底線分數越高
                         const rowFactor = color === 'red' ? (3 - r) / 3 : r / 3;
-                        const posBonus = val * 0.3 * rowFactor;
-                        // 炮在中央區域額外加分
+                        let posBonus = val * 0.3 * rowFactor;
                         let cannonBonus = 0;
                         if (p.rank === 6) {
                             const centerDist = Math.abs(c - 3.5) + Math.abs(r - 1.5);
                             cannonBonus = val * 0.2 * (1 - centerDist / 5);
                         }
-                        const totalVal = val + posBonus + cannonBonus;
+                        let pawnBonus = 0;
+                        if (p.rank === 7) {
+                            if (p.color === 'red' && r >= 2) pawnBonus = 150;
+                            if (p.color === 'black' && r <= 1) pawnBonus = 150;
+                        }
+                        let cannonSupport = 0;
+                        if (p.rank === 6) {
+                            const dirs = [[-1,0],[1,0],[0,-1],[0,1]];
+                            for (const [dr, dc] of dirs) {
+                                const nr = r + dr, nc = c + dc;
+                                if (nr>=0 && nr<4 && nc>=0 && nc<8) {
+                                    const neighbor = board[nr][nc];
+                                    if (neighbor && neighbor.faceUp && neighbor.color === p.color) {
+                                        cannonSupport += 50;
+                                        break;
+                                    }
+                                }
+                            }
+                        }
+                        let horsePenalty = 0;
+                        if (p.rank === 5) {
+                            const dirs = [[-1,0],[1,0],[0,-1],[0,1]];
+                            for (const [dr, dc] of dirs) {
+                                const nr = r + dr, nc = c + dc;
+                                if (nr>=0 && nr<4 && nc>=0 && nc<8) {
+                                    const neighbor = board[nr][nc];
+                                    if (neighbor && neighbor.faceUp && neighbor.color === p.color) {
+                                        horsePenalty -= 30;
+                                        break;
+                                    }
+                                }
+                            }
+                        }
+                        const moves = generateMoves(board, r, c);
+                        const mobilityBonus = moves.length * 8;
+                        const controlBonus = moves.length * 5;
+
+                        const totalVal = val + posBonus + cannonBonus + pawnBonus + cannonSupport + horsePenalty + mobilityBonus + controlBonus;
                         if (p.color === color) {
                             score += totalVal;
                         } else {
@@ -696,11 +656,9 @@
                         }
                     }
                 }
-                // 將帥安全懲罰（若被威脅，大幅扣分）
                 if (isKingInDanger(board, color)) {
-                    score -= 5000;
+                    score -= 6000;
                 }
-                // 獎勵對敵方將帥的威脅（我方棋子能吃到對方將帥）
                 for (let r = 0; r < 4; r++) {
                     for (let c = 0; c < 8; c++) {
                         const p = board[r][c];
@@ -709,7 +667,7 @@
                             for (const m of moves) {
                                 const target = board[m.row][m.col];
                                 if (target && target.rank === 1 && target.color === enemy) {
-                                    score += 3000; // 威脅將帥加分
+                                    score += 4000;
                                 }
                             }
                         }
@@ -718,7 +676,6 @@
                 return score;
             };
 
-            // 生成所有合法走法
             const generateAllMoves = (board, color) => {
                 const moves = [];
                 for (let r = 0; r < 4; r++) {
@@ -735,7 +692,6 @@
                 return moves;
             };
 
-            // 模擬走法
             const simulateMove = (board, fromRow, fromCol, toRow, toCol) => {
                 const nb = cloneBoard(board);
                 const piece = nb[fromRow][fromCol];
@@ -744,14 +700,13 @@
                 return nb;
             };
 
-            // 搜索函數（深度 d，返回最佳走法）
-            const search = (board, depth, color, isMaximizing) => {
+            // Alpha-Beta 负极大值搜索
+            const alphaBeta = (board, depth, alpha, beta, isMaximizing, color) => {
                 const moves = generateAllMoves(board, color);
-                if (moves.length === 0 || depth === 0) {
-                    return { score: evaluateBoard(board, aiColor), move: null };
+                if (depth === 0 || moves.length === 0) {
+                    return { score: evaluateBoard(board, color), move: null };
                 }
 
-                // 對走法排序：優先考慮吃子走法（提高剪枝效率）
                 moves.sort((a, b) => {
                     const aTarget = board[a.toRow][a.toCol];
                     const bTarget = board[b.toRow][b.toCol];
@@ -765,60 +720,64 @@
 
                 for (const mv of moves) {
                     const nb = simulateMove(board, mv.fromRow, mv.fromCol, mv.toRow, mv.toCol);
-                    const nextColor = color === 'red' ? 'black' : 'red';
-                    const result = search(nb, depth - 1, nextColor, !isMaximizing);
-                    let score = result.score;
-                    // 若直接吃掉對方將帥，給予極大獎勵/懲罰
                     const target = board[mv.toRow][mv.toCol];
                     if (target && target.rank === 1 && target.color !== color) {
-                        score = isMaximizing ? 999999 : -999999;
+                        const score = isMaximizing ? 999999 : -999999;
+                        return { score, move: mv };
                     }
+                    const nextColor = color === 'red' ? 'black' : 'red';
+                    const result = alphaBeta(nb, depth - 1, alpha, beta, !isMaximizing, nextColor);
+                    let score = result.score;
+
                     if (isMaximizing) {
                         if (score > bestScore) {
                             bestScore = score;
                             bestMove = mv;
                         }
+                        alpha = Math.max(alpha, bestScore);
                     } else {
                         if (score < bestScore) {
                             bestScore = score;
                             bestMove = mv;
                         }
+                        beta = Math.min(beta, bestScore);
                     }
+                    if (alpha >= beta) break;
                 }
                 return { score: bestScore, move: bestMove };
             };
 
-            // AI 決策主體（含防送死過濾 + 攻擊性強化）
+            // ---------- AI 决策 ----------
             const aiDecide = () => {
-                // 收集暗棋位置
                 const unrevealed = [];
-                for (let r = 0; r < 4; r++) {
-                    for (let c = 0; c < 8; c++) {
-                        const p = board[r][c];
-                        if (p && !p.faceUp) {
-                            unrevealed.push({ row: r, col: c });
-                        }
-                    }
-                }
-
                 let myCount = 0, enemyCount = 0;
                 for (let r = 0; r < 4; r++) {
                     for (let c = 0; c < 8; c++) {
                         const p = board[r][c];
-                        if (p && p.faceUp) {
+                        if (p && !p.faceUp) {
+                            unrevealed.push({ row: r, col: c, piece: p });
+                        } else if (p && p.faceUp) {
                             if (p.color === aiColor) myCount++;
                             else enemyCount++;
                         }
                     }
                 }
 
-                // 開局階段：優先翻牌（但要有策略）
-                if (myCount + enemyCount < 8 && unrevealed.length > 0) {
+                const totalRevealed = myCount + enemyCount;
+
+                // 翻棋阶段
+                if (unrevealed.length > 0 && totalRevealed < 10) {
                     let bestFlip = null;
                     let bestFlipScore = -Infinity;
                     for (const u of unrevealed) {
-                        let score = 0;
-                        // 靠近敵方將帥
+                        const simBoard = cloneBoard(board);
+                        simBoard[u.row][u.col].faceUp = true;
+                        let score = evaluateBoard(simBoard, aiColor);
+                        if (u.piece.color === aiColor) {
+                            score += PIECE_VALUES[u.piece.rank] * 0.5;
+                        } else {
+                            score -= PIECE_VALUES[u.piece.rank] * 0.3;
+                        }
                         let enemyGeneral = null;
                         for (let r = 0; r < 4; r++) {
                             for (let c = 0; c < 8; c++) {
@@ -830,22 +789,8 @@
                         }
                         if (enemyGeneral) {
                             const dist = Math.abs(u.row - enemyGeneral.row) + Math.abs(u.col - enemyGeneral.col);
-                            score += (6 - dist) * 25;
+                            score += (6 - dist) * 30;
                         }
-                        // 周圍已翻牌數
-                        let around = 0;
-                        for (let dr = -1; dr <= 1; dr++) {
-                            for (let dc = -1; dc <= 1; dc++) {
-                                if (dr === 0 && dc === 0) continue;
-                                const nr = u.row + dr, nc = u.col + dc;
-                                if (nr >= 0 && nr < 4 && nc >= 0 && nc < 8) {
-                                    const neighbor = board[nr][nc];
-                                    if (neighbor && neighbor.faceUp) around++;
-                                }
-                            }
-                        }
-                        score += around * 12;
-                        // 盡量翻開能形成連線的位置
                         if (score > bestFlipScore) {
                             bestFlipScore = score;
                             bestFlip = u;
@@ -856,33 +801,31 @@
                         const newBoard = cloneBoard(board);
                         newBoard[bestFlip.row][bestFlip.col].faceUp = true;
                         const nextTurn = aiColor === 'red' ? 'black' : 'red';
-                        if (checkWinCondition(newBoard)) {
-                            setBoard(newBoard);
-                            return;
-                        }
                         setBoard(newBoard);
                         setCurrentTurn(nextTurn);
                         return;
                     }
                 }
 
-                // 正常走法搜索（深度根據局面調整）
+                // 正常走棋搜索（动态深度）
                 const totalPieces = myCount + enemyCount;
-                const depth = totalPieces < 12 ? 4 : 3; // 終局加深
-                const result = search(board, depth, aiColor, true);
+                let depth = 4;
+                if (totalPieces >= 20) depth = 5;
+                else if (totalPieces >= 14) depth = 6;
+                else if (totalPieces >= 8) depth = 7;
+                else depth = 8;
+
+                const result = alphaBeta(board, depth, -Infinity, Infinity, true, aiColor);
                 if (result.move) {
                     const mv = result.move;
-                    // 安全檢查：走後是否會導致己方將帥被吃
                     const simBoard = simulateMove(board, mv.fromRow, mv.fromCol, mv.toRow, mv.toCol);
                     if (isKingInDanger(simBoard, aiColor)) {
-                        // 若危險，嘗試從所有走法中選一個不會導致危險且評分最高的
                         const allMoves = generateAllMoves(board, aiColor);
                         const safeMoves = allMoves.filter(m => {
                             const sim = simulateMove(board, m.fromRow, m.fromCol, m.toRow, m.toCol);
                             return !isKingInDanger(sim, aiColor);
                         });
                         if (safeMoves.length > 0) {
-                            // 選評分最高的安全走法
                             let bestSafe = null;
                             let bestSafeScore = -Infinity;
                             for (const m of safeMoves) {
@@ -898,38 +841,89 @@
                                 return;
                             }
                         }
-                        // 若所有走法都危險，無奈還是走原來的（避免卡死）
                     }
                     executeMove(mv.fromRow, mv.fromCol, mv.toRow, mv.toCol);
                 } else {
-                    // 無走法，翻牌
                     if (unrevealed.length > 0) {
-                        // 隨機翻（但可優化）
                         const u = unrevealed[Math.floor(Math.random() * unrevealed.length)];
                         playSound('flip');
                         const newBoard = cloneBoard(board);
                         newBoard[u.row][u.col].faceUp = true;
                         const nextTurn = aiColor === 'red' ? 'black' : 'red';
-                        if (checkWinCondition(newBoard)) {
-                            setBoard(newBoard);
-                            return;
-                        }
                         setBoard(newBoard);
                         setCurrentTurn(nextTurn);
                     }
                 }
             };
 
-            // 觸發 AI
-            useEffect(() => {
-                if (gameOver || gameMode !== 'ai' || currentTurn === null || !aiColor || currentTurn !== aiColor) return;
-                const timer = setTimeout(() => {
-                    aiDecide();
-                }, 700);
-                return () => clearTimeout(timer);
-            }, [board, currentTurn, gameOver, gameMode, aiColor]);
+			// ========== 2. 再定义 executeMove（依赖 checkWinCondition） ==========
+			const executeMove = useCallback((fromRow, fromCol, toRow, toCol) => {
+				if (gameOver) return;
+				const newBoard = cloneBoard(board);
+				const attacker = newBoard[fromRow][fromCol];
+				const target = newBoard[toRow][toCol];
+				if (target) playSound('capture');
+				else playSound('move');
+				newBoard[toRow][toCol] = attacker;
+				newBoard[fromRow][fromCol] = null;
 
-            // 玩家點擊（保持原樣）
+				// 将帅被吃即负
+				if (target && target.rank === 1) {
+					setBoard(newBoard);
+					setGameOver(true);
+					setWinner(attacker.color === 'red' ? 'red' : 'black');
+					setSelectedPos(null);
+					setHighlightCells([]);
+					playSound('win');
+					return;
+				}
+
+				// 原有胜负检查（无子可走）
+				if (checkWinCondition(newBoard)) {
+					setBoard(newBoard);
+					setSelectedPos(null);
+					setHighlightCells([]);
+					return;
+				}
+
+				const nextTurn = currentTurn === 'red' ? 'black' : 'red';
+				setBoard(newBoard);
+				setCurrentTurn(nextTurn);
+				setSelectedPos(null);
+				setHighlightCells([]);
+			}, [board, currentTurn, gameOver, checkWinCondition]);
+
+			// ========== 1. 先定义 checkWinCondition ==========
+			const checkWinCondition = useCallback((newBoard) => {
+				let hasUnrevealed = false;
+				for (let r = 0; r < 4; r++) {
+					for (let c = 0; c < 8; c++) {
+						if (newBoard[r][c] && !newBoard[r][c].faceUp) {
+							hasUnrevealed = true;
+							break;
+						}
+					}
+					if (hasUnrevealed) break;
+				}
+				if (hasUnrevealed) return false;
+
+				let redPieces = 0, blackPieces = 0;
+				let redMoves = 0, blackMoves = 0;
+				for (let r = 0; r < 4; r++) {
+					for (let c = 0; c < 8; c++) {
+						const p = newBoard[r][c];
+						if (!p) continue;
+						const moves = generateMoves(newBoard, r, c);
+						if (p.color === 'red') { redPieces++; redMoves += moves.length; }
+						else { blackPieces++; blackMoves += moves.length; }
+					}
+				}
+				if (redPieces === 0 || redMoves === 0) { setGameOver(true); setWinner('black'); return true; }
+				if (blackPieces === 0 || blackMoves === 0) { setGameOver(true); setWinner('red'); return true; }
+				return false;
+			}, []);
+
+            // ---------- 玩家交互 ----------
             const handleCellClick = useCallback((row, col) => {
                 if (gameOver) return;
                 if (gameMode === 'ai' && currentTurn !== null && currentTurn === aiColor) return;
@@ -984,6 +978,15 @@
                 }
             }, [board, currentTurn, gameOver, selectedPos, highlightCells, executeMove, gameMode, aiColor, checkWinCondition]);
 
+            // ---------- AI 触发 ----------
+            useEffect(() => {
+                if (gameOver || gameMode !== 'ai' || currentTurn === null || !aiColor || currentTurn !== aiColor) return;
+                const timer = setTimeout(() => {
+                    aiDecide();
+                }, 700);
+                return () => clearTimeout(timer);
+            }, [board, currentTurn, gameOver, gameMode, aiColor]);
+
             const handleRestart = () => {
                 playSound('move');
                 setBoard(createInitialBoard());
@@ -1002,7 +1005,7 @@
                 handleRestart();
             };
 
-            // 渲染棋盤 (列優先)
+            // ---------- 渲染 ----------
             const renderBoard = () => {
                 const cells = [];
                 let index = 0;

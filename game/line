@@ -1,0 +1,471 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>数织逻辑游戏</title>
+    <style>
+        :root {
+            --cell-size: min(12vw, 56px);
+            --bg-sky: linear-gradient(to bottom, #84c3ff 0%, #c4e6ff 100%);
+            --bg-ground: #e8f5c8;
+            --color-filled: #4caf50;
+            --color-cross: #ff5252;
+            --color-clue-bg: #cbb27c;
+            --color-clue-text: #ffffff;
+            --color-empty: #efebe9;
+            --color-grid-line: #d7ccc8;
+            --color-btn-fill: #4caf50;
+            --color-btn-cross: #e0e0e0;
+            --radius: 12px;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background: var(--bg-sky);
+            background-attachment: fixed;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: #3e2723;
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        #app {
+            width: 100%;
+            max-width: 480px;
+            padding: 20px 16px 40px;
+            box-sizing: border-box;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        /* 游戏背景卡片 */
+        .game-wrapper {
+            background: rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(4px);
+            border-radius: 24px;
+            padding: 20px 16px;
+            width: 100%;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
+        }
+
+        /* 棋盘布局 */
+        .board-area {
+            display: flex;
+            flex-direction: column;
+            width: 100%;
+        }
+
+        .clues-top-container {
+            display: grid;
+            grid-template-columns: repeat(5, var(--cell-size));
+            padding-left: calc(var(--cell-size));
+            margin-bottom: 4px;
+            gap: 2px;
+        }
+
+        .board-main {
+            display: flex;
+            gap: 2px;
+        }
+
+        .clues-left-container {
+            display: grid;
+            grid-template-rows: repeat(5, var(--cell-size));
+            gap: 2px;
+        }
+
+        .grid-container {
+            display: grid;
+            grid-template-columns: repeat(5, var(--cell-size));
+            grid-template-rows: repeat(5, var(--cell-size));
+            gap: 2px;
+        }
+
+        /* 提示数字单元 */
+        .clue-cell {
+            background: var(--color-clue-bg);
+            border-radius: 4px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            font-weight: bold;
+            font-size: 14px;
+            color: var(--color-clue-text);
+            padding: 2px;
+            box-sizing: border-box;
+            line-height: 1.1;
+            text-align: center;
+        }
+        .clue-cell span { margin: 1px 0; }
+
+        /* 游戏网格 */
+        .grid-cell {
+            background: var(--color-empty);
+            border-radius: 4px;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            transition: background 0.15s ease;
+            cursor: pointer;
+            box-sizing: border-box;
+            border: 1px solid transparent;
+        }
+        .grid-cell:active { transform: scale(0.94); }
+
+        .grid-cell.filled {
+            background: var(--color-filled);
+            border: 2px solid #2e7d32;
+            box-shadow: inset 0 -3px 0 rgba(0,0,0,0.2);
+        }
+        .grid-cell.cross {
+            background: #f5f5f5;
+            color: var(--color-cross);
+            font-weight: bold;
+            font-size: 20px;
+            position: relative;
+            border: 1px solid #ccc;
+        }
+        .grid-cell.cross::after {
+            content: '×';
+            font-size: 24px;
+            line-height: 1;
+        }
+
+        /* 底部控制 */
+        .bottom-controls {
+            width: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background: rgba(255, 255, 255, 0.6);
+            backdrop-filter: blur(4px);
+            padding: 12px 0;
+            border-radius: 30px;
+            margin-top: 10px;
+        }
+
+        .mode-toggle {
+            display: flex;
+            background: #e0e0e0;
+            border-radius: 30px;
+            padding: 4px;
+            width: 160px;
+            position: relative;
+        }
+
+        .mode-btn {
+            flex: 1;
+            border: none;
+            background: transparent;
+            padding: 8px 0;
+            border-radius: 26px;
+            font-size: 14px;
+            font-weight: bold;
+            color: #666;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            z-index: 1;
+            position: relative;
+        }
+
+        .mode-btn.active-fill {
+            background: var(--color-btn-fill);
+            color: white;
+            box-shadow: 0 2px 6px rgba(76, 175, 80, 0.4);
+        }
+        .mode-btn.active-cross {
+            background: var(--color-btn-cross);
+            color: #333;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+        }
+        .mode-btn.active-cross::after {
+            content: '✕';
+            margin-left: 4px;
+            color: var(--color-cross);
+        }
+
+        /* 胜利弹窗 */
+        #win-modal {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            backdrop-filter: blur(6px);
+            z-index: 100;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease;
+        }
+        #win-modal.show {
+            opacity: 1;
+            pointer-events: auto;
+        }
+        .modal-content {
+            background: white;
+            padding: 40px 30px;
+            border-radius: 24px;
+            text-align: center;
+            max-width: 300px;
+            width: 80%;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+            transform: scale(0.8);
+            transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        #win-modal.show .modal-content {
+            transform: scale(1);
+        }
+        .modal-content h2 {
+            margin: 0 0 12px;
+            color: #2e7d32;
+            font-size: 24px;
+        }
+        .modal-content p {
+            color: #666;
+            font-size: 14px;
+            margin: 0 0 24px;
+        }
+        .btn-restart {
+            background: #ffb300;
+            color: white;
+            border: none;
+            border-radius: 30px;
+            padding: 12px 30px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            box-shadow: 0 4px 12px rgba(255, 179, 0, 0.3);
+        }
+        .btn-restart:active { transform: scale(0.95); }
+    </style>
+</head>
+<body>
+<div id="app">
+    <div class="game-wrapper">
+        <div class="board-area">
+            <div class="clues-top-container" id="clues-top"></div>
+            <div class="board-main">
+                <div class="clues-left-container" id="clues-left"></div>
+                <div class="grid-container" id="grid"></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="bottom-controls">
+        <div class="mode-toggle">
+            <button class="mode-btn active-fill" id="btn-fill">填方块</button>
+            <button class="mode-btn" id="btn-cross">标叉叉</button>
+        </div>
+    </div>
+
+    <!-- 胜利弹窗 -->
+    <div id="win-modal">
+        <div class="modal-content">
+            <h2>🎉 恭喜通关</h2>
+            <p>您已准确找出所有隐藏的方块！</p>
+            <button class="btn-restart" id="reset-game">重新开始</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    (function() {
+        // --- 1. 游戏配置与目标图案 (5x5) ---
+        const SIZE = 5;
+        // 目标图案： 1代表实心，0代表空白
+        const TARGET = [
+            [1, 1, 1, 1, 1],
+            [1, 0, 0, 0, 1],
+            [1, 0, 0, 0, 1],
+            [1, 0, 0, 0, 1],
+            [1, 1, 1, 1, 1]
+        ];
+
+        // 游戏状态数组： 0=空, 1=实心(Filled), -1=叉叉(Cross)
+        let boardState = [];
+        let gameEnded = false;
+        let currentMode = 'fill'; // 'fill' 或 'cross'
+
+        // DOM 元素
+        const gridEl = document.getElementById('grid');
+        const cluesTopEl = document.getElementById('clues-top');
+        const cluesLeftEl = document.getElementById('clues-left');
+        const btnFill = document.getElementById('btn-fill');
+        const btnCross = document.getElementById('btn-cross');
+        const winModal = document.getElementById('win-modal');
+        const resetBtn = document.getElementById('reset-game');
+
+        // --- 2. 核心算法：从图案反推提示数字 (Clues) ---
+        function calculateClues(line) {
+            const clues = [];
+            let count = 0;
+            for (let val of line) {
+                if (val === 1) {
+                    count++;
+                } else {
+                    if (count > 0) {
+                        clues.push(count);
+                        count = 0;
+                    }
+                }
+            }
+            if (count > 0) clues.push(count);
+            // 如果是全空行，返回 [0] 以占位显示
+            if (clues.length === 0) clues.push(0);
+            return clues;
+        }
+
+        // 计算所有行和列的线索
+        function generateAllClues(target) {
+            const rowClues = [];
+            const colClues = [];
+            // 行线索
+            for (let r = 0; r < SIZE; r++) {
+                rowClues.push(calculateClues(target[r]));
+            }
+            // 列线索
+            for (let c = 0; c < SIZE; c++) {
+                const col = [];
+                for (let r = 0; r < SIZE; r++) {
+                    col.push(target[r][c]);
+                }
+                colClues.push(calculateClues(col));
+            }
+            return { rowClues, colClues };
+        }
+
+        // --- 3. 渲染引擎 ---
+        function render() {
+            // 渲染网格
+            gridEl.innerHTML = '';
+            for (let r = 0; r < SIZE; r++) {
+                for (let c = 0; c < SIZE; c++) {
+                    const cell = document.createElement('div');
+                    cell.className = 'grid-cell';
+                    const state = boardState[r][c];
+                    if (state === 1) cell.classList.add('filled');
+                    if (state === -1) cell.classList.add('cross');
+                    
+                    cell.dataset.row = r;
+                    cell.dataset.col = c;
+                    cell.addEventListener('click', () => handleClick(r, c));
+                    gridEl.appendChild(cell);
+                }
+            }
+
+            // 渲染左侧行提示
+            const { rowClues } = generateAllClues(TARGET);
+            cluesLeftEl.innerHTML = '';
+            for (let r = 0; r < SIZE; r++) {
+                const clueCell = document.createElement('div');
+                clueCell.className = 'clue-cell';
+                rowClues[r].forEach(num => {
+                    const span = document.createElement('span');
+                    span.textContent = num;
+                    clueCell.appendChild(span);
+                });
+                cluesLeftEl.appendChild(clueCell);
+            }
+
+            // 渲染顶部列提示
+            const { colClues } = generateAllClues(TARGET);
+            cluesTopEl.innerHTML = '';
+            for (let c = 0; c < SIZE; c++) {
+                const clueCell = document.createElement('div');
+                clueCell.className = 'clue-cell';
+                colClues[c].forEach(num => {
+                    const span = document.createElement('span');
+                    span.textContent = num;
+                    clueCell.appendChild(span);
+                });
+                cluesTopEl.appendChild(clueCell);
+            }
+
+            // 渲染模式切换按钮
+            btnFill.className = 'mode-btn';
+            btnCross.className = 'mode-btn';
+            if (currentMode === 'fill') {
+                btnFill.classList.add('active-fill');
+            } else {
+                btnCross.classList.add('active-cross');
+            }
+        }
+
+        // --- 4. 交互逻辑 (双模式切换) ---
+        function handleClick(row, col) {
+            if (gameEnded) return;
+
+            const currentState = boardState[row][col];
+            
+            if (currentMode === 'fill') {
+                // 填方块模式： 空 -> 实心； 实心 -> 空； 叉叉 -> 实心
+                if (currentState === 0) boardState[row][col] = 1;
+                else if (currentState === 1) boardState[row][col] = 0;
+                else if (currentState === -1) boardState[row][col] = 1;
+            } else if (currentMode === 'cross') {
+                // 打叉模式： 空 -> 叉叉； 叉叉 -> 空； 实心 -> 叉叉
+                if (currentState === 0) boardState[row][col] = -1;
+                else if (currentState === -1) boardState[row][col] = 0;
+                else if (currentState === 1) boardState[row][col] = -1;
+            }
+
+            render();
+            checkWin();
+        }
+
+        // --- 5. 胜利判定规则 ---
+        function checkWin() {
+            for (let r = 0; r < SIZE; r++) {
+                for (let c = 0; c < SIZE; c++) {
+                    const targetVal = TARGET[r][c];
+                    const boardVal = boardState[r][c];
+                    
+                    // 必须满足：目标1必须等于实心，目标0必须等于叉叉
+                    if (targetVal === 1 && boardVal !== 1) return false;
+                    if (targetVal === 0 && boardVal !== -1) return false;
+                }
+            }
+            // 全完美匹配
+            gameEnded = true;
+            winModal.classList.add('show');
+        }
+
+        // --- 6. 初始化与重置 ---
+        function initGame() {
+            boardState = Array(SIZE).fill().map(() => Array(SIZE).fill(0));
+            gameEnded = false;
+            winModal.classList.remove('show');
+            currentMode = 'fill';
+            render();
+        }
+
+        // --- 7. 事件绑定 ---
+        btnFill.addEventListener('click', () => {
+            currentMode = 'fill';
+            render();
+        });
+        btnCross.addEventListener('click', () => {
+            currentMode = 'cross';
+            render();
+        });
+        resetBtn.addEventListener('click', initGame);
+
+        // 启动游戏
+        initGame();
+
+    })();
+</script>
+</body>
+</html>

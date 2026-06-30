@@ -6,11 +6,11 @@
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-    <meta name="theme-color" content="#1a120e" />
-    <title>暗棋 · 極簡 PWA</title>
-    <link rel="manifest" href="./manifest.json" />
-    <link rel="apple-touch-icon" href="https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/265f.png" />
-    <script src="https://cdn.tailwindcss.com"></script>
+    <meta name="theme-color" content="#0d0a07" />
+    <title>暗棋 V5 · 極致重設計</title>
+
+    <script src="https://cdn.tailwindcss.com">
+    </script>
     <script>
         tailwind.config = {
             theme: {
@@ -18,30 +18,36 @@
                     colors: {
                         wood: { 50: '#f7efe6', 100: '#ede0d0', 200: '#dcc4aa', 300: '#c9a884', 400: '#b88f66', 500: '#a57850', 600: '#8a6240', 700: '#6f4d30', 800: '#543a22', 900: '#3a2818', 950: '#241810' },
                     },
-                    fontFamily: { sans: ['Inter', 'system-ui', 'sans-serif'] },
+                    fontFamily: { sans: ['Noto Serif TC', 'Inter', 'system-ui', 'sans-serif'] },
                 }
             }
         }
     </script>
     <style>
-        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; outline: none; }
-        html, body { 
-            margin: 0; padding: 0; 
-            height: 100%; 
-            overflow: hidden; 
-            font-family: 'Inter', system-ui, sans-serif; 
-            background: #1a120e; 
-            touch-action: none;
-            -webkit-user-select: none; user-select: none;
+        * {
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+            outline: none;
         }
-        #root { 
-            height: 100%; 
-            display: flex; 
-            align-items: center; 
-            justify-content: center; 
-            background: radial-gradient(ellipse at 50% 30%, #2d1e14, #120c08);
-            padding: env(safe-area-inset-top) env(safe-area-inset-right) 
-                     env(safe-area-inset-bottom) env(safe-area-inset-left);
+        html,
+        body {
+            margin: 0;
+            padding: 0;
+            height: 100%;
+            overflow: hidden;
+            font-family: 'Inter', system-ui, sans-serif;
+            background: #0d0a07;
+            touch-action: none;
+            -webkit-user-select: none;
+            user-select: none;
+        }
+        #root {
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: radial-gradient(ellipse at 50% 20%, #2a1f16 0%, #150f0a 50%, #0a0705 100%);
+            padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
         }
         .app-container {
             width: 100%;
@@ -54,7 +60,8 @@
             gap: 8px;
             overflow: hidden;
         }
-        .top-bar, .bottom-bar {
+        .top-bar,
+        .bottom-bar {
             flex-shrink: 0;
             z-index: 10;
         }
@@ -67,7 +74,7 @@
             background: rgba(30, 22, 16, 0.6);
             backdrop-filter: blur(8px);
             border-radius: 20px;
-            border: 1px solid rgba(200,170,130,0.12);
+            border: 1px solid rgba(200, 170, 130, 0.12);
         }
         .bottom-bar {
             display: grid;
@@ -82,21 +89,23 @@
             font-size: 0.95rem;
             background: rgba(60, 44, 32, 0.5);
             backdrop-filter: blur(4px);
-            border: 1px solid rgba(200,170,130,0.15);
+            border: 1px solid rgba(200, 170, 130, 0.15);
             color: #d0c0a8;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
             transition: transform 0.1s, background 0.1s;
             cursor: pointer;
             touch-action: manipulation;
         }
-        .bottom-bar button:active { transform: scale(0.96); }
+        .bottom-bar button:active {
+            transform: scale(0.96);
+        }
         .bottom-bar .btn-primary {
             background: linear-gradient(135deg, #8a6240, #6f4d30);
             color: #f0e6d8;
-            border-color: rgba(200,170,130,0.3);
+            border-color: rgba(200, 170, 130, 0.3);
         }
         .bottom-bar .btn-secondary {
-            background: rgba(30,22,16,0.5);
+            background: rgba(30, 22, 16, 0.5);
             color: #c9b89c;
         }
         .board-area {
@@ -111,20 +120,20 @@
             width: 100%;
             max-height: 100%;
             aspect-ratio: 4 / 8;
-            background: rgba(84, 58, 34, 0.3);
+            background: linear-gradient(145deg, rgba(80, 60, 40, 0.4), rgba(40, 28, 18, 0.6));
             backdrop-filter: blur(4px);
-            border-radius: 24px;
-            padding: 6px;
-            border: 1px solid rgba(200,170,130,0.12);
-            box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+            border-radius: 20px;
+            padding: 8px;
+            border: 1px solid rgba(200, 170, 130, 0.1);
+            box-shadow: 0 12px 48px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(200, 170, 130, 0.08);
         }
         .board-inner {
             width: 100%;
             height: 100%;
-            background: rgba(165, 120, 80, 0.15);
-            border-radius: 18px;
-            padding: 4px;
-            box-shadow: inset 0 2px 12px rgba(255,215,140,0.05);
+            background: linear-gradient(180deg, rgba(139, 109, 74, 0.12), rgba(100, 78, 52, 0.08));
+            border-radius: 14px;
+            padding: 5px;
+            box-shadow: none;
             position: relative;
         }
         .board-grid {
@@ -136,17 +145,39 @@
             height: 100%;
         }
         .cell {
-            background: radial-gradient(circle at 30% 30%, rgba(200,170,130,0.2), rgba(140,110,80,0.08));
+            background: radial-gradient(circle at 30% 30%, rgba(200, 170, 130, 0.2), rgba(140, 110, 80, 0.08));
             border-radius: 8px;
-            border: 1px solid rgba(180,150,110,0.15);
+            border: 1px solid rgba(180, 150, 110, 0.15);
             display: flex;
             align-items: center;
             justify-content: center;
             transition: box-shadow 0.15s;
             position: relative;
         }
-        .cell-highlight-move { box-shadow: inset 0 0 0 2px rgba(120,200,120,0.6), 0 0 20px rgba(120,200,120,0.15); }
-        .cell-highlight-capture { box-shadow: inset 0 0 0 2px rgba(230,120,120,0.6), 0 0 20px rgba(230,120,120,0.15); }
+        .cell-highlight-move {
+            box-shadow: inset 0 0 0 2px rgba(120, 200, 120, 0.6), 0 0 20px rgba(120, 200, 120, 0.15);
+            position: relative;
+        }
+        .cell-highlight-move::after {
+            content: "";
+            position: absolute;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: rgba(120, 200, 120, 0.4);
+            border: 2px solid rgba(120, 200, 120, 0.7);
+        }
+        .cell-highlight-capture {
+            box-shadow: inset 0 0 0 2px rgba(230, 120, 120, 0.6), 0 0 20px rgba(230, 120, 120, 0.15);
+            position: relative;
+        }
+        .cell-highlight-capture::after {
+            content: "✕";
+            position: absolute;
+            font-size: 18px;
+            color: rgba(230, 120, 120, 0.6);
+            font-weight: 900;
+        }
         .piece {
             width: 88%;
             height: 88%;
@@ -157,47 +188,92 @@
             font-weight: 900;
             font-size: clamp(1.4rem, 5.5vw, 2.4rem);
             color: white;
-            text-shadow: 0 2px 8px rgba(0,0,0,0.5);
-            box-shadow: 0 4px 0 rgba(0,0,0,0.2), 0 8px 20px rgba(0,0,0,0.3);
-            transition: transform 0.1s, box-shadow 0.1s;
+            text-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
+            box-shadow: 0 4px 0 rgba(0, 0, 0, 0.2), 0 8px 20px rgba(0, 0, 0, 0.3);
+            transition: transform 0.15s ease, box-shadow 0.15s ease;
             cursor: pointer;
             touch-action: manipulation;
             position: relative;
             line-height: 1;
             padding: 0;
+            will-change: transform;
+        }
+        .piece:active {
+            transform: scale(0.93);
         }
         .piece-red {
-            background: radial-gradient(circle at 35% 30%, #e74c3c, #c0392b, #922b21);
-            border: 1.5px solid rgba(255,200,150,0.4);
+            background: radial-gradient(circle at 35% 30%, #e86050, #c0392b, #922b21);
+            border: 1.5px solid rgba(255, 200, 150, 0.35);
+            box-shadow: 0 3px 0 rgba(0, 0, 0, 0.25), 0 6px 16px rgba(0, 0, 0, 0.35);
         }
         .piece-black {
-            background: radial-gradient(circle at 35% 30%, #5a5a5a, #2c2c2c, #1a1a1a);
-            border: 1.5px solid rgba(200,200,200,0.2);
+            background: radial-gradient(circle at 35% 30%, #6a6a6a, #3a3a3a, #1a1a1a);
+            border: 1.5px solid rgba(200, 200, 200, 0.15);
+            box-shadow: 0 3px 0 rgba(0, 0, 0, 0.25), 0 6px 16px rgba(0, 0, 0, 0.35);
         }
         .piece-back {
             background: radial-gradient(circle at 35% 30%, #8a6e4b, #543a22, #2d1f12);
-            border: 1px solid rgba(160,130,90,0.3);
+            border: 1px solid rgba(160, 130, 90, 0.3);
         }
         .piece-back::after {
             content: "♟";
             position: absolute;
             font-size: clamp(1rem, 4vw, 1.6rem);
-            color: rgba(200,180,150,0.2);
+            color: rgba(200, 180, 150, 0.2);
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
             pointer-events: none;
         }
         .piece-selected {
-            ring: 3px solid #fbbf24;
-            ring-offset: 2px;
-            ring-offset-color: rgba(20,14,10,0.6);
+            box-shadow: 0 0 0 3px #fbbf24, 0 0 0 5px rgba(251, 191, 36, 0.3), 0 4px 0 rgba(0, 0, 0, 0.25), 0 8px 20px rgba(0, 0, 0, 0.35) !important;
+            transform: scale(1.05);
         }
+        .piece-enter {
+            animation: piecePop 0.28s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+        }
+        @keyframes piecePop {
+            0% {
+                transform: scale(0.85);
+                opacity: 0.6;
+            }
+            100% {
+                transform: scale(1);
+                opacity: 1;
+            }
+        }
+        .piece-enter.piece-selected {
+            animation: piecePopSelected 0.28s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+        }
+        @keyframes piecePopSelected {
+            0% {
+                transform: scale(0.85);
+                opacity: 0.6;
+            }
+            100% {
+                transform: scale(1.05);
+                opacity: 1;
+            }
+        }
+        .cell-enter {
+            animation: cellPop 0.3s ease-out forwards;
+        }
+        @keyframes cellPop {
+            0% {
+                transform: scale(0.92);
+                opacity: 0;
+            }
+            100% {
+                transform: scale(1);
+                opacity: 1;
+            }
+        }
+        /* 勝利覆蓋層動畫 — 完全不使用內聯 style，由 class 控制 */
         .victory-overlay {
             position: absolute;
             inset: 0;
-            background: rgba(0,0,0,0.85);
-            backdrop-filter: blur(8px);
+            background: rgba(0, 0, 0, 0.88);
+            backdrop-filter: blur(12px);
             border-radius: inherit;
             display: flex;
             flex-direction: column;
@@ -205,52 +281,122 @@
             justify-content: center;
             z-index: 20;
             gap: 12px;
+            opacity: 0;
+            animation: victoryOverlayFade 0.6s ease 0.1s forwards;
+        }
+        @keyframes victoryOverlayFade {
+            0% {
+                opacity: 0;
+            }
+            100% {
+                opacity: 1;
+            }
         }
         .victory-text {
             font-size: clamp(2rem, 8vw, 4rem);
             font-weight: 900;
-            text-shadow: 0 4px 20px rgba(0,0,0,0.8);
+            text-shadow: 0 4px 20px rgba(0, 0, 0, 0.8);
             letter-spacing: 4px;
+            opacity: 0;
+            animation: victoryBounce 0.8s ease 0.2s forwards;
         }
-        .victory-red { color: #ff6b6b; }
-        .victory-black { color: #d0d0d0; }
+        @keyframes victoryBounce {
+            0% {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+            100% {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        .victory-red {
+            color: #ff6b6b;
+        }
+        .victory-black {
+            color: #d0d0d0;
+        }
         .victory-sub {
             font-size: clamp(1rem, 4vw, 1.3rem);
             font-weight: bold;
             color: #f7efe6;
-            background: rgba(255,255,255,0.1);
+            background: rgba(255, 255, 255, 0.08);
             padding: 4px 16px;
             border-radius: 12px;
             margin-bottom: 8px;
+            opacity: 0;
+            animation: victoryFadeIn 0.6s ease 0.4s forwards;
+        }
+        @keyframes victoryFadeIn {
+            0% {
+                opacity: 0;
+                transform: scale(0.9);
+            }
+            100% {
+                opacity: 1;
+                transform: scale(1);
+            }
         }
         .victory-overlay button {
             padding: 12px 32px;
             background: linear-gradient(135deg, #c9a884, #8a6240);
-            border: 1px solid rgba(255,255,255,0.2);
+            border: 1px solid rgba(255, 255, 255, 0.2);
             border-radius: 40px;
             font-weight: 900;
-            color: #1a120e;
+            color: #0d0a07;
             font-size: 1.1rem;
-            box-shadow: 0 4px 16px rgba(0,0,0,0.6);
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.6);
             cursor: pointer;
             transition: transform 0.1s;
+            opacity: 0;
+            animation: victoryFadeIn 0.6s ease 0.6s forwards;
         }
-        .victory-overlay button:active { transform: scale(0.95); }
+        .victory-overlay button:active {
+            transform: scale(0.95);
+        }
+        /* 响应式微调 */
+        @media (max-width: 420px) {
+            .top-bar {
+                height: 42px;
+                padding: 0 10px;
+                font-size: 0.8rem;
+            }
+            .bottom-bar {
+                height: 44px;
+                gap: 8px;
+            }
+            .bottom-bar button {
+                font-size: 0.8rem;
+                border-radius: 12px;
+            }
+            .board-wrapper {
+                padding: 4px;
+            }
+            .board-inner {
+                padding: 3px;
+            }
+            .board-grid {
+                gap: 2px;
+            }
+            .cell {
+                border-radius: 4px;
+            }
+        }
     </style>
 </head>
 <body>
     <div id="root"></div>
 
     <script type="module">
-        import React, { useState, useEffect, useCallback, useRef, memo } from 'https://cdn.jsdelivr.net/npm/react@18.2.0/+esm';
-        import ReactDOM from 'https://cdn.jsdelivr.net/npm/react-dom@18.2.0/+esm';
-        import { motion, AnimatePresence } from 'https://cdn.jsdelivr.net/npm/framer-motion@10.16.4/+esm';
-        import htm from 'https://cdn.jsdelivr.net/npm/htm@3.1.1/+esm';
+        import React, { useState, useEffect, useCallback, useRef, memo } from 'https://esm.sh/react@18.3.1';
+        import ReactDOM from 'https://esm.sh/react-dom@18.3.1/client';
+        import htm from 'https://esm.sh/htm@3.1.1';
 
         const html = htm.bind(React.createElement);
 
         // ========================= 音效系統 =========================
         let globalAudioCtx = null;
+
         function getAudioCtx() {
             try {
                 const AudioContext = window.AudioContext || window.webkitAudioContext;
@@ -264,76 +410,114 @@
         }
 
         function playFlip() {
-            const ctx = getAudioCtx(); if (!ctx) return;
+            const ctx = getAudioCtx();
+            if (!ctx) return;
             try {
-                const osc = ctx.createOscillator(); const gain = ctx.createGain();
-                osc.type = 'triangle'; osc.frequency.setValueAtTime(400, ctx.currentTime);
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(400, ctx.currentTime);
                 osc.frequency.exponentialRampToValueAtTime(100, ctx.currentTime + 0.05);
                 gain.gain.setValueAtTime(0.4, ctx.currentTime);
                 gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.06);
-                osc.connect(gain); gain.connect(ctx.destination);
-                osc.start(); osc.stop(ctx.currentTime + 0.06);
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+                osc.start();
+                osc.stop(ctx.currentTime + 0.06);
             } catch (_) {}
         }
 
         function playMove() {
-            const ctx = getAudioCtx(); if (!ctx) return;
+            const ctx = getAudioCtx();
+            if (!ctx) return;
             try {
-                const osc = ctx.createOscillator(); const gain = ctx.createGain();
-                osc.type = 'sine'; osc.frequency.setValueAtTime(280, ctx.currentTime);
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(280, ctx.currentTime);
                 osc.frequency.exponentialRampToValueAtTime(120, ctx.currentTime + 0.08);
                 gain.gain.setValueAtTime(0.3, ctx.currentTime);
                 gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.08);
-                osc.connect(gain); gain.connect(ctx.destination);
-                osc.start(); osc.stop(ctx.currentTime + 0.08);
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+                osc.start();
+                osc.stop(ctx.currentTime + 0.08);
             } catch (_) {}
         }
 
         function playCapture() {
-            const ctx = getAudioCtx(); if (!ctx) return;
+            const ctx = getAudioCtx();
+            if (!ctx) return;
             try {
-                const osc = ctx.createOscillator(); const gain = ctx.createGain();
-                osc.type = 'square'; osc.frequency.setValueAtTime(150, ctx.currentTime);
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                osc.type = 'square';
+                osc.frequency.setValueAtTime(150, ctx.currentTime);
                 osc.frequency.exponentialRampToValueAtTime(40, ctx.currentTime + 0.12);
                 gain.gain.setValueAtTime(0.3, ctx.currentTime);
                 gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.15);
-                osc.connect(gain); gain.connect(ctx.destination);
-                osc.start(); osc.stop(ctx.currentTime + 0.15);
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+                osc.start();
+                osc.stop(ctx.currentTime + 0.15);
                 const bufferSize = ctx.sampleRate * 0.05;
                 const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
                 const data = buffer.getChannelData(0);
                 for (let i = 0; i < bufferSize; i++) data[i] = (Math.random() * 2 - 1) * Math.exp(-i / bufferSize * 5);
-                const noise = ctx.createBufferSource(); noise.buffer = buffer;
-                const noiseGain = ctx.createGain(); noiseGain.gain.setValueAtTime(0.3, ctx.currentTime);
+                const noise = ctx.createBufferSource();
+                noise.buffer = buffer;
+                const noiseGain = ctx.createGain();
+                noiseGain.gain.setValueAtTime(0.3, ctx.currentTime);
                 noiseGain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.05);
-                noise.connect(noiseGain); noiseGain.connect(ctx.destination);
-                noise.start(); noise.stop(ctx.currentTime + 0.05);
+                noise.connect(noiseGain);
+                noiseGain.connect(ctx.destination);
+                noise.start();
+                noise.stop(ctx.currentTime + 0.05);
             } catch (_) {}
         }
 
         function playWin() {
-            const ctx = getAudioCtx(); if (!ctx) return;
+            const ctx = getAudioCtx();
+            if (!ctx) return;
             try {
                 const notes = [523.25, 659.25, 783.99, 1046.50];
                 notes.forEach((freq, i) => {
-                    const osc = ctx.createOscillator(); const gain = ctx.createGain();
-                    osc.type = 'sine'; osc.frequency.setValueAtTime(freq, ctx.currentTime + i * 0.08);
+                    const osc = ctx.createOscillator();
+                    const gain = ctx.createGain();
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(freq, ctx.currentTime + i * 0.08);
                     gain.gain.setValueAtTime(0.3, ctx.currentTime + i * 0.08);
                     gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + i * 0.08 + 0.4);
-                    osc.connect(gain); gain.connect(ctx.destination);
-                    osc.start(ctx.currentTime + i * 0.08); osc.stop(ctx.currentTime + i * 0.08 + 0.4);
+                    osc.connect(gain);
+                    gain.connect(ctx.destination);
+                    osc.start(ctx.currentTime + i * 0.08);
+                    osc.stop(ctx.currentTime + i * 0.08 + 0.4);
                 });
             } catch (_) {}
         }
 
         const playSound = (type) => {
-            switch(type) { case 'flip': playFlip(); break; case 'move': playMove(); break; case 'capture': playCapture(); break; case 'win': playWin(); break; }
+            switch (type) {
+                case 'flip':
+                    playFlip();
+                    break;
+                case 'move':
+                    playMove();
+                    break;
+                case 'capture':
+                    playCapture();
+                    break;
+                case 'win':
+                    playWin();
+                    break;
+            }
         };
 
         // ========================= 遊戲邏輯 =========================
         const NAMES = { red: ['', '帥', '仕', '相', '俥', '傌', '炮', '兵'], black: ['', '將', '士', '象', '車', '馬', '砲', '卒'] };
+
         function getPieceName(color, rank) { return NAMES[color]?.[rank] || '?'; }
-        
+
         function canCapture(attackerRank, defenderRank) {
             if (attackerRank === 1 && defenderRank === 7) return false;
             if (attackerRank === 7) return defenderRank === 1 || defenderRank === 7;
@@ -360,7 +544,8 @@
                 const j = Math.floor(Math.random() * (i + 1));
                 [pieces[i], pieces[j]] = [pieces[j], pieces[i]];
             }
-            const board = []; let idx = 0;
+            const board = [];
+            let idx = 0;
             for (let r = 0; r < 4; r++) {
                 const row = [];
                 for (let c = 0; c < 8; c++) row.push({ ...pieces[idx++], faceUp: false });
@@ -372,28 +557,44 @@
         function generateMoves(board, row, col) {
             const piece = board[row]?.[col];
             if (!piece || !piece.faceUp) return [];
-            const moves = []; const color = piece.color; const rank = piece.rank; const isCannon = rank === 6;
-            const dirs = [[-1,0],[1,0],[0,-1],[0,1]];
+            const moves = [];
+            const color = piece.color;
+            const rank = piece.rank;
+            const isCannon = rank === 6;
+            const dirs = [
+                [-1, 0],
+                [1, 0],
+                [0, -1],
+                [0, 1]
+            ];
             for (const [dr, dc] of dirs) {
                 if (isCannon) {
-                    const nr = row + dr, nc = col + dc;
+                    const nr = row + dr,
+                        nc = col + dc;
                     if (nr >= 0 && nr <= 3 && nc >= 0 && nc <= 7 && !board[nr][nc]) {
                         moves.push({ row: nr, col: nc, type: 'move' });
                     }
-                    let tr = row + dr, tc = col + dc; let blockFound = false;
+                    let tr = row + dr,
+                        tc = col + dc;
+                    let blockFound = false;
                     while (tr >= 0 && tr <= 3 && tc >= 0 && tc <= 7) {
                         const target = board[tr][tc];
-                        if (!target) { tr += dr; tc += dc; continue; }
-                        if (!blockFound) { blockFound = true; tr += dr; tc += dc; continue; }
+                        if (!target) { tr += dr;
+                            tc += dc; continue; }
+                        if (!blockFound) { blockFound = true;
+                            tr += dr;
+                            tc += dc; continue; }
                         if (target.faceUp && target.color !== color) moves.push({ row: tr, col: tc, type: 'capture' });
                         break;
                     }
                 } else {
-                    const nr = row + dr, nc = col + dc;
+                    const nr = row + dr,
+                        nc = col + dc;
                     if (nr < 0 || nr > 3 || nc < 0 || nc > 7) continue;
                     const target = board[nr][nc];
                     if (!target) moves.push({ row: nr, col: nc, type: 'move' });
-                    else if (target.faceUp && target.color !== color && canCapture(rank, target.rank)) moves.push({ row: nr, col: nc, type: 'capture' });
+                    else if (target.faceUp && target.color !== color && canCapture(rank, target.rank)) moves.push({ row: nr,
+                        col: nc, type: 'capture' });
                 }
             }
             return moves;
@@ -402,22 +603,42 @@
         function cloneBoard(board) { return board.map(row => row.map(cell => cell ? { ...cell } : null)); }
 
         // ========================= React 組件 =========================
-        const Piece = memo(({ piece, isSelected, onClick }) => {
+        const Piece = memo(({ piece, isSelected, onClick, index }) => {
             if (!piece) return null;
             const { color, rank, faceUp } = piece;
-            const isRed = color === 'red'; const name = faceUp ? getPieceName(color, rank) : ''; const isBack = !faceUp;
+            const isRed = color === 'red';
+            const name = faceUp ? getPieceName(color, rank) : '';
+            const isBack = !faceUp;
+
             let className = `piece ${isBack ? 'piece-back' : (isRed ? 'piece-red' : 'piece-black')}`;
             if (isSelected) className += ' piece-selected';
-            const style = { fontSize: faceUp ? 'clamp(1.4rem, 5.5vw, 2.4rem)' : '0', color: faceUp ? (isRed ? '#fff8f0' : '#f0f0f0') : 'transparent' };
-            return html`<${motion.div} className=${className} style=${style} initial=${{ scale: 0.85 }} animate=${{ scale: 1 }} transition=${{ type: 'spring', stiffness: 350, damping: 28, mass: 0.6 }} onClick=${onClick}>${faceUp ? name : ''}<//>`;
+            className += ' piece-enter';
+
+            const style = {
+                fontSize: faceUp ? 'clamp(1.4rem, 5.5vw, 2.4rem)' : '0',
+                color: faceUp ? (isRed ? '#fff8f0' : '#f0f0f0') : 'transparent',
+                animationDelay: `${(index || 0) * 0.008}s`,
+            };
+
+            return html `<div className=${className} style=${style} onClick=${onClick} onTouchEnd=${onClick}>${faceUp ? name : ''}</div>`;
         });
 
         const Cell = memo(({ row, col, piece, isHighlight, highlightType, isSelected, onCellClick, index }) => {
-            const handleClick = (e) => { e.preventDefault(); onCellClick(row, col); };
+            const handleClick = (e) => {
+                e.preventDefault();
+                onCellClick(row, col);
+            };
             let highlightClass = '';
-            if (isHighlight) highlightClass = highlightType === 'capture' ? 'cell-highlight-capture' : 'cell-highlight-move';
-            const className = `cell ${highlightClass}`;
-            return html`<${motion.div} className=${className} initial=${{ opacity: 0, scale: 0.92 }} animate=${{ opacity: 1, scale: 1 }} transition=${{ delay: index * 0.005, type: 'spring', stiffness: 400, damping: 30 }} onTouchEnd=${handleClick} onClick=${handleClick}>${piece && html`<${Piece} piece=${piece} isSelected=${isSelected} onClick=${handleClick} />`}<//>`;
+            if (isHighlight) highlightClass = highlightType === 'capture' ? 'cell-highlight-capture' :
+            'cell-highlight-move';
+            const className = `cell ${highlightClass} cell-enter`;
+            const style = { animationDelay: `${(index || 0) * 0.005}s` };
+
+            return html `
+                <div className=${className} style=${style} onTouchEnd=${handleClick} onClick=${handleClick}>
+                    ${piece && html`<${Piece} piece=${piece} isSelected=${isSelected} onClick=${handleClick} index=${index} />`}
+                </div>
+            `;
         });
 
         // ========================= 主 App =========================
@@ -433,8 +654,10 @@
             const [gameMode, setGameMode] = useState('pvp');
             const [aiColor, setAiColor] = useState(null);
             const [captureGeneralMode, setCaptureGeneralMode] = useState(false);
+            const [redCaptures, setRedCaptures] = useState(0);
+            const [blackCaptures, setBlackCaptures] = useState(0);
+            const [lastMove, setLastMove] = useState(null);
 
-            // 1. 修正：反映暗棋真實階級的動態權重，讓 AI 知道大棋有多重要
             const BASE_PIECE_VALUES = { 1: 10000, 2: 7000, 3: 4500, 4: 3000, 5: 1500, 6: 5000, 7: 1000 };
             const aiHistoryRef = useRef(new Map());
 
@@ -453,16 +676,15 @@
                         const p = board[r][c];
                         if (p && p.faceUp && p.color === enemy) {
                             const moves = generateMoves(board, r, c);
-                            if (moves.some(m => m.row === kingPos.row && m.col === kingPos.col && m.type === 'capture')) return true;
+                            if (moves.some(m => m.row === kingPos.row && m.col === kingPos.col && m.type === 'capture'))
+                                return true;
                         }
                     }
                 }
                 return false;
             }, []);
 
-            // 2. 修正：精確的「預判威脅矩陣」，AI 現在懂得逃跑與避開砲口
             const evaluateBoardDynamic = useCallback((board, colorToEval) => {
-                let score = 0;
                 let myScore = 0;
                 let enemyScore = 0;
                 const enemyColor = colorToEval === 'red' ? 'black' : 'red';
@@ -479,14 +701,12 @@
                     }
                 }
 
-                // 計算基礎價值與攻擊意圖
                 for (let r = 0; r < 4; r++) {
                     for (let c = 0; c < 8; c++) {
                         const p = board[r][c];
                         if (!p || !p.faceUp) continue;
-
                         const isMine = p.color === colorToEval;
-                        let val = BASE_PIECE_VALUES[p.rank];
+                        let val = BASE_PIECE_VALUES[p.rank] || 0;
 
                         if (p.rank === 7) {
                             if (isMine && !enemyGeneralAlive) val = 100;
@@ -495,14 +715,10 @@
                         }
 
                         const moves = generateMoves(board, r, c);
-                        if (p.rank === 6) val = moves.length > 0 ? val + (moves.length * 100) : val * 0.5;
-
                         let mobilityScore = moves.length * 20;
                         if (moves.length === 0 && p.rank !== 6) val *= 0.7;
 
                         let pieceTotal = val + mobilityScore;
-
-                        // AI 發現自己可以吃人，增加分數獎勵 (強化攻擊性)
                         for (const mv of moves) {
                             if (mv.type === 'capture') {
                                 const target = board[mv.row][mv.col];
@@ -515,7 +731,6 @@
                     }
                 }
 
-                // 核心防禦矩陣：如果 AI 的棋子被敵人鎖定(包含隔山打牛的砲)，直接扣除 80% 價值，逼迫 AI 逃跑或反殺
                 for (let r = 0; r < 4; r++) {
                     for (let c = 0; c < 8; c++) {
                         const p = board[r][c];
@@ -525,7 +740,7 @@
                                 if (mv.type === 'capture') {
                                     const target = board[mv.row][mv.col];
                                     if (target && target.color === colorToEval) {
-                                        myScore -= BASE_PIECE_VALUES[target.rank] * 0.8; // 極度恐慌懲罰
+                                        myScore -= BASE_PIECE_VALUES[target.rank] * 0.8;
                                     }
                                 }
                             }
@@ -533,7 +748,7 @@
                     }
                 }
 
-                score = myScore - enemyScore;
+                let score = myScore - enemyScore;
                 if (captureGeneralMode && isKingInDanger(board, colorToEval)) score -= 20000;
                 return score;
             }, [captureGeneralMode, isKingInDanger]);
@@ -545,7 +760,8 @@
                         const p = board[r][c];
                         if (p && p.faceUp && p.color === color) {
                             const ms = generateMoves(board, r, c);
-                            ms.forEach(m => moves.push({ fromRow: r, fromCol: c, toRow: m.row, toCol: m.col, type: m.type }));
+                            ms.forEach(m => moves.push({ fromRow: r, fromCol: c, toRow: m.row, toCol: m.col, type: m
+                                    .type }));
                         }
                     }
                 }
@@ -554,17 +770,21 @@
 
             const simulateMove = useCallback((board, fromRow, fromCol, toRow, toCol) => {
                 const nb = cloneBoard(board);
-                const piece = nb[fromRow][fromCol]; nb[toRow][toCol] = piece; nb[fromRow][fromCol] = null;
+                const piece = nb[fromRow][fromCol];
+                nb[toRow][toCol] = piece;
+                nb[fromRow][fromCol] = null;
                 return nb;
             }, []);
 
             const alphaBeta = useCallback((board, depth, alpha, beta, isMaximizing, color, currentDepth = 0) => {
                 const moves = generateAllMoves(board, color);
-                if (depth === 0 || moves.length === 0) return { score: evaluateBoardDynamic(board, aiColor), move: null };
+                if (depth === 0 || moves.length === 0) {
+                    return { score: evaluateBoardDynamic(board, aiColor), move: null };
+                }
 
-                // 優先計算吃子路線，加速剪枝
                 moves.sort((a, b) => {
-                    const aTarget = board[a.toRow][a.toCol]; const bTarget = board[b.toRow][b.toCol];
+                    const aTarget = board[a.toRow][a.toCol];
+                    const bTarget = board[b.toRow][b.toCol];
                     const aScore = aTarget ? BASE_PIECE_VALUES[aTarget.rank] : 0;
                     const bScore = bTarget ? BASE_PIECE_VALUES[bTarget.rank] : 0;
                     return bScore - aScore;
@@ -576,26 +796,28 @@
                 for (const mv of moves) {
                     const nb = simulateMove(board, mv.fromRow, mv.fromCol, mv.toRow, mv.toCol);
                     const target = board[mv.toRow][mv.toCol];
-                    
+
                     if (captureGeneralMode && target && target.rank === 1 && target.color !== color) {
                         return { score: isMaximizing ? 999999 : -999999, move: mv };
                     }
-                    
+
                     const nextColor = color === 'red' ? 'black' : 'red';
                     const moveHash = `${color}-${mv.fromRow}${mv.fromCol}-${mv.toRow}${mv.toCol}`;
                     const penalty = (aiHistoryRef.current.get(moveHash) || 0) * 2000;
 
                     const result = alphaBeta(nb, depth - 1, alpha, beta, !isMaximizing, nextColor, currentDepth + 1);
-                    
+
                     let currentScore = result.score;
                     if (isMaximizing) currentScore -= penalty;
                     else currentScore += penalty;
 
                     if (isMaximizing) {
-                        if (currentScore > bestScore) { bestScore = currentScore; bestMove = mv; }
+                        if (currentScore > bestScore) { bestScore = currentScore;
+                            bestMove = mv; }
                         alpha = Math.max(alpha, bestScore);
                     } else {
-                        if (currentScore < bestScore) { bestScore = currentScore; bestMove = mv; }
+                        if (currentScore < bestScore) { bestScore = currentScore;
+                            bestMove = mv; }
                         beta = Math.min(beta, bestScore);
                     }
                     if (alpha >= beta) break;
@@ -612,7 +834,8 @@
                 for (let r = 0; r < 4; r++) {
                     for (let c = 0; c < 8; c++) {
                         const p = board[r][c];
-                        if (p) { if (p.faceUp) totalCounts[p.color][p.rank]--; else unrevealedCount++; }
+                        if (p) { if (p.faceUp) totalCounts[p.color][p.rank]--;
+                            else unrevealedCount++; }
                     }
                 }
                 return { pool: totalCounts, total: unrevealedCount };
@@ -621,44 +844,87 @@
             const checkWinCondition = useCallback((newBoard) => {
                 let hasUnrevealed = false;
                 for (let r = 0; r < 4; r++) {
-                    for (let c = 0; c < 8; c++) { if (newBoard[r][c] && !newBoard[r][c].faceUp) { hasUnrevealed = true; break; } }
+                    for (let c = 0; c < 8; c++) {
+                        if (newBoard[r][c] && !newBoard[r][c].faceUp) { hasUnrevealed = true; break; }
+                    }
                     if (hasUnrevealed) break;
                 }
                 if (hasUnrevealed) return false;
 
-                let redPieces = 0, blackPieces = 0; let redMoves = 0, blackMoves = 0;
+                let redPieces = 0,
+                    blackPieces = 0;
+                let redMoves = 0,
+                    blackMoves = 0;
                 for (let r = 0; r < 4; r++) {
                     for (let c = 0; c < 8; c++) {
-                        const p = newBoard[r][c]; if (!p) continue;
+                        const p = newBoard[r][c];
+                        if (!p) continue;
                         const moves = generateMoves(newBoard, r, c);
-                        if (p.color === 'red') { redPieces++; redMoves += moves.length; } else { blackPieces++; blackMoves += moves.length; }
+                        if (p.color === 'red') { redPieces++;
+                            redMoves += moves.length; } else { blackPieces++;
+                            blackMoves += moves.length; }
                     }
                 }
-                if (redPieces === 0 || redMoves === 0) { setGameOver(true); setWinner('black'); setWinReason(redPieces === 0 ? '紅方被全殲' : '紅方無子可走'); playSound('win'); return true; }
-                if (blackPieces === 0 || blackMoves === 0) { setGameOver(true); setWinner('red'); setWinReason(blackPieces === 0 ? '黑方被全殲' : '黑方無子可走'); playSound('win'); return true; }
+                if (redPieces === 0 || redMoves === 0) {
+                    setGameOver(true);
+                    setWinner('black');
+                    setWinReason(redPieces === 0 ? '紅方被全殲' : '紅方無子可走');
+                    playSound('win');
+                    return true;
+                }
+                if (blackPieces === 0 || blackMoves === 0) {
+                    setGameOver(true);
+                    setWinner('red');
+                    setWinReason(blackPieces === 0 ? '黑方被全殲' : '黑方無子可走');
+                    playSound('win');
+                    return true;
+                }
                 return false;
             }, []);
 
             const executeMove = useCallback((fromRow, fromCol, toRow, toCol) => {
                 if (gameOver) return;
                 const newBoard = cloneBoard(board);
-                const attacker = newBoard[fromRow][fromCol]; const target = newBoard[toRow][toCol];
-                if (target) playSound('capture'); else playSound('move');
-                
-                newBoard[toRow][toCol] = attacker; newBoard[fromRow][fromCol] = null;
+                const attacker = newBoard[fromRow][fromCol];
+                const target = newBoard[toRow][toCol];
+                if (target) playSound('capture');
+                else playSound('move');
 
+                newBoard[toRow][toCol] = attacker;
+                newBoard[fromRow][fromCol] = null;
+                if (target) {
+                    if (target.color === 'red') setBlackCaptures(p => p + 1);
+                    else setRedCaptures(p => p + 1);
+                }
+                setLastMove({ fromRow, fromCol, toRow, toCol });
+
+                // 奪帥模式：吃掉將/帥直接勝利
                 if (captureGeneralMode && target && target.rank === 1) {
-                    setBoard(newBoard); setGameOver(true); setWinner(attacker.color === 'red' ? 'red' : 'black');
+                    setBoard(newBoard);
+                    setGameOver(true);
+                    setWinner(attacker.color === 'red' ? 'red' : 'black');
                     setWinReason(target.color === 'red' ? '紅方主帥被奪' : '黑方主將被奪');
-                    setSelectedPos(null); setHighlightCells([]); playSound('win'); return;
+                    setSelectedPos(null);
+                    setHighlightCells([]);
+                    playSound('win');
+                    return;
                 }
 
-                if (checkWinCondition(newBoard)) { setBoard(newBoard); setSelectedPos(null); setHighlightCells([]); return; }
+                // 一般勝負判定
+                if (checkWinCondition(newBoard)) {
+                    setBoard(newBoard);
+                    setSelectedPos(null);
+                    setHighlightCells([]);
+                    return;
+                }
                 const nextTurn = currentTurn === 'red' ? 'black' : 'red';
-                setBoard(newBoard); setCurrentTurn(nextTurn); setSelectedPos(null); setHighlightCells([]);
+                setBoard(newBoard);
+                setCurrentTurn(nextTurn);
+                setSelectedPos(null);
+                setHighlightCells([]);
             }, [board, currentTurn, gameOver, checkWinCondition, captureGeneralMode]);
 
-            // 3. 修正：精算翻牌期望值 vs 實體走法的戰略對比 (不再胡亂盲翻)
+            // AI 決策（略，與原版一致）
             const aiDecide = useCallback(() => {
                 const unrevealed = [];
                 for (let r = 0; r < 4; r++) {
@@ -672,7 +938,7 @@
                 if (allMoves.length > 0) {
                     const faceUpCount = 32 - unrevealed.length;
                     let searchDepth = 4;
-                    if (faceUpCount >= 18) searchDepth = 5; // 進入殘局提高預判深度
+                    if (faceUpCount >= 18) searchDepth = 5;
                     bestMoveResult = alphaBeta(board, searchDepth, -Infinity, Infinity, true, aiColor);
                 }
 
@@ -681,15 +947,21 @@
 
                 if (unrevealed.length > 0) {
                     const { pool, total } = getUnknownPiecePool(board);
-                    
+
                     for (const target of unrevealed) {
                         let expectedValue = 0;
                         let surroundingDanger = 0;
                         let surroundingPrey = 0;
-                        
-                        const dirs = [[-1,0],[1,0],[0,-1],[0,1]];
+
+                        const dirs = [
+                            [-1, 0],
+                            [1, 0],
+                            [0, -1],
+                            [0, 1]
+                        ];
                         for (const [dr, dc] of dirs) {
-                            const nr = target.row + dr, nc = target.col + dc;
+                            const nr = target.row + dr,
+                                nc = target.col + dc;
                             if (nr >= 0 && nr < 4 && nc >= 0 && nc < 8) {
                                 const adj = board[nr][nc];
                                 if (adj && adj.faceUp) {
@@ -706,7 +978,6 @@
                                     const probability = count / total;
                                     const isMine = color === aiColor;
                                     let pieceVal = BASE_PIECE_VALUES[rank];
-                                    
                                     if (isMine) expectedValue += probability * (pieceVal * 0.5 - surroundingDanger);
                                     else expectedValue -= probability * (pieceVal * 0.5 - surroundingPrey);
                                 }
@@ -729,9 +1000,6 @@
                     } else {
                         const moveScore = bestMoveResult.score;
                         const flipExpectedScore = currentBoardScore + maxExpectedValue;
-
-                        // 判斷：除非「翻棋的期望收益」遠超「安全走棋或逃命的收益」，否則堅決不翻
-                        // 給予走棋 +1500 的行動傾向，確保 AI 會優先選擇吃子跟逃命
                         if (flipExpectedScore > moveScore + 1500) {
                             executeFlip = true;
                         }
@@ -742,9 +1010,10 @@
                     playSound('flip');
                     const newBoard = cloneBoard(board);
                     newBoard[bestFlipTarget.row][bestFlipTarget.col].faceUp = true;
-                    aiHistoryRef.current.clear(); 
+                    aiHistoryRef.current.clear();
                     const nextTurn = aiColor === 'red' ? 'black' : 'red';
-                    setBoard(newBoard); setCurrentTurn(nextTurn);
+                    setBoard(newBoard);
+                    setCurrentTurn(nextTurn);
                 } else if (bestMoveResult && bestMoveResult.move) {
                     const mv = bestMoveResult.move;
                     const moveHash = `${aiColor}-${mv.fromRow}${mv.fromCol}-${mv.toRow}${mv.toCol}`;
@@ -756,7 +1025,8 @@
                     const newBoard = cloneBoard(board);
                     newBoard[u.row][u.col].faceUp = true;
                     const nextTurn = aiColor === 'red' ? 'black' : 'red';
-                    setBoard(newBoard); setCurrentTurn(nextTurn);
+                    setBoard(newBoard);
+                    setCurrentTurn(nextTurn);
                 }
             }, [board, aiColor, executeMove, alphaBeta, evaluateBoardDynamic, generateAllMoves, getUnknownPiecePool]);
 
@@ -769,8 +1039,11 @@
                 if (currentTurn === null) {
                     if (piece && !piece.faceUp) {
                         playSound('flip');
-                        const newBoard = cloneBoard(board); newBoard[row][col] = { ...piece, faceUp: true }; setBoard(newBoard);
-                        const firstColor = piece.color; setPlayerColor(firstColor);
+                        const newBoard = cloneBoard(board);
+                        newBoard[row][col] = { ...piece, faceUp: true };
+                        setBoard(newBoard);
+                        const firstColor = piece.color;
+                        setPlayerColor(firstColor);
                         if (gameMode === 'ai') setAiColor(firstColor === 'red' ? 'black' : 'red');
                         setCurrentTurn(firstColor === 'red' ? 'black' : 'red');
                     }
@@ -780,9 +1053,12 @@
                 if (selectedPos) {
                     const hit = highlightCells.find(h => h.row === row && h.col === col);
                     if (hit) { executeMove(selectedPos.row, selectedPos.col, row, col); return; }
-                    setSelectedPos(null); setHighlightCells([]);
+                    setSelectedPos(null);
+                    setHighlightCells([]);
                     if (piece && piece.faceUp && piece.color === currentTurn) {
-                        const moves = generateMoves(board, row, col); setSelectedPos({ row, col }); setHighlightCells(moves);
+                        const moves = generateMoves(board, row, col);
+                        setSelectedPos({ row, col });
+                        setHighlightCells(moves);
                     }
                     return;
                 }
@@ -790,15 +1066,22 @@
                 if (!piece) return;
                 if (!piece.faceUp) {
                     playSound('flip');
-                    const newBoard = cloneBoard(board); newBoard[row][col] = { ...piece, faceUp: true };
+                    const newBoard = cloneBoard(board);
+                    newBoard[row][col] = { ...piece, faceUp: true };
                     const nextTurn = currentTurn === 'red' ? 'black' : 'red';
                     if (checkWinCondition(newBoard)) { setBoard(newBoard); return; }
-                    setBoard(newBoard); setCurrentTurn(nextTurn); return;
+                    setBoard(newBoard);
+                    setCurrentTurn(nextTurn);
+                    return;
                 }
                 if (piece.color === currentTurn) {
-                    const moves = generateMoves(board, row, col); setSelectedPos({ row, col }); setHighlightCells(moves);
+                    const moves = generateMoves(board, row, col);
+                    setSelectedPos({ row, col });
+                    setHighlightCells(moves);
                 }
-            }, [board, currentTurn, gameOver, selectedPos, highlightCells, executeMove, gameMode, aiColor, checkWinCondition]);
+            }, [board, currentTurn, gameOver, selectedPos, highlightCells, executeMove, gameMode, aiColor,
+                checkWinCondition
+            ]);
 
             useEffect(() => {
                 if (gameOver || gameMode !== 'ai' || currentTurn === null || !aiColor || currentTurn !== aiColor) return;
@@ -807,36 +1090,55 @@
             }, [board, currentTurn, gameOver, gameMode, aiColor, aiDecide]);
 
             const handleRestart = () => {
-                playSound('move'); setBoard(createInitialBoard()); setCurrentTurn(null); setPlayerColor(null);
-                setAiColor(null); setSelectedPos(null); setHighlightCells([]); setGameOver(false); setWinner(null); setWinReason('');
+                playSound('move');
+                setBoard(createInitialBoard());
+                setCurrentTurn(null);
+                setPlayerColor(null);
+                setAiColor(null);
+                setSelectedPos(null);
+                setHighlightCells([]);
+                setGameOver(false);
+                setWinner(null);
+                setWinReason('');
+                setRedCaptures(0);
+                setBlackCaptures(0);
+                setLastMove(null);
                 aiHistoryRef.current.clear();
             };
 
-            const toggleMode = () => { playSound('move'); setGameMode(prev => prev === 'pvp' ? 'ai' : 'pvp'); handleRestart(); };
+            const toggleMode = () => {
+                playSound('move');
+                setGameMode(prev => prev === 'pvp' ? 'ai' : 'pvp');
+                handleRestart();
+            };
 
             const renderBoard = () => {
-                const cells = []; let index = 0;
+                const cells = [];
+                let index = 0;
                 for (let c = 0; c < 8; c++) {
                     for (let r = 0; r < 4; r++) {
                         const piece = board[r][c];
                         const isHighlight = highlightCells.some(h => h.row === r && h.col === c);
                         const highlightType = highlightCells.find(h => h.row === r && h.col === c)?.type || 'move';
                         const isSelected = selectedPos && selectedPos.row === r && selectedPos.col === c;
-                        cells.push(html`<${Cell} key=${`cell-${r}-${c}`} row=${r} col=${c} piece=${piece} isHighlight=${isHighlight} highlightType=${highlightType} isSelected=${isSelected} onCellClick=${handleCellClick} index=${index++} />`);
+                        cells.push(html `<${Cell} key=${`cell-${r}-${c}`} row=${r} col=${c} piece=${piece} isHighlight=${isHighlight} highlightType=${highlightType} isSelected=${isSelected} onCellClick=${handleCellClick} index=${index++} />`);
                     }
                 }
                 return cells;
             };
 
             const turnLabel = currentTurn ? (currentTurn === 'red' ? '紅方' : '黑方') : '翻牌開局';
-            const turnColor = currentTurn === 'red' ? 'bg-red-500' : (currentTurn === 'black' ? 'bg-stone-600' : 'bg-wood-500');
             const isToggleDisabled = currentTurn !== null;
 
-            return html`
-                <div className="app-container">
+            return html `
+                <div className="app-container" role="main" aria-label="暗棋遊戲">
                     <div className="top-bar">
                         <div className="flex items-center gap-3">
-                            <span className="text-wood-300 text-sm font-black tracking-wider">♟ 暗棋</span>
+                            <div className="flex items-center gap-3">
+                                <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-wood-400 to-wood-600 flex items-center justify-center text-base shadow-md" aria-hidden="true">♟</div>
+                                <span className="text-wood-300 text-sm font-black tracking-wider">暗棋</span>
+                                ${gameMode === 'ai' ? html`<span className="text-[9px] font-bold text-wood-500 bg-wood-800/40 px-2 py-0.5 rounded-md border border-wood-500/20 tracking-widest">VS 電腦</span>` : html`<span className="text-[9px] font-bold text-wood-500 bg-wood-800/40 px-2 py-0.5 rounded-md border border-wood-500/20 tracking-widest">雙人</span>`}
+                            </div>
                             <label className=${`flex items-center gap-1.5 bg-wood-800/40 px-2 py-1 rounded-lg border border-wood-500/20 shadow-inner transition-all duration-300 ${isToggleDisabled ? 'opacity-40 cursor-not-allowed' : 'cursor-pointer'}`}>
                                 <div className="relative w-7 h-4 rounded-full bg-wood-950 transition-colors duration-300" style=${{ backgroundColor: captureGeneralMode ? '#b91c1c' : '#241810' }}>
                                     <input type="checkbox" className="sr-only" checked=${captureGeneralMode} disabled=${isToggleDisabled} onChange=${() => { if (isToggleDisabled) return; playSound('flip'); setCaptureGeneralMode(!captureGeneralMode); }} />
@@ -845,32 +1147,48 @@
                                 <span className="text-[11px] text-wood-200 font-bold select-none tracking-widest whitespace-nowrap">${captureGeneralMode ? '奪帥 ON' : '奪帥 OFF'}</span>
                             </label>
                         </div>
-                        <div className="flex items-center gap-2 text-sm text-wood-300 font-bold">
-                            <span>${turnLabel}</span><div className="w-3 h-3 rounded-full ${turnColor} transition-all duration-300 shadow-lg"></div>
+                        <div className="flex items-center gap-3 text-xs">
+                            <div className="flex items-center gap-1.5 bg-wood-900/40 px-2 py-1 rounded-lg border border-wood-500/10">
+                                <div className="w-2 h-2 rounded-full bg-gradient-to-br from-red-400 to-red-700"></div>
+                                <span className="text-wood-300 font-bold">${redCaptures}</span>
+                                <span className="text-wood-600 text-[9px]">吃</span>
+                            </div>
+                            <div className="flex items-center gap-1.5 px-2 py-1 rounded-2xl bg-wood-900/60 backdrop-blur border border-wood-500/10">
+                                <div className=${"w-2.5 h-2.5 rounded-full " + (currentTurn === 'red' ? 'bg-gradient-to-br from-red-400 to-red-700 shadow-red-500/50 shadow-lg' : (currentTurn === 'black' ? 'bg-gradient-to-br from-gray-400 to-gray-700 shadow-gray-500/50 shadow-lg' : 'bg-gradient-to-br from-wood-400 to-wood-600 shadow-wood-500/50 shadow-lg'))}></div>
+                                <span className="text-wood-300 font-bold">${turnLabel}</span>
+                            </div>
+                            <div className="flex items-center gap-1.5 bg-wood-900/40 px-2 py-1 rounded-lg border border-wood-500/10">
+                                <div className="w-2 h-2 rounded-full bg-gradient-to-br from-gray-400 to-gray-700"></div>
+                                <span className="text-wood-300 font-bold">${blackCaptures}</span>
+                                <span className="text-wood-600 text-[9px]">吃</span>
+                            </div>
                         </div>
                     </div>
-                    <div className="board-area"><div className="board-wrapper"><div className="board-inner relative"><div className="board-grid"><${AnimatePresence}>${renderBoard()}<//></div>
-                                ${gameOver && winner && html`
-                                    <div className="victory-overlay">
+                    <div className="board-area"><div className="board-wrapper"><div className="board-inner relative"><div className="board-grid">${renderBoard()}</div>
+                                ${gameOver && winner ? html`
+                                    <div className="victory-overlay" key="victory-overlay">
                                         <div className="victory-text ${winner === 'red' ? 'victory-red' : 'victory-black'}">${winner === 'red' ? '紅方獲勝' : '黑方獲勝'}</div>
                                         <div className="victory-sub">${winReason}</div>
                                         <button onClick=${handleRestart}>重新新局</button>
                                     </div>
-                                `}
+                                ` : null}
                             </div></div></div>
                     <div className="bottom-bar">
-                        <button className="btn-secondary" onClick=${toggleMode}>${gameMode === 'pvp' ? '👥 雙人' : '🤖 電腦'}</button>
-                        <button className="btn-primary" onClick=${handleRestart}>↺ 重開</button>
+                        <button className="btn-secondary" onClick=${toggleMode} aria-label=${gameMode === 'pvp' ? '切換電腦模式' : '切換雙人模式'}>${gameMode === 'pvp' ? '🤖 電腦' : '👥 雙人'}</button>
+                        <button className="btn-primary" onClick=${handleRestart} aria-label="重新開始遊戲">↺ 重開</button>
                     </div>
                 </div>
             `;
         }
 
         const root = ReactDOM.createRoot(document.getElementById('root'));
-        root.render(html`<${React.StrictMode}><${App} /><//>`);
+        root.render(html `<${React.StrictMode}><${App} /></>`);
 
         if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => { navigator.serviceWorker.register('./sw.js').then(reg => console.log('ServiceWorker 註冊成功')).catch(err => console.log('本地 file:// 環境下跳過 ServiceWorker 註冊')); });
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./sw.js').then(reg => console.log('ServiceWorker 註冊成功'))
+                    .catch(err => console.log('本地 file:// 環境下跳過 ServiceWorker 註冊'));
+            });
         }
     </script>
 </body>

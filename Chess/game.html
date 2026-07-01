@@ -7,7 +7,7 @@
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="theme-color" content="#0d0a07" />
-    <title>暗棋 V5 · 極致重設計</title>
+    <title>暗棋 V5 · 極致</title>
 
     <script src="https://cdn.tailwindcss.com">
     </script>
@@ -24,6 +24,7 @@
         }
     </script>
     <style>
+        /* 所有样式与上一版完全相同，此处省略重复内容以节省篇幅，实际交付时会包含完整样式 */
         * {
             box-sizing: border-box;
             -webkit-tap-highlight-color: transparent;
@@ -268,7 +269,6 @@
                 opacity: 1;
             }
         }
-        /* 勝利覆蓋層動畫 — 完全不使用內聯 style，由 class 控制 */
         .victory-overlay {
             position: absolute;
             inset: 0;
@@ -354,7 +354,27 @@
         .victory-overlay button:active {
             transform: scale(0.95);
         }
-        /* 响应式微调 */
+        @keyframes startPromptFade {
+            0% {
+                opacity: 0;
+                transform: scale(0.95);
+            }
+            15% {
+                opacity: 1;
+                transform: scale(1);
+            }
+            85% {
+                opacity: 1;
+                transform: scale(1);
+            }
+            100% {
+                opacity: 0;
+                transform: scale(0.95);
+            }
+        }
+        .start-prompt {
+            animation: startPromptFade 3s ease forwards;
+        }
         @media (max-width: 420px) {
             .top-bar {
                 height: 42px;
@@ -657,9 +677,34 @@
             const [redCaptures, setRedCaptures] = useState(0);
             const [blackCaptures, setBlackCaptures] = useState(0);
             const [lastMove, setLastMove] = useState(null);
+            const [showStartPrompt, setShowStartPrompt] = useState(true);
+            const startTimerRef = useRef(null);
 
             const BASE_PIECE_VALUES = { 1: 10000, 2: 7000, 3: 4500, 4: 3000, 5: 1500, 6: 5000, 7: 1000 };
             const aiHistoryRef = useRef(new Map());
+
+            useEffect(() => {
+                if (currentTurn !== null || gameOver) {
+                    if (startTimerRef.current) {
+                        clearTimeout(startTimerRef.current);
+                        startTimerRef.current = null;
+                    }
+                    setShowStartPrompt(false);
+                    return;
+                }
+                setShowStartPrompt(true);
+                if (startTimerRef.current) clearTimeout(startTimerRef.current);
+                startTimerRef.current = setTimeout(() => {
+                    setShowStartPrompt(false);
+                    startTimerRef.current = null;
+                }, 3000);
+                return () => {
+                    if (startTimerRef.current) {
+                        clearTimeout(startTimerRef.current);
+                        startTimerRef.current = null;
+                    }
+                };
+            }, [currentTurn, gameOver]);
 
             const isKingInDanger = useCallback((board, color) => {
                 let kingPos = null;
@@ -898,7 +943,6 @@
                 }
                 setLastMove({ fromRow, fromCol, toRow, toCol });
 
-                // 奪帥模式：吃掉將/帥直接勝利
                 if (captureGeneralMode && target && target.rank === 1) {
                     setBoard(newBoard);
                     setGameOver(true);
@@ -910,7 +954,6 @@
                     return;
                 }
 
-                // 一般勝負判定
                 if (checkWinCondition(newBoard)) {
                     setBoard(newBoard);
                     setSelectedPos(null);
@@ -924,7 +967,6 @@
                 setHighlightCells([]);
             }, [board, currentTurn, gameOver, checkWinCondition, captureGeneralMode]);
 
-            // AI 決策（略，與原版一致）
             const aiDecide = useCallback(() => {
                 const unrevealed = [];
                 for (let r = 0; r < 4; r++) {
@@ -1127,7 +1169,7 @@
                 return cells;
             };
 
-            const turnLabel = currentTurn ? (currentTurn === 'red' ? '紅方' : '黑方') : '翻牌開局';
+            const turnLabel = currentTurn ? (currentTurn === 'red' ? '紅方' : '黑方') : '';
             const isToggleDisabled = currentTurn !== null;
 
             return html `
@@ -1137,7 +1179,7 @@
                             <div className="flex items-center gap-3">
                                 <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-wood-400 to-wood-600 flex items-center justify-center text-base shadow-md" aria-hidden="true">♟</div>
                                 <span className="text-wood-300 text-sm font-black tracking-wider">暗棋</span>
-                                ${gameMode === 'ai' ? html`<span className="text-[9px] font-bold text-wood-500 bg-wood-800/40 px-2 py-0.5 rounded-md border border-wood-500/20 tracking-widest">VS 電腦</span>` : html`<span className="text-[9px] font-bold text-wood-500 bg-wood-800/40 px-2 py-0.5 rounded-md border border-wood-500/20 tracking-widest">雙人</span>`}
+                                ${gameMode === 'ai' ? html`<span className="text-[9px] font-bold text-wood-500 bg-wood-800/40 px-2 py-0.5 rounded-md border border-wood-500/20 tracking-widest">AI</span>` : html`<span className="text-[9px] font-bold text-wood-500 bg-wood-800/40 px-2 py-0.5 rounded-md border border-wood-500/20 tracking-widest">雙人</span>`}
                             </div>
                             <label className=${`flex items-center gap-1.5 bg-wood-800/40 px-2 py-1 rounded-lg border border-wood-500/20 shadow-inner transition-all duration-300 ${isToggleDisabled ? 'opacity-40 cursor-not-allowed' : 'cursor-pointer'}`}>
                                 <div className="relative w-7 h-4 rounded-full bg-wood-950 transition-colors duration-300" style=${{ backgroundColor: captureGeneralMode ? '#b91c1c' : '#241810' }}>
@@ -1170,6 +1212,13 @@
                                         <div className="victory-text ${winner === 'red' ? 'victory-red' : 'victory-black'}">${winner === 'red' ? '紅方獲勝' : '黑方獲勝'}</div>
                                         <div className="victory-sub">${winReason}</div>
                                         <button onClick=${handleRestart}>重新新局</button>
+                                    </div>
+                                ` : null}
+                                ${!gameOver && currentTurn === null && showStartPrompt ? html`
+                                    <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-10">
+                                        <div className="bg-black/70 backdrop-blur-sm px-8 py-5 rounded-2xl border border-wood-400/40 text-3xl font-bold text-wood-100 shadow-2xl start-prompt">
+                                            翻牌開局
+                                        </div>
                                     </div>
                                 ` : null}
                             </div></div></div>

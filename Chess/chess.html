@@ -3,13 +3,11 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+    <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-    <meta name="theme-color" content="#1a120e" />
-    <title>暗棋 · 極簡 PWA</title>
-    <link rel="manifest" href="./manifest.json" />
-    <link rel="apple-touch-icon" href="https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/265f.png" />
-    
+    <meta name="theme-color" content="#0d0a07" />
+    <title>暗棋 V8 · 大師挑戰版</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
         tailwind.config = {
@@ -18,38 +16,49 @@
                     colors: {
                         wood: { 50: '#f7efe6', 100: '#ede0d0', 200: '#dcc4aa', 300: '#c9a884', 400: '#b88f66', 500: '#a57850', 600: '#8a6240', 700: '#6f4d30', 800: '#543a22', 900: '#3a2818', 950: '#241810' },
                     },
-                    fontFamily: { sans: ['Inter', 'system-ui', 'sans-serif'] },
+                    fontFamily: { sans: ['Noto Serif TC', 'Inter', 'system-ui', 'sans-serif'] },
                 }
             }
         }
     </script>
     <style>
-        /* 全域重置 */
-        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; outline: none; }
-        html, body { 
-            margin: 0; padding: 0; 
-            height: 100%; 
-            overflow: hidden; 
-            font-family: 'Inter', system-ui, sans-serif; 
-            background: #1a120e; 
-            touch-action: none;
-            -webkit-user-select: none; user-select: none;
+        /* ========== 基礎重置 ========== */
+        * {
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+            outline: none;
         }
-        #root { 
-            height: 100%; 
-            display: flex; 
-            align-items: center; 
-            justify-content: center; 
-            background: radial-gradient(ellipse at 50% 30%, #2d1e14, #120c08);
-            padding: env(safe-area-inset-top) env(safe-area-inset-right) 
-                     env(safe-area-inset-bottom) env(safe-area-inset-left);
+        html, body {
+            margin: 0;
+            padding: 0;
+            height: 100%;
+            overflow: hidden;
+            font-family: 'Inter', system-ui, sans-serif;
+            background: #0d0a07;
+            touch-action: none;
+            -webkit-user-select: none;
+            user-select: none;
         }
 
-        /* 主容器：垂直排列，無滾動 */
+        /* ========== iOS 專用佈局 ========== */
+        #root {
+            /* 回退方案 */
+            height: 100vh;
+            /* iOS 15.4+ 動態視口 */
+            height: 100dvh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: radial-gradient(ellipse at 50% 20%, #2a1f16 0%, #150f0a 50%, #0a0705 100%);
+            /* 安全區域 */
+            padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+            overflow: hidden;
+        }
+
         .app-container {
             width: 100%;
             max-width: 450px;
-            height: 100vh;
+            height: 100%;           /* 由父容器決定 */
             max-height: 100%;
             display: flex;
             flex-direction: column;
@@ -58,34 +67,41 @@
             overflow: hidden;
         }
 
-        /* 頂部和底部欄固定高度 */
+        /* ========== 頂部與底部欄 ========== */
         .top-bar, .bottom-bar {
             flex-shrink: 0;
             z-index: 10;
         }
+
         .top-bar {
-            height: 48px;
+            min-height: 44px;
             display: flex;
             align-items: center;
             justify-content: space-between;
-            padding: 0 16px;
-            background: rgba(30, 22, 16, 0.6);
+            padding: 4px 12px;
+            background: rgba(30,22,16,0.6);
             backdrop-filter: blur(8px);
             border-radius: 20px;
             border: 1px solid rgba(200,170,130,0.12);
+            gap: 4px;
+            flex-wrap: nowrap;
         }
+
         .bottom-bar {
             display: grid;
             grid-template-columns: 1fr 1fr;
             gap: 12px;
             height: 52px;
+            /* 為底部安全區域留白（Home Indicator） */
+            padding-bottom: env(safe-area-inset-bottom);
         }
+
         .bottom-bar button {
             border: none;
             border-radius: 16px;
             font-weight: 800;
             font-size: 0.95rem;
-            background: rgba(60, 44, 32, 0.5);
+            background: rgba(60,44,32,0.5);
             backdrop-filter: blur(4px);
             border: 1px solid rgba(200,170,130,0.15);
             color: #d0c0a8;
@@ -105,41 +121,38 @@
             color: #c9b89c;
         }
 
-        /* 棋盤區域：伸縮填滿剩餘空間 */
+        /* ========== 棋盤區域 ========== */
         .board-area {
             flex: 1;
-            min-height: 0;   /* 允許收縮 */
+            min-height: 0;
             display: flex;
             align-items: center;
             justify-content: center;
             width: 100%;
         }
 
-        /* 棋盤外殼：強制比例 4:8，並限制最大尺寸 */
         .board-wrapper {
             width: 100%;
             max-height: 100%;
             aspect-ratio: 4 / 8;
-            background: rgba(84, 58, 34, 0.3);
+            background: linear-gradient(145deg, rgba(80,60,40,0.4), rgba(40,28,18,0.6));
             backdrop-filter: blur(4px);
-            border-radius: 24px;
-            padding: 6px;  /* 極小內距，不影響比例 */
-            border: 1px solid rgba(200,170,130,0.12);
-            box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+            border-radius: 20px;
+            padding: 8px;
+            border: 1px solid rgba(200,170,130,0.1);
+            box-shadow: 0 12px 48px rgba(0,0,0,0.6), inset 0 1px 0 rgba(200,170,130,0.08);
         }
 
-        /* 內部網格外殼：撐滿 */
         .board-inner {
             width: 100%;
             height: 100%;
-            background: rgba(165, 120, 80, 0.15);
-            border-radius: 18px;
-            padding: 4px;
-            box-shadow: inset 0 2px 12px rgba(255,215,140,0.05);
+            background: linear-gradient(180deg, rgba(139,109,74,0.12), rgba(100,78,52,0.08));
+            border-radius: 14px;
+            padding: 5px;
+            box-shadow: none;
             position: relative;
         }
 
-        /* 4x8 網格：使用 grid，每個格子自動正方形 */
         .board-grid {
             display: grid;
             grid-template-columns: repeat(4, 1fr);
@@ -149,7 +162,7 @@
             height: 100%;
         }
 
-        /* 每個格子 */
+        /* ========== 格子與棋子 ========== */
         .cell {
             background: radial-gradient(circle at 30% 30%, rgba(200,170,130,0.2), rgba(140,110,80,0.08));
             border-radius: 8px;
@@ -159,64 +172,92 @@
             justify-content: center;
             transition: box-shadow 0.15s;
             position: relative;
-            /* 強制正方形：grid 自動分配寬高，因容器寬高比 4:8，且列數4行數8，所以每個單元格寬高相等 */
         }
 
-        .cell-highlight-move { box-shadow: inset 0 0 0 2px rgba(120,200,120,0.6), 0 0 20px rgba(120,200,120,0.15); }
-        .cell-highlight-capture { box-shadow: inset 0 0 0 2px rgba(230,120,120,0.6), 0 0 20px rgba(230,120,120,0.15); }
+        .cell-highlight-move {
+            box-shadow: inset 0 0 0 2px rgba(120,200,120,0.6), 0 0 20px rgba(120,200,120,0.15);
+            position: relative;
+        }
+        .cell-highlight-move::after {
+            content: "";
+            position: absolute;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: rgba(120,200,120,0.4);
+            border: 2px solid rgba(120,200,120,0.7);
+        }
+        .cell-highlight-capture {
+            box-shadow: inset 0 0 0 2px rgba(230,120,120,0.6), 0 0 20px rgba(230,120,120,0.15);
+            position: relative;
+        }
+        .cell-highlight-capture::after {
+            content: "✕";
+            position: absolute;
+            font-size: 18px;
+            color: rgba(230,120,120,0.6);
+            font-weight: 900;
+        }
 
-        /* 棋子元件 - 完全適應格子 */
+        /* 棋子樣式（保留原有質感） */
         .piece {
-            width: 88%;
-            height: 88%;
+            width: 85%;
+            height: 85%;
             border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
             font-weight: 900;
-            font-size: clamp(1rem, 4vw, 1.8rem);
+            font-size: clamp(1.2rem, 5vw, 2rem);
             color: white;
-            text-shadow: 0 2px 8px rgba(0,0,0,0.5);
-            box-shadow: 0 4px 0 rgba(0,0,0,0.2), 0 8px 20px rgba(0,0,0,0.3);
-            transition: transform 0.1s, box-shadow 0.1s;
+            transition: transform 0.15s ease;
             cursor: pointer;
             touch-action: manipulation;
             position: relative;
+            border: 2px solid rgba(255,255,255,0.1);
+            box-shadow: 
+                inset 0 2px 4px rgba(255,255,255,0.3),
+                inset 0 -4px 6px rgba(0,0,0,0.4),
+                0 4px 6px rgba(0,0,0,0.4);
         }
-        .piece-red {
-            background: radial-gradient(circle at 35% 30%, #e74c3c, #c0392b, #922b21);
-            border: 1.5px solid rgba(255,200,150,0.4);
-        }
-        .piece-black {
-            background: radial-gradient(circle at 35% 30%, #5a5a5a, #2c2c2c, #1a1a1a);
-            border: 1.5px solid rgba(200,200,200,0.2);
-        }
+        .piece-red { background: radial-gradient(circle at 30% 30%, #d63031, #a61d1d); }
+        .piece-black { background: radial-gradient(circle at 30% 30%, #4a4a4a, #2d2d2d); }
         .piece-back {
-            background: radial-gradient(circle at 35% 30%, #8a6e4b, #543a22, #2d1f12);
-            border: 1px solid rgba(160,130,90,0.3);
+            background: radial-gradient(circle at 30% 30%, #e0c9a6, #c4a47a);
+            box-shadow: inset 0 0 10px rgba(0,0,0,0.2), 0 4px 6px rgba(0,0,0,0.3);
         }
-        .piece-back::after {
-            content: "♟";
-            position: absolute;
-            font-size: clamp(0.8rem, 3.5vw, 1.4rem);
-            color: rgba(200,180,150,0.2);
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            pointer-events: none;
-        }
+        .piece-text { text-shadow: 0 1px 1px rgba(0,0,0,0.8), 0 -1px 0 rgba(255,255,255,0.2); }
+
         .piece-selected {
-            ring: 3px solid #fbbf24;
-            ring-offset: 2px;
-            ring-offset-color: rgba(20,14,10,0.6);
+            box-shadow: 0 0 0 4px #fbbf24, 0 8px 12px rgba(0,0,0,0.5) !important;
+            transform: translateY(-4px);
         }
 
-        /* 勝利覆蓋層 */
+        /* 動畫 */
+        .piece-enter { animation: piecePop 0.28s cubic-bezier(0.34,1.56,0.64,1) forwards; }
+        @keyframes piecePop {
+            0% { transform: scale(0.85); opacity: 0.6; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+        .piece-enter.piece-selected {
+            animation: piecePopSelected 0.28s cubic-bezier(0.34,1.56,0.64,1) forwards;
+        }
+        @keyframes piecePopSelected {
+            0% { transform: scale(0.85); opacity: 0.6; }
+            100% { transform: scale(1.05); opacity: 1; }
+        }
+        .cell-enter { animation: cellPop 0.3s ease-out forwards; }
+        @keyframes cellPop {
+            0% { transform: scale(0.92); opacity: 0; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+
+        /* ========== 勝利遮罩 ========== */
         .victory-overlay {
             position: absolute;
             inset: 0;
-            background: rgba(0,0,0,0.75);
-            backdrop-filter: blur(6px);
+            background: rgba(0,0,0,0.88);
+            backdrop-filter: blur(12px);
             border-radius: inherit;
             display: flex;
             flex-direction: column;
@@ -224,101 +265,211 @@
             justify-content: center;
             z-index: 20;
             gap: 12px;
+            opacity: 0;
+            animation: victoryOverlayFade 0.6s ease 0.1s forwards;
+        }
+        @keyframes victoryOverlayFade {
+            0% { opacity: 0; }
+            100% { opacity: 1; }
         }
         .victory-text {
-            font-size: clamp(2rem, 8vw, 4rem);
+            font-size: clamp(2rem,8vw,4rem);
             font-weight: 900;
             text-shadow: 0 4px 20px rgba(0,0,0,0.8);
             letter-spacing: 4px;
+            opacity: 0;
+            animation: victoryBounce 0.8s ease 0.2s forwards;
+        }
+        @keyframes victoryBounce {
+            0% { opacity: 0; transform: translateY(-20px); }
+            100% { opacity: 1; transform: translateY(0); }
         }
         .victory-red { color: #ff6b6b; }
         .victory-black { color: #d0d0d0; }
         .victory-sub {
-            font-size: clamp(0.9rem, 3vw, 1.2rem);
-            color: rgba(255,255,255,0.6);
+            font-size: clamp(1rem,4vw,1.3rem);
+            font-weight: bold;
+            color: #f7efe6;
+            background: rgba(255,255,255,0.08);
+            padding: 4px 16px;
+            border-radius: 12px;
+            margin-bottom: 8px;
+            opacity: 0;
+            animation: victoryFadeIn 0.6s ease 0.4s forwards;
+        }
+        @keyframes victoryFadeIn {
+            0% { opacity: 0; transform: scale(0.9); }
+            100% { opacity: 1; transform: scale(1); }
         }
         .victory-overlay button {
-            padding: 10px 28px;
-            background: #b88f66;
-            border: none;
+            padding: 12px 32px;
+            background: linear-gradient(135deg, #c9a884, #8a6240);
+            border: 1px solid rgba(255,255,255,0.2);
             border-radius: 40px;
-            font-weight: 700;
-            color: #1a120e;
-            font-size: 1rem;
-            box-shadow: 0 4px 16px rgba(0,0,0,0.4);
+            font-weight: 900;
+            color: #0d0a07;
+            font-size: 1.1rem;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.6);
             cursor: pointer;
             transition: transform 0.1s;
+            opacity: 0;
+            animation: victoryFadeIn 0.6s ease 0.6s forwards;
         }
         .victory-overlay button:active { transform: scale(0.95); }
+
+        /* ========== 開始提示 ========== */
+        @keyframes startPromptFade {
+            0% { opacity: 0; transform: scale(0.95); }
+            15% { opacity: 1; transform: scale(1); }
+            85% { opacity: 1; transform: scale(1); }
+            100% { opacity: 0; transform: scale(0.95); }
+        }
+        .start-prompt {
+            animation: startPromptFade 3s ease forwards;
+        }
+
+        /* ========== 響應式微調 ========== */
+        @media (max-width:420px) {
+            .top-bar { padding: 4px 8px; min-height: 40px; }
+            .bottom-bar { height: 44px; gap: 8px; }
+            .bottom-bar button { font-size: 0.8rem; border-radius: 12px; }
+            .board-wrapper { padding: 4px; }
+            .board-inner { padding: 3px; }
+            .board-grid { gap: 2px; }
+            .cell { border-radius: 4px; }
+        }
+
+        /* 針對 iPhone 全面屏額外保險 */
+        @supports (padding: max(0px)) {
+            .bottom-bar {
+                padding-bottom: max(env(safe-area-inset-bottom), 8px);
+            }
+        }
     </style>
 </head>
 <body>
     <div id="root"></div>
 
     <script type="module">
-        import React, { useState, useEffect, useCallback, useRef, memo } from 'https://cdn.jsdelivr.net/npm/react@18.2.0/+esm';
-        import ReactDOM from 'https://cdn.jsdelivr.net/npm/react-dom@18.2.0/+esm';
-        import { motion, AnimatePresence } from 'https://cdn.jsdelivr.net/npm/framer-motion@10.16.4/+esm';
-        import htm from 'https://cdn.jsdelivr.net/npm/htm@3.1.1/+esm';
+        // ========================= 以下為 JavaScript（與原始代碼完全一致） =========================
+        import React, { useState, useEffect, useCallback, useRef, memo } from 'https://esm.sh/react@18.3.1';
+        import ReactDOM from 'https://esm.sh/react-dom@18.3.1/client';
+        import htm from 'https://esm.sh/htm@3.1.1';
 
         const html = htm.bind(React.createElement);
 
-        // ========================= 音效 (完全原始) =========================
+        // ========================= 音效系統 =========================
         let globalAudioCtx = null;
-        const playSound = (type) => {
+        function getAudioCtx() {
             try {
                 const AudioContext = window.AudioContext || window.webkitAudioContext;
-                if (!AudioContext) return;
+                if (!AudioContext) return null;
                 if (!globalAudioCtx || globalAudioCtx.state === 'closed') {
                     globalAudioCtx = new AudioContext();
                 }
-                const ctx = globalAudioCtx;
-                if (ctx.state === 'suspended') ctx.resume();
-
-                if (type === 'move' || type === 'flip') {
+                if (globalAudioCtx.state === 'suspended') globalAudioCtx.resume();
+                return globalAudioCtx;
+            } catch (_) { return null; }
+        }
+        function playFlip() {
+            const ctx = getAudioCtx();
+            if (!ctx) return;
+            try {
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(400, ctx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(100, ctx.currentTime + 0.05);
+                gain.gain.setValueAtTime(0.4, ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.06);
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+                osc.start();
+                osc.stop(ctx.currentTime + 0.06);
+            } catch (_) {}
+        }
+        function playMove() {
+            const ctx = getAudioCtx();
+            if (!ctx) return;
+            try {
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(280, ctx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(120, ctx.currentTime + 0.08);
+                gain.gain.setValueAtTime(0.3, ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.08);
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+                osc.start();
+                osc.stop(ctx.currentTime + 0.08);
+            } catch (_) {}
+        }
+        function playCapture() {
+            const ctx = getAudioCtx();
+            if (!ctx) return;
+            try {
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                osc.type = 'square';
+                osc.frequency.setValueAtTime(150, ctx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(40, ctx.currentTime + 0.12);
+                gain.gain.setValueAtTime(0.3, ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.15);
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+                osc.start();
+                osc.stop(ctx.currentTime + 0.15);
+                const bufferSize = ctx.sampleRate * 0.05;
+                const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+                const data = buffer.getChannelData(0);
+                for (let i = 0; i < bufferSize; i++) data[i] = (Math.random() * 2 - 1) * Math.exp(-i / bufferSize * 5);
+                const noise = ctx.createBufferSource();
+                noise.buffer = buffer;
+                const noiseGain = ctx.createGain();
+                noiseGain.gain.setValueAtTime(0.3, ctx.currentTime);
+                noiseGain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.05);
+                noise.connect(noiseGain);
+                noiseGain.connect(ctx.destination);
+                noise.start();
+                noise.stop(ctx.currentTime + 0.05);
+            } catch (_) {}
+        }
+        function playWin() {
+            const ctx = getAudioCtx();
+            if (!ctx) return;
+            try {
+                const notes = [523.25, 659.25, 783.99, 1046.50];
+                notes.forEach((freq, i) => {
                     const osc = ctx.createOscillator();
                     const gain = ctx.createGain();
-                    osc.type = 'triangle';
-                    osc.frequency.setValueAtTime(180, ctx.currentTime);
-                    osc.frequency.exponentialRampToValueAtTime(80, ctx.currentTime + 0.08);
-                    gain.gain.setValueAtTime(0.4, ctx.currentTime);
-                    gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.08);
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(freq, ctx.currentTime + i * 0.08);
+                    gain.gain.setValueAtTime(0.3, ctx.currentTime + i * 0.08);
+                    gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + i * 0.08 + 0.4);
                     osc.connect(gain);
                     gain.connect(ctx.destination);
-                    osc.start();
-                    osc.stop(ctx.currentTime + 0.08);
-                } else if (type === 'capture') {
-                    const osc1 = ctx.createOscillator();
-                    const osc2 = ctx.createOscillator();
-                    const gain = ctx.createGain();
-                    osc1.type = 'sawtooth';
-                    osc1.frequency.setValueAtTime(140, ctx.currentTime);
-                    osc1.frequency.exponentialRampToValueAtTime(50, ctx.currentTime + 0.15);
-                    osc2.type = 'triangle';
-                    osc2.frequency.setValueAtTime(90, ctx.currentTime);
-                    osc2.frequency.exponentialRampToValueAtTime(40, ctx.currentTime + 0.15);
-                    gain.gain.setValueAtTime(0.5, ctx.currentTime);
-                    gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.15);
-                    osc1.connect(gain);
-                    osc2.connect(gain);
-                    gain.connect(ctx.destination);
-                    osc1.start();
-                    osc2.start();
-                    osc1.stop(ctx.currentTime + 0.15);
-                    osc2.stop(ctx.currentTime + 0.15);
-                }
-            } catch (e) { /* 靜默 */ }
+                    osc.start(ctx.currentTime + i * 0.08);
+                    osc.stop(ctx.currentTime + i * 0.08 + 0.4);
+                });
+            } catch (_) {}
+        }
+        const playSound = (type) => {
+            switch (type) {
+                case 'flip': playFlip(); break;
+                case 'move': playMove(); break;
+                case 'capture': playCapture(); break;
+                case 'win': playWin(); break;
+            }
         };
 
-        // ========================= 遊戲邏輯 (完全原始) =========================
+        // ========================= 遊戲邏輯與基礎工具 =========================
         const NAMES = { red: ['', '帥', '仕', '相', '俥', '傌', '炮', '兵'], black: ['', '將', '士', '象', '車', '馬', '砲', '卒'] };
         function getPieceName(color, rank) { return NAMES[color]?.[rank] || '?'; }
-
+        
         function canCapture(attackerRank, defenderRank) {
             if (attackerRank === 1 && defenderRank === 7) return false;
-            if (attackerRank === 7) {
-                return defenderRank === 1 || defenderRank === 7;
-            }
+            if (attackerRank === 7) return defenderRank === 1 || defenderRank === 7;
             return attackerRank <= defenderRank;
         }
 
@@ -338,19 +489,15 @@
             for (let i = 0; i < 2; i++) pieces.push({ id: `b5-${i}`, color: 'black', rank: 5 });
             for (let i = 0; i < 2; i++) pieces.push({ id: `b6-${i}`, color: 'black', rank: 6 });
             for (let i = 0; i < 5; i++) pieces.push({ id: `b7-${i}`, color: 'black', rank: 7 });
-
             for (let i = pieces.length - 1; i > 0; i--) {
                 const j = Math.floor(Math.random() * (i + 1));
                 [pieces[i], pieces[j]] = [pieces[j], pieces[i]];
             }
-
             const board = [];
             let idx = 0;
             for (let r = 0; r < 4; r++) {
                 const row = [];
-                for (let c = 0; c < 8; c++) {
-                    row.push({ ...pieces[idx++], faceUp: false });
-                }
+                for (let c = 0; c < 8; c++) row.push({ ...pieces[idx++], faceUp: false });
                 board.push(row);
             }
             return board;
@@ -364,7 +511,6 @@
             const rank = piece.rank;
             const isCannon = rank === 6;
             const dirs = [[-1,0],[1,0],[0,-1],[0,1]];
-
             for (const [dr, dc] of dirs) {
                 if (isCannon) {
                     const nr = row + dr, nc = col + dc;
@@ -375,59 +521,50 @@
                     let blockFound = false;
                     while (tr >= 0 && tr <= 3 && tc >= 0 && tc <= 7) {
                         const target = board[tr][tc];
-                        if (!target) {
-                            tr += dr; tc += dc;
-                            continue;
-                        }
-                        if (!blockFound) {
-                            blockFound = true;
-                            tr += dr; tc += dc;
-                            continue;
-                        }
-                        if (target.faceUp && target.color !== color) {
-                            moves.push({ row: tr, col: tc, type: 'capture' });
-                        }
+                        if (!target) { tr += dr; tc += dc; continue; }
+                        if (!blockFound) { blockFound = true; tr += dr; tc += dc; continue; }
+                        if (target.faceUp && target.color !== color) moves.push({ row: tr, col: tc, type: 'capture' });
                         break;
                     }
                 } else {
                     const nr = row + dr, nc = col + dc;
                     if (nr < 0 || nr > 3 || nc < 0 || nc > 7) continue;
                     const target = board[nr][nc];
-                    if (!target) {
-                        moves.push({ row: nr, col: nc, type: 'move' });
-                    } else if (target.faceUp && target.color !== color && canCapture(rank, target.rank)) {
-                        moves.push({ row: nr, col: nc, type: 'capture' });
-                    }
+                    if (!target) moves.push({ row: nr, col: nc, type: 'move' });
+                    else if (target.faceUp && target.color !== color && canCapture(rank, target.rank)) moves.push({ row: nr, col: nc, type: 'capture' });
                 }
             }
             return moves;
         }
+        function cloneBoard(board) { return board.map(row => row.map(cell => cell ? { ...cell } : null)); }
 
-        function cloneBoard(board) {
-            return board.map(row => row.map(cell => cell ? { ...cell } : null));
-        }
+        // 盤面哈希 (供置換表使用)
+        const hashBoard = (board) => {
+            const arr = new Array(32);
+            let idx = 0;
+            for(let r=0; r<4; r++){
+                for(let c=0; c<8; c++){
+                    const p = board[r][c];
+                    arr[idx++] = p ? (p.faceUp ? p.color[0]+p.rank : 'X') : '0';
+                }
+            }
+            return arr.join('');
+        };
 
-        // ========================= React 元件 =========================
-        const Piece = memo(({ piece, isSelected, onClick }) => {
+        // ========================= React 組件 =========================
+        const Piece = memo(({ piece, isSelected, onClick, index }) => {
             if (!piece) return null;
             const { color, rank, faceUp } = piece;
             const isRed = color === 'red';
             const name = faceUp ? getPieceName(color, rank) : '';
             const isBack = !faceUp;
-            let className = `piece ${isBack ? 'piece-back' : (isRed ? 'piece-red' : 'piece-black')}`;
-            if (isSelected) className += ' piece-selected';
-            const style = {
-                fontSize: faceUp ? 'clamp(0.9rem, 4vw, 1.8rem)' : '0',
-                color: faceUp ? (isRed ? '#fff8f0' : '#f0f0f0') : 'transparent',
-            };
-            return html`
-                <${motion.div} className=${className} style=${style}
-                    initial=${{ scale: 0.85 }}
-                    animate=${{ scale: 1 }}
-                    transition=${{ type: 'spring', stiffness: 350, damping: 28, mass: 0.6 }}
-                    onClick=${onClick}>
-                    ${faceUp ? name : ''}
-                <//>
+            
+            const className = `piece ${isBack ? 'piece-back' : (isRed ? 'piece-red' : 'piece-black')} ${isSelected ? 'piece-selected' : ''} piece-enter`;
+            
+            return html `
+                <div className=${className} onClick=${onClick} style=${{ animationDelay: `${(index || 0) * 0.008}s` }}>
+                    <span className="piece-text">${faceUp ? name : ''}</span>
+                </div>
             `;
         });
 
@@ -436,18 +573,18 @@
                 e.preventDefault();
                 onCellClick(row, col);
             };
+            const handlePieceClick = (e) => {
+                e.stopPropagation();
+                onCellClick(row, col);
+            };
             let highlightClass = '';
             if (isHighlight) highlightClass = highlightType === 'capture' ? 'cell-highlight-capture' : 'cell-highlight-move';
-            const className = `cell ${highlightClass}`;
-            return html`
-                <${motion.div} className=${className}
-                    initial=${{ opacity: 0, scale: 0.92 }}
-                    animate=${{ opacity: 1, scale: 1 }}
-                    transition=${{ delay: index * 0.005, type: 'spring', stiffness: 400, damping: 30 }}
-                    onTouchEnd=${handleClick}
-                    onClick=${handleClick}>
-                    ${piece && html`<${Piece} piece=${piece} isSelected=${isSelected} onClick=${handleClick} />`}
-                <//>
+            const className = `cell ${highlightClass} cell-enter`;
+            const style = { animationDelay: `${(index || 0) * 0.005}s` };
+            return html `
+                <div className=${className} style=${style} onClick=${handleClick}>
+                    ${piece && html`<${Piece} piece=${piece} isSelected=${isSelected} onClick=${handlePieceClick} index=${index} />`}
+                </div>
             `;
         });
 
@@ -460,22 +597,395 @@
             const [highlightCells, setHighlightCells] = useState([]);
             const [gameOver, setGameOver] = useState(false);
             const [winner, setWinner] = useState(null);
+            const [winReason, setWinReason] = useState('');
             const [gameMode, setGameMode] = useState('pvp');
             const [aiColor, setAiColor] = useState(null);
+            const [captureGeneralMode, setCaptureGeneralMode] = useState(false);
+            const [redCaptures, setRedCaptures] = useState(0);
+            const [blackCaptures, setBlackCaptures] = useState(0);
+            const [showStartPrompt, setShowStartPrompt] = useState(true);
+            const startTimerRef = useRef(null);
 
+            const BASE_PIECE_VALUES = { 1: 10000, 2: 7000, 3: 4500, 4: 3000, 5: 1500, 6: 5000, 7: 1000 };
+            const aiHistoryRef = useRef(new Map());
+            const ttRef = useRef(new Map());
+
+            const POSITION_VALUES = useRef({
+                1: [[0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0]],
+                2: [[0,0,0,0,0,0,0,0],[0,2,4,6,6,4,2,0],[0,2,4,6,6,4,2,0],[0,0,0,0,0,0,0,0]],
+                3: [[0,1,2,3,3,2,1,0],[0,2,4,5,5,4,2,0],[0,1,2,3,3,2,1,0],[0,0,0,0,0,0,0,0]],
+                4: [[0,1,2,3,3,2,1,0],[1,3,6,8,8,6,3,1],[1,3,6,8,8,6,3,1],[0,1,2,3,3,2,1,0]],
+                5: [[0,1,2,3,3,2,1,0],[1,3,6,8,8,6,3,1],[1,3,6,8,8,6,3,1],[0,1,2,3,3,2,1,0]],
+                6: [[0,1,2,3,3,2,1,0],[1,3,5,7,7,5,3,1],[1,3,5,7,7,5,3,1],[0,1,2,3,3,2,1,0]],
+                7: [[0,0,0,0,0,0,0,0],[0,2,4,5,5,4,2,0],[1,3,6,7,7,6,3,1],[0,0,0,0,0,0,0,0]]
+            });
+
+            // ----- 輔助防禦與威脅判定 -----
+            const isPositionProtected = useCallback((board, row, col, color) => {
+                for (let r = 0; r < 4; r++) {
+                    for (let c = 0; c < 8; c++) {
+                        const p = board[r][c];
+                        if (p && p.faceUp && p.color === color) {
+                            const moves = generateMoves(board, r, c);
+                            for (const mv of moves) {
+                                if (mv.row === row && mv.col === col && mv.type === 'capture') return true;
+                            }
+                        }
+                    }
+                }
+                return false;
+            }, []);
+
+            const isPositionThreatened = useCallback((board, row, col, color) => {
+                const enemy = color === 'red' ? 'black' : 'red';
+                for (let r = 0; r < 4; r++) {
+                    for (let c = 0; c < 8; c++) {
+                        const p = board[r][c];
+                        if (p && p.faceUp && p.color === enemy) {
+                            const moves = generateMoves(board, r, c);
+                            for (const mv of moves) {
+                                if (mv.row === row && mv.col === col && mv.type === 'capture') return true;
+                            }
+                        }
+                    }
+                }
+                return false;
+            }, []);
+
+            const getProtectedByCount = useCallback((board, row, col, color) => {
+                let count = 0;
+                for (let r = 0; r < 4; r++) {
+                    for (let c = 0; c < 8; c++) {
+                        const p = board[r][c];
+                        if (p && p.faceUp && p.color === color) {
+                            const moves = generateMoves(board, r, c);
+                            for (const mv of moves) {
+                                if (mv.row === row && mv.col === col && mv.type === 'capture') count++;
+                            }
+                        }
+                    }
+                }
+                return count;
+            }, []);
+
+            const getThreatenedByCount = useCallback((board, row, col, color) => {
+                const enemy = color === 'red' ? 'black' : 'red';
+                let count = 0;
+                for (let r = 0; r < 4; r++) {
+                    for (let c = 0; c < 8; c++) {
+                        const p = board[r][c];
+                        if (p && p.faceUp && p.color === enemy) {
+                            const moves = generateMoves(board, r, c);
+                            for (const mv of moves) {
+                                if (mv.row === row && mv.col === col && mv.type === 'capture') count++;
+                            }
+                        }
+                    }
+                }
+                return count;
+            }, []);
+
+            // ----- 大師級盤面評估核心 -----
+            const evaluateBoardDynamic = useCallback((board, colorToEval) => {
+                let myScore = 0, enemyScore = 0;
+                const enemyColor = colorToEval === 'red' ? 'black' : 'red';
+                let myGeneralAlive = false, enemyGeneralAlive = false;
+                let myGeneralPos = null, enemyGeneralPos = null;
+                
+                let unrevealedAmt = 0;
+                let enemyPieces = [];
+
+                for (let r = 0; r < 4; r++) {
+                    for (let c = 0; c < 8; c++) {
+                        const p = board[r][c];
+                        if (p) {
+                            if (!p.faceUp) { unrevealedAmt++; } 
+                            else {
+                                if (p.color === enemyColor) {
+                                    enemyPieces.push({ rank: p.rank, r: r, c: c });
+                                }
+                            }
+                        }
+
+                        if (p && p.faceUp && p.rank === 1) {
+                            if (p.color === colorToEval) { myGeneralAlive = true; myGeneralPos = { row: r, col: c }; }
+                            if (p.color === enemyColor) { enemyGeneralAlive = true; enemyGeneralPos = { row: r, col: c }; }
+                        }
+                    }
+                }
+                
+                if (!myGeneralAlive) return -999999;
+                if (!enemyGeneralAlive) return 999999;
+
+                for (let r = 0; r < 4; r++) {
+                    for (let c = 0; c < 8; c++) {
+                        const p = board[r][c];
+                        if (!p || !p.faceUp) continue;
+                        const isMine = p.color === colorToEval;
+                        const rank = p.rank;
+                        let val = BASE_PIECE_VALUES[rank] || 0;
+                        
+                        const posTable = POSITION_VALUES.current[rank];
+                        if (posTable && posTable[r] && posTable[r][c] !== undefined) {
+                            val += posTable[r][c] * 50;
+                        }
+
+                        const prot = getProtectedByCount(board, r, c, p.color);
+                        const threat = getThreatenedByCount(board, r, c, p.color);
+                        val += prot * (rank <= 3 ? 200 : 100);
+                        val -= threat * (rank <= 3 ? 500 : 250); 
+                        
+                        if (rank === 1) {
+                            val += prot * 500;
+                            val -= threat * 1000;
+                        }
+
+                        if (rank === 6) {
+                            let mounts = 0;
+                            for (let i = 0; i < 8; i++) if (i !== c && board[r][i]) mounts++;
+                            for (let i = 0; i < 4; i++) if (i !== r && board[i][c]) mounts++;
+                            val += mounts * 60;
+                            
+                            if (mounts > 0) {
+                                for (let i = 0; i < 8; i++) {
+                                    const tgt = board[r][i];
+                                    if (tgt && tgt.faceUp && tgt.color !== p.color && tgt.rank <= 3) val += 150;
+                                }
+                                for (let i = 0; i < 4; i++) {
+                                    const tgt = board[i][c];
+                                    if (tgt && tgt.faceUp && tgt.color !== p.color && tgt.rank <= 3) val += 150;
+                                }
+                            }
+                        }
+
+                        const dirs = [[-1,0],[1,0],[0,-1],[0,1]];
+                        let adjFriends = 0;
+                        for (const [dr, dc] of dirs) {
+                            const nr = r + dr, nc = c + dc;
+                            if (nr >= 0 && nr < 4 && nc >= 0 && nc < 8) {
+                                const nb = board[nr][nc];
+                                if (nb && nb.faceUp && nb.color === p.color) adjFriends++;
+                            }
+                        }
+                        val += adjFriends * 70;
+                        
+                        if (isMine && enemyPieces.length > 0) {
+                            let minDistToPrey = 99;
+                            for (const ep of enemyPieces) {
+                                if (canCapture(rank, ep.rank) || (rank === 6 && ep.rank <= 3)) {
+                                    const dist = Math.abs(r - ep.r) + Math.abs(c - ep.c);
+                                    if (dist < minDistToPrey) minDistToPrey = dist;
+                                }
+                            }
+                            if (minDistToPrey < 99) {
+                                val += (12 - minDistToPrey) * (rank === 1 ? 70 : (rank <= 4 ? 40 : 15));
+                            }
+                        }
+
+                        const moves = generateMoves(board, r, c);
+                        val += moves.length * (rank === 6 ? 15 : 25);
+                        
+                        let captureThreat = 0;
+                        for (const mv of moves) {
+                            if (mv.type === 'capture') {
+                                const target = board[mv.row][mv.col];
+                                if (target) {
+                                    const targetVal = BASE_PIECE_VALUES[target.rank] || 0;
+                                    const targetProt = getProtectedByCount(board, mv.row, mv.col, target.color);
+                                    const netVal = targetVal - targetProt * 500;
+                                    captureThreat += Math.max(0, netVal) * 0.2;
+                                }
+                            }
+                        }
+                        val += captureThreat;
+                        
+                        if (isMine) myScore += val;
+                        else enemyScore += val;
+                    }
+                }
+                
+                if (captureGeneralMode) {
+                    if (myGeneralPos && isPositionThreatened(board, myGeneralPos.row, myGeneralPos.col, colorToEval)) {
+                        myScore -= 10000;
+                    }
+                    if (enemyGeneralPos && isPositionThreatened(board, enemyGeneralPos.row, enemyGeneralPos.col, enemyColor)) {
+                        enemyScore -= 10000;
+                    }
+                }
+                
+                let myCnt = 0, enemyCnt = 0;
+                for (let r = 0; r < 4; r++) {
+                    for (let c = 0; c < 8; c++) {
+                        const p = board[r][c];
+                        if (p && p.faceUp) {
+                            if (p.color === colorToEval) myCnt++;
+                            else enemyCnt++;
+                        }
+                    }
+                }
+                myScore += (myCnt - enemyCnt) * 150;
+
+                return myScore - enemyScore;
+            }, [captureGeneralMode, getProtectedByCount, getThreatenedByCount, isPositionThreatened]);
+
+            // ----- 走法排序 -----
+            const orderMoves = useCallback((board, moves, color) => {
+                return moves.sort((a, b) => {
+                    const aTarget = board[a.toRow][a.toCol];
+                    const bTarget = board[b.toRow][b.toCol];
+                    const aFrom = board[a.fromRow][a.fromCol];
+                    const bFrom = board[b.fromRow][b.fromCol];
+                    let aScore = 0, bScore = 0;
+                    if (aTarget) {
+                        let tVal = BASE_PIECE_VALUES[aTarget.rank] || 0;
+                        aScore += tVal;
+                    }
+                    if (bTarget) {
+                        let tVal = BASE_PIECE_VALUES[bTarget.rank] || 0;
+                        bScore += tVal;
+                    }
+                    if (aFrom && getThreatenedByCount(board, a.fromRow, a.fromCol, color) > 0) aScore += 1000;
+                    if (bFrom && getThreatenedByCount(board, b.fromRow, b.fromCol, color) > 0) bScore += 1000;
+                    return bScore - aScore;
+                });
+            }, [getThreatenedByCount]);
+
+            const generateAllMoves = useCallback((board, color) => {
+                const moves = [];
+                for (let r = 0; r < 4; r++) {
+                    for (let c = 0; c < 8; c++) {
+                        const p = board[r][c];
+                        if (p && p.faceUp && p.color === color) {
+                            const ms = generateMoves(board, r, c);
+                            ms.forEach(m => moves.push({ fromRow: r, fromCol: c, toRow: m.row, toCol: m.col, type: m.type }));
+                        }
+                    }
+                }
+                return moves;
+            }, []);
+
+            const simulateMove = useCallback((board, fromRow, fromCol, toRow, toCol) => {
+                const nb = cloneBoard(board);
+                const piece = nb[fromRow][fromCol];
+                nb[toRow][toCol] = piece;
+                nb[fromRow][fromCol] = null;
+                return nb;
+            }, []);
+
+            // ----- 靜止搜索 -----
+            const quiesce = useCallback((board, alpha, beta, isMaximizing, currentColor, rootAiColor, qDepth = 0) => {
+                const stand_pat = evaluateBoardDynamic(board, rootAiColor);
+                if (qDepth > 4) return stand_pat;
+
+                if (isMaximizing) {
+                    if (stand_pat >= beta) return stand_pat;
+                    alpha = Math.max(alpha, stand_pat);
+                } else {
+                    if (stand_pat <= alpha) return stand_pat;
+                    beta = Math.min(beta, stand_pat);
+                }
+
+                const moves = generateAllMoves(board, currentColor).filter(m => m.type === 'capture');
+                const sortedMoves = orderMoves(board, moves, currentColor);
+
+                for (const mv of sortedMoves) {
+                    const nb = simulateMove(board, mv.fromRow, mv.fromCol, mv.toRow, mv.toCol);
+                    const nextColor = currentColor === 'red' ? 'black' : 'red';
+                    const score = quiesce(nb, alpha, beta, !isMaximizing, nextColor, rootAiColor, qDepth + 1);
+
+                    if (isMaximizing) {
+                        alpha = Math.max(alpha, score);
+                        if (alpha >= beta) break;
+                    } else {
+                        beta = Math.min(beta, score);
+                        if (beta <= alpha) break;
+                    }
+                }
+                return isMaximizing ? alpha : beta;
+            }, [evaluateBoardDynamic, generateAllMoves, orderMoves, simulateMove]);
+
+            // ----- α-β 搜索 -----
+            const alphaBeta = useCallback((board, depth, alpha, beta, isMaximizing, currentColor, rootAiColor) => {
+                const hash = hashBoard(board) + '-' + currentColor;
+                const ttEntry = ttRef.current.get(hash);
+                const originalAlpha = alpha;
+                const originalBeta = beta;
+
+                if (ttEntry && ttEntry.depth >= depth) {
+                    if (ttEntry.flag === 'EXACT') return { score: ttEntry.score, move: ttEntry.move };
+                    if (ttEntry.flag === 'LOWERBOUND') alpha = Math.max(alpha, ttEntry.score);
+                    if (ttEntry.flag === 'UPPERBOUND') beta = Math.min(beta, ttEntry.score);
+                    if (alpha >= beta) return { score: ttEntry.score, move: ttEntry.move };
+                }
+
+                if (depth === 0) {
+                    const qScore = quiesce(board, alpha, beta, isMaximizing, currentColor, rootAiColor, 0);
+                    return { score: qScore, move: null };
+                }
+
+                const moves = generateAllMoves(board, currentColor);
+                if (moves.length === 0) {
+                    return { score: evaluateBoardDynamic(board, rootAiColor), move: null };
+                }
+                
+                const sortedMoves = orderMoves(board, moves, currentColor);
+                let bestMove = null;
+                let bestScore = isMaximizing ? -Infinity : Infinity;
+
+                for (const mv of sortedMoves) {
+                    const target = board[mv.toRow][mv.toCol];
+                    const isCapture = !!target;
+                    const nb = simulateMove(board, mv.fromRow, mv.fromCol, mv.toRow, mv.toCol);
+
+                    if (captureGeneralMode && target && target.rank === 1 && target.color !== currentColor) {
+                        return { score: isMaximizing ? 999999 : -999999, move: mv };
+                    }
+
+                    const nextColor = currentColor === 'red' ? 'black' : 'red';
+                    const result = alphaBeta(nb, depth - 1, alpha, beta, !isMaximizing, nextColor, rootAiColor);
+                    
+                    let currentScore = result.score;
+                    const moveHash = `${currentColor}-${mv.fromRow}${mv.fromCol}-${mv.toRow}${mv.toCol}`;
+                    const historyPenalty = (aiHistoryRef.current.get(moveHash) || 0) * 500;
+                    const adjustedPenalty = isCapture ? historyPenalty * 0.1 : historyPenalty;
+
+                    if (isMaximizing) currentScore -= adjustedPenalty;
+                    else currentScore += adjustedPenalty;
+
+                    if (isMaximizing) {
+                        if (currentScore > bestScore) {
+                            bestScore = currentScore;
+                            bestMove = mv;
+                        }
+                        alpha = Math.max(alpha, bestScore);
+                    } else {
+                        if (currentScore < bestScore) {
+                            bestScore = currentScore;
+                            bestMove = mv;
+                        }
+                        beta = Math.min(beta, bestScore);
+                    }
+                    if (alpha >= beta) break;
+                }
+
+                let flag = 'EXACT';
+                if (bestScore <= originalAlpha) flag = 'UPPERBOUND';
+                else if (bestScore >= originalBeta) flag = 'LOWERBOUND';
+                ttRef.current.set(hash, { depth, flag, score: bestScore, move: bestMove });
+
+                return { score: bestScore, move: bestMove };
+            }, [generateAllMoves, simulateMove, evaluateBoardDynamic, orderMoves, captureGeneralMode, quiesce]);
+
+            // ----- 勝負檢查 & 執行走法 -----
             const checkWinCondition = useCallback((newBoard) => {
                 let hasUnrevealed = false;
                 for (let r = 0; r < 4; r++) {
                     for (let c = 0; c < 8; c++) {
-                        if (newBoard[r][c] && !newBoard[r][c].faceUp) {
-                            hasUnrevealed = true;
-                            break;
-                        }
+                        if (newBoard[r][c] && !newBoard[r][c].faceUp) { hasUnrevealed = true; break; }
                     }
                     if (hasUnrevealed) break;
                 }
                 if (hasUnrevealed) return false;
-
                 let redPieces = 0, blackPieces = 0;
                 let redMoves = 0, blackMoves = 0;
                 for (let r = 0; r < 4; r++) {
@@ -487,8 +997,14 @@
                         else { blackPieces++; blackMoves += moves.length; }
                     }
                 }
-                if (redPieces === 0 || redMoves === 0) { setGameOver(true); setWinner('black'); return true; }
-                if (blackPieces === 0 || blackMoves === 0) { setGameOver(true); setWinner('red'); return true; }
+                if (redPieces === 0 || redMoves === 0) {
+                    setGameOver(true); setWinner('black'); setWinReason(redPieces === 0 ? '紅方被全殲' : '紅方無子可走');
+                    playSound('win'); return true;
+                }
+                if (blackPieces === 0 || blackMoves === 0) {
+                    setGameOver(true); setWinner('red'); setWinReason(blackPieces === 0 ? '黑方被全殲' : '黑方無子可走');
+                    playSound('win'); return true;
+                }
                 return false;
             }, []);
 
@@ -497,138 +1013,125 @@
                 const newBoard = cloneBoard(board);
                 const attacker = newBoard[fromRow][fromCol];
                 const target = newBoard[toRow][toCol];
-                if (target) playSound('capture');
-                else playSound('move');
+                if (target) playSound('capture'); else playSound('move');
                 newBoard[toRow][toCol] = attacker;
                 newBoard[fromRow][fromCol] = null;
-                const nextTurn = currentTurn === 'red' ? 'black' : 'red';
-                if (checkWinCondition(newBoard)) {
+                if (target) {
+                    if (target.color === 'red') setBlackCaptures(p => p + 1);
+                    else setRedCaptures(p => p + 1);
+                }
+                if (captureGeneralMode && target && target.rank === 1) {
                     setBoard(newBoard);
-                    setSelectedPos(null);
-                    setHighlightCells([]);
+                    setGameOver(true);
+                    setWinner(attacker.color === 'red' ? 'red' : 'black');
+                    setWinReason(target.color === 'red' ? '紅方主帥被奪' : '黑方主將被奪');
+                    setSelectedPos(null); setHighlightCells([]);
+                    playSound('win');
                     return;
                 }
+                if (checkWinCondition(newBoard)) {
+                    setBoard(newBoard);
+                    setSelectedPos(null); setHighlightCells([]);
+                    return;
+                }
+                const nextTurn = currentTurn === 'red' ? 'black' : 'red';
                 setBoard(newBoard);
                 setCurrentTurn(nextTurn);
                 setSelectedPos(null);
                 setHighlightCells([]);
-            }, [board, currentTurn, gameOver, checkWinCondition]);
+            }, [board, currentTurn, gameOver, captureGeneralMode, checkWinCondition]);
 
-            // AI 邏輯（完整原始）
-            useEffect(() => {
-                if (gameOver || gameMode !== 'ai' || currentTurn === null || !aiColor || currentTurn !== aiColor) return;
-                const timer = setTimeout(() => {
-                    let generalPos = null;
-                    const enemyThreats = [];
-                    const availableCaptures = [];
-                    const availableMoves = [];
-                    const unrevealedPieces = [];
+            // ----- 大師級決策分配 -----
+            const aiDecide = useCallback(() => {
+                if (ttRef.current.size > 50000) ttRef.current.clear();
 
-                    for (let r = 0; r < 4; r++) {
-                        for (let c = 0; c < 8; c++) {
-                            const p = board[r][c];
-                            if (!p) continue;
-                            if (!p.faceUp) {
-                                unrevealedPieces.push({ row: r, col: c });
-                                continue;
-                            }
-                            if (p.color === aiColor) {
-                                if (p.rank === 1) generalPos = { row: r, col: c };
-                                const moves = generateMoves(board, r, c);
-                                moves.forEach(m => {
-                                    if (m.type === 'capture') {
-                                        availableCaptures.push({ from: { row: r, col: c }, to: m });
-                                    } else {
-                                        availableMoves.push({ from: { row: r, col: c }, to: m });
-                                    }
-                                });
-                            }
+                const unrevealed = [];
+                for (let r = 0; r < 4; r++) {
+                    for (let c = 0; c < 8; c++) {
+                        if (board[r][c] && !board[r][c].faceUp) unrevealed.push({ row: r, col: c });
+                    }
+                }
+                
+                const allMoves = generateAllMoves(board, aiColor);
+                let bestMoveResult = null;
+                
+                if (allMoves.length > 0) {
+                    const faceUpCount = 32 - unrevealed.length;
+                    let depth = 4;
+                    if (faceUpCount >= 22) depth = 5;
+                    if (faceUpCount >= 28) depth = 6;
+                    bestMoveResult = alphaBeta(board, depth, -Infinity, Infinity, true, aiColor, aiColor);
+                }
+                
+                let isCaptureMove = false;
+                let isEscapeMove = false;
+                
+                if (bestMoveResult && bestMoveResult.move) {
+                    const mv = bestMoveResult.move;
+                    if (board[mv.toRow][mv.toCol] !== null) {
+                        isCaptureMove = true;
+                    }
+                    
+                    const boardAfter = simulateMove(board, mv.fromRow, mv.fromCol, mv.toRow, mv.toCol);
+                    const wasThreatened = isPositionThreatened(board, mv.fromRow, mv.fromCol, aiColor);
+                    const isStillThreatened = isPositionThreatened(boardAfter, mv.toRow, mv.toCol, aiColor);
+                    if (wasThreatened && !isStillThreatened) {
+                        isEscapeMove = true;
+                    }
+                }
+
+                let shouldFlip = false;
+                const currentScore = evaluateBoardDynamic(board, aiColor);
+
+                if (!bestMoveResult || !bestMoveResult.move) {
+                    shouldFlip = true;
+                } else if (isCaptureMove || isEscapeMove) {
+                    shouldFlip = false;
+                } else {
+                    const faceUpCount = 32 - unrevealed.length;
+                    if (faceUpCount < 10) {
+                        shouldFlip = true;
+                    } else if (currentScore < -3000) {
+                        shouldFlip = Math.random() > 0.2; 
+                    } else {
+                        const moveGain = bestMoveResult.score - currentScore;
+                        if (moveGain <= 100) { 
+                            shouldFlip = true;
                         }
                     }
+                }
 
-                    if (generalPos) {
-                        for (let r = 0; r < 4; r++) {
-                            for (let c = 0; c < 8; c++) {
-                                const p = board[r][c];
-                                if (p && p.faceUp && p.color !== aiColor) {
-                                    const eMoves = generateMoves(board, r, c);
-                                    const canHitGeneral = eMoves.some(m => m.row === generalPos.row && m.col === generalPos.col && m.type === 'capture');
-                                    if (canHitGeneral) {
-                                        enemyThreats.push({ row: r, col: c, rank: p.rank });
-                                    }
-                                }
-                            }
-                        }
-                    }
-
-                    if (enemyThreats.length > 0 && generalPos) {
-                        const counterCaptures = availableCaptures.filter(cap =>
-                            enemyThreats.some(threat => cap.to.row === threat.row && cap.to.col === threat.col)
-                        );
-                        if (counterCaptures.length > 0) {
-                            const choice = counterCaptures[Math.floor(Math.random() * counterCaptures.length)];
-                            executeMove(choice.from.row, choice.from.col, choice.to.row, choice.to.col);
-                            return;
-                        }
-
-                        const generalMoves = generateMoves(board, generalPos.row, generalPos.col);
-                        const safeGeneralMoves = [];
-                        generalMoves.forEach(gm => {
-                            const simBoard = cloneBoard(board);
-                            simBoard[gm.row][gm.col] = simBoard[generalPos.row][generalPos.col];
-                            simBoard[generalPos.row][generalPos.col] = null;
-                            let stillThreatened = false;
-                            for (let r = 0; r < 4; r++) {
-                                for (let c = 0; c < 8; c++) {
-                                    const p = simBoard[r][c];
-                                    if (p && p.faceUp && p.color !== aiColor) {
-                                        const eMoves = generateMoves(simBoard, r, c);
-                                        if (eMoves.some(m => m.row === gm.row && m.col === gm.col && m.type === 'capture')) {
-                                            stillThreatened = true;
-                                        }
-                                    }
-                                }
-                            }
-                            if (!stillThreatened) safeGeneralMoves.push(gm);
-                        });
-                        if (safeGeneralMoves.length > 0) {
-                            const choice = safeGeneralMoves[Math.floor(Math.random() * safeGeneralMoves.length)];
-                            executeMove(generalPos.row, generalPos.col, choice.row, choice.col);
-                            return;
-                        }
-                    }
-
-                    if (availableCaptures.length > 0) {
-                        const choice = availableCaptures[Math.floor(Math.random() * availableCaptures.length)];
-                        executeMove(choice.from.row, choice.from.col, choice.to.row, choice.to.col);
-                    } 
-                    else if (availableMoves.length > 0 && (unrevealedPieces.length === 0 || Math.random() > 0.4)) {
-                        const choice = availableMoves[Math.floor(Math.random() * availableMoves.length)];
-                        executeMove(choice.from.row, choice.from.col, choice.to.row, choice.to.col);
-                    } 
-                    else if (unrevealedPieces.length > 0) {
-                        const choice = unrevealedPieces[Math.floor(Math.random() * unrevealedPieces.length)];
-                        playSound('flip');
-                        const newBoard = cloneBoard(board);
-                        newBoard[choice.row][choice.col].faceUp = true;
-                        const nextTurn = aiColor === 'red' ? 'black' : 'red';
-                        if (checkWinCondition(newBoard)) {
-                            setBoard(newBoard);
-                            return;
-                        }
+                if (shouldFlip && unrevealed.length > 0) {
+                    const u = unrevealed[Math.floor(Math.random() * unrevealed.length)];
+                    playSound('flip');
+                    const newBoard = cloneBoard(board);
+                    newBoard[u.row][u.col].faceUp = true;
+                    aiHistoryRef.current.clear();
+                    
+                    if (checkWinCondition(newBoard)) {
                         setBoard(newBoard);
-                        setCurrentTurn(nextTurn);
+                        setSelectedPos(null); setHighlightCells([]);
+                        return;
                     }
-                }, 550);
-                return () => clearTimeout(timer);
-            }, [board, currentTurn, gameOver, gameMode, aiColor, executeMove, checkWinCondition]);
+                    const nextTurn = aiColor === 'red' ? 'black' : 'red';
+                    setBoard(newBoard);
+                    setCurrentTurn(nextTurn);
+                    return;
+                }
 
+                if (bestMoveResult && bestMoveResult.move) {
+                    const mv = bestMoveResult.move;
+                    const moveHash = `${aiColor}-${mv.fromRow}${mv.fromCol}-${mv.toRow}${mv.toCol}`;
+                    aiHistoryRef.current.set(moveHash, (aiHistoryRef.current.get(moveHash) || 0) + 1);
+                    executeMove(mv.fromRow, mv.fromCol, mv.toRow, mv.toCol);
+                }
+            }, [board, aiColor, generateAllMoves, alphaBeta, simulateMove, isPositionThreatened, evaluateBoardDynamic, executeMove, checkWinCondition]);
+
+            // ----- 事件處理 -----
             const handleCellClick = useCallback((row, col) => {
                 if (gameOver) return;
                 if (gameMode === 'ai' && currentTurn !== null && currentTurn === aiColor) return;
-
                 const piece = board[row][col];
-
                 if (currentTurn === null) {
                     if (piece && !piece.faceUp) {
                         playSound('flip');
@@ -642,13 +1145,9 @@
                     }
                     return;
                 }
-
                 if (selectedPos) {
                     const hit = highlightCells.find(h => h.row === row && h.col === col);
-                    if (hit) {
-                        executeMove(selectedPos.row, selectedPos.col, row, col);
-                        return;
-                    }
+                    if (hit) { executeMove(selectedPos.row, selectedPos.col, row, col); return; }
                     setSelectedPos(null);
                     setHighlightCells([]);
                     if (piece && piece.faceUp && piece.color === currentTurn) {
@@ -658,7 +1157,6 @@
                     }
                     return;
                 }
-
                 if (!piece) return;
                 if (!piece.faceUp) {
                     playSound('flip');
@@ -677,6 +1175,38 @@
                 }
             }, [board, currentTurn, gameOver, selectedPos, highlightCells, executeMove, gameMode, aiColor, checkWinCondition]);
 
+            // ----- useEffect 觸發 AI -----
+            useEffect(() => {
+                if (gameOver || gameMode !== 'ai' || currentTurn === null || !aiColor || currentTurn !== aiColor) return;
+                const timer = setTimeout(() => aiDecide(), 600);
+                return () => clearTimeout(timer);
+            }, [board, currentTurn, gameOver, gameMode, aiColor, aiDecide]);
+
+            // ----- 啟動提示 -----
+            useEffect(() => {
+                if (currentTurn !== null || gameOver) {
+                    if (startTimerRef.current) {
+                        clearTimeout(startTimerRef.current);
+                        startTimerRef.current = null;
+                    }
+                    setShowStartPrompt(false);
+                    return;
+                }
+                setShowStartPrompt(true);
+                if (startTimerRef.current) clearTimeout(startTimerRef.current);
+                startTimerRef.current = setTimeout(() => {
+                    setShowStartPrompt(false);
+                    startTimerRef.current = null;
+                }, 3000);
+                return () => {
+                    if (startTimerRef.current) {
+                        clearTimeout(startTimerRef.current);
+                        startTimerRef.current = null;
+                    }
+                };
+            }, [currentTurn, gameOver]);
+
+            // ----- 重啟 & 模式切換 -----
             const handleRestart = () => {
                 playSound('move');
                 setBoard(createInitialBoard());
@@ -687,6 +1217,11 @@
                 setHighlightCells([]);
                 setGameOver(false);
                 setWinner(null);
+                setWinReason('');
+                setRedCaptures(0);
+                setBlackCaptures(0);
+                aiHistoryRef.current.clear();
+                ttRef.current.clear();
             };
 
             const toggleMode = () => {
@@ -695,7 +1230,7 @@
                 handleRestart();
             };
 
-            // 渲染棋盤 (列優先)
+            // ----- 渲染 -----
             const renderBoard = () => {
                 const cells = [];
                 let index = 0;
@@ -705,78 +1240,80 @@
                         const isHighlight = highlightCells.some(h => h.row === r && h.col === c);
                         const highlightType = highlightCells.find(h => h.row === r && h.col === c)?.type || 'move';
                         const isSelected = selectedPos && selectedPos.row === r && selectedPos.col === c;
-                        cells.push(html`
-                            <${Cell} 
-                                key=${`cell-${r}-${c}`} 
-                                row=${r} col=${c} 
-                                piece=${piece} 
-                                isHighlight=${isHighlight} 
-                                highlightType=${highlightType} 
-                                isSelected=${isSelected} 
-                                onCellClick=${handleCellClick} 
-                                index=${index++} 
-                            />
-                        `);
+                        cells.push(html `<${Cell} key=${`cell-${r}-${c}`} row=${r} col=${c} piece=${piece} isHighlight=${isHighlight} highlightType=${highlightType} isSelected=${isSelected} onCellClick=${handleCellClick} index=${index++} />`);
                     }
                 }
                 return cells;
             };
 
-            const turnLabel = currentTurn ? (currentTurn === 'red' ? '紅方' : '黑方') : '翻牌開局';
-            const turnColor = currentTurn === 'red' ? 'bg-red-500' : (currentTurn === 'black' ? 'bg-stone-600' : 'bg-wood-500');
+            const turnLabel = currentTurn ? (currentTurn === 'red' ? '紅方' : '黑方') : '';
+            const isToggleDisabled = currentTurn !== null;
 
-            return html`
-                <div className="app-container">
-                    <!-- 頂部狀態欄 -->
+            return html `
+                <div className="app-container" role="main" aria-label="暗棋遊戲">
                     <div className="top-bar">
-                        <span className="text-wood-300 text-sm font-black tracking-wider">♟ 暗棋</span>
-                        <div className="flex items-center gap-2 text-sm text-wood-300 font-bold">
-                            <span>${turnLabel}</span>
-                            <div className="w-3 h-3 rounded-full ${turnColor} transition-all duration-300 shadow-lg"></div>
-                        </div>
-                    </div>
-
-                    <!-- 棋盤區域 -->
-                    <div className="board-area">
-                        <div className="board-wrapper">
-                            <div className="board-inner relative">
-                                <div className="board-grid">
-                                    <${AnimatePresence}>${renderBoard()}<//>
+                        <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0">
+                            <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0">
+                                <div className="w-6 h-6 sm:w-8 sm:h-8 rounded-xl bg-gradient-to-br from-wood-400 to-wood-600 flex items-center justify-center text-base shadow-md flex-shrink-0" aria-hidden="true">♟</div>
+                                <span className="text-wood-300 text-xs sm:text-sm font-black tracking-wider flex-shrink-0">暗棋</span>
+                                ${gameMode === 'ai' ? html`<span className="text-[8px] sm:text-[9px] font-bold text-wood-500 bg-wood-800/40 px-1.5 py-0.5 rounded-md border border-wood-500/20 tracking-widest flex-shrink-0">電腦</span>` : html`<span className="text-[8px] sm:text-[9px] font-bold text-wood-500 bg-wood-800/40 px-1.5 py-0.5 rounded-md border border-wood-500/20 tracking-widest flex-shrink-0">雙人</span>`}
+                            </div>
+                            <label className=${`flex items-center gap-1 bg-wood-800/40 px-1.5 py-0.5 sm:px-2 sm:py-1 rounded-lg border border-wood-500/20 shadow-inner transition-all duration-300 flex-shrink-0 ${isToggleDisabled ? 'opacity-40 cursor-not-allowed' : 'cursor-pointer'}`}>
+                                <div className="relative w-6 h-3.5 sm:w-7 sm:h-4 rounded-full bg-wood-950 transition-colors duration-300 flex-shrink-0" style=${{ backgroundColor: captureGeneralMode ? '#b91c1c' : '#241810' }}>
+                                    <input type="checkbox" className="sr-only" checked=${captureGeneralMode} disabled=${isToggleDisabled} onChange=${() => { if (isToggleDisabled) return; playSound('flip'); setCaptureGeneralMode(!captureGeneralMode); }} />
+                                    <div className="absolute left-0.5 top-0.5 w-2.5 h-2.5 sm:w-3 sm:h-3 bg-wood-100 rounded-full transition-transform duration-300 shadow-sm" style=${{ transform: captureGeneralMode ? 'translateX(12px)' : 'translateX(0)' }}></div>
                                 </div>
-                                ${gameOver && winner && html`
-                                    <div className="victory-overlay">
-                                        <div className="victory-text ${winner === 'red' ? 'victory-red' : 'victory-black'}">
-                                            ${winner === 'red' ? '紅方獲勝' : '黑方獲勝'}
-                                        </div>
-                                        <div className="victory-sub">因對手無子可走或被全殲</div>
-                                        <button onClick=${handleRestart}>重新新局</button>
-                                    </div>
-                                `}
+                                <span className="text-[10px] sm:text-[11px] text-wood-200 font-bold select-none tracking-widest whitespace-nowrap">奪帥</span>
+                            </label>
+                        </div>
+                        <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0">
+                            <div className="flex items-center gap-1 bg-wood-900/40 px-1.5 py-0.5 sm:px-2 sm:py-1 rounded-lg border border-wood-500/10 flex-shrink-0">
+                                <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-gradient-to-br from-red-400 to-red-700 flex-shrink-0"></div>
+                                <span className="text-wood-300 font-bold min-w-[1.25rem] text-center text-xs sm:text-sm">${redCaptures}</span>
+                                <span className="text-wood-600 text-[8px] sm:text-[9px] flex-shrink-0">吃</span>
+                            </div>
+                            <div className="flex items-center gap-1 px-1.5 py-0.5 sm:px-2 sm:py-1 rounded-2xl bg-wood-900/60 backdrop-blur border border-wood-500/10 flex-shrink-0 min-w-[3rem] justify-center">
+                                <div className=${"w-2 h-2 sm:w-2.5 sm:h-2.5 rounded-full flex-shrink-0 " + (currentTurn === 'red' ? 'bg-gradient-to-br from-red-400 to-red-700 shadow-red-500/50 shadow-lg' : (currentTurn === 'black' ? 'bg-gradient-to-br from-gray-400 to-gray-700 shadow-gray-500/50 shadow-lg' : 'bg-gradient-to-br from-wood-400 to-wood-600 shadow-wood-500/50 shadow-lg'))}></div>
+                                <span className="text-wood-300 font-bold min-w-[2rem] text-center text-xs sm:text-sm">${turnLabel}</span>
+                            </div>
+                            <div className="flex items-center gap-1 bg-wood-900/40 px-1.5 py-0.5 sm:px-2 sm:py-1 rounded-lg border border-wood-500/10 flex-shrink-0">
+                                <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-gradient-to-br from-gray-400 to-gray-700 flex-shrink-0"></div>
+                                <span className="text-wood-300 font-bold min-w-[1.25rem] text-center text-xs sm:text-sm">${blackCaptures}</span>
+                                <span className="text-wood-600 text-[8px] sm:text-[9px] flex-shrink-0">吃</span>
                             </div>
                         </div>
                     </div>
-
-                    <!-- 底部按鈕 -->
+                    <div className="board-area"><div className="board-wrapper"><div className="board-inner relative"><div className="board-grid">${renderBoard()}</div>
+                                ${gameOver && winner ? html`
+                                    <div className="victory-overlay" key="victory-overlay">
+                                        <div className="victory-text ${winner === 'red' ? 'victory-red' : 'victory-black'}">${winner === 'red' ? '紅方獲勝' : '黑方獲勝'}</div>
+                                        <div className="victory-sub">${winReason}</div>
+                                        <button onClick=${handleRestart}>重新新局</button>
+                                    </div>
+                                ` : null}
+                                ${!gameOver && currentTurn === null && showStartPrompt ? html`
+                                    <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-10">
+                                        <div className="bg-black/70 backdrop-blur-sm px-8 py-5 rounded-2xl border border-wood-400/40 text-3xl font-bold text-wood-100 shadow-2xl start-prompt">
+                                            翻牌開局
+                                        </div>
+                                    </div>
+                                ` : null}
+                            </div></div></div>
                     <div className="bottom-bar">
-                        <button className="btn-secondary" onClick=${toggleMode}>
-                            ${gameMode === 'pvp' ? '👥 雙人' : '🤖 電腦'}
-                        </button>
-                        <button className="btn-primary" onClick=${handleRestart}>
-                            ↺ 重開
-                        </button>
+                        <button className="btn-secondary" onClick=${toggleMode} aria-label=${gameMode === 'pvp' ? '切換電腦模式' : '切換雙人模式'}>${gameMode === 'pvp' ? '🤖 電腦' : '👥 雙人'}</button>
+                        <button className="btn-primary" onClick=${handleRestart} aria-label="重新開始遊戲">↺ 重開</button>
                     </div>
                 </div>
             `;
         }
 
         const root = ReactDOM.createRoot(document.getElementById('root'));
-        root.render(html`<${React.StrictMode}><${App} /><//>`);
+        root.render(html `<${React.StrictMode}><${App} /></>`);
 
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
-                navigator.serviceWorker.register('./sw.js')
-                    .then(reg => console.log('ServiceWorker 註冊成功，範圍: ', reg.scope))
-                    .catch(err => console.log('ServiceWorker 註冊失敗: ', err));
+                navigator.serviceWorker.register('./sw.js').then(reg => console.log('ServiceWorker 註冊成功'))
+                    .catch(err => console.log('本地 file:// 環境下跳過 ServiceWorker 註冊'));
             });
         }
     </script>

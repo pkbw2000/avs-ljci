@@ -110,7 +110,10 @@ function updateUI() {
 }
 
 // --- 遊戲規則邏輯 (純函數驗證) ---
+// --- 遊戲規則邏輯 (純函數驗證) ---
 function isValidMove(from, to, currentBoard) {
+  if (from === to) return false; // 【修復】：防止原地判定導致的砲/炮無窮迴圈
+
   const dx = Math.abs((from % 4) - (to % 4));
   const dy = Math.abs(Math.floor(from / 4) - Math.floor(to / 4));
   const attacker = currentBoard[from].piece;

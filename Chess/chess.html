@@ -40,17 +40,14 @@
             user-select: none;
         }
 
-        /* ========== iOS 專用佈局 ========== */
+        /* ========== iOS 專用佈局（高度動態適應） ========== */
         #root {
-            /* 回退方案 */
-            height: 100vh;
-            /* iOS 15.4+ 動態視口 */
-            height: 100dvh;
+            height: 100vh;          /* 回退 */
+            height: 100dvh;         /* iOS 15.4+ 動態視口 */
             display: flex;
             align-items: center;
             justify-content: center;
             background: radial-gradient(ellipse at 50% 20%, #2a1f16 0%, #150f0a 50%, #0a0705 100%);
-            /* 安全區域 */
             padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
             overflow: hidden;
         }
@@ -58,49 +55,48 @@
         .app-container {
             width: 100%;
             max-width: 450px;
-            height: 100%;           /* 由父容器決定 */
+            height: 100%;
             max-height: 100%;
             display: flex;
             flex-direction: column;
-            padding: 8px 12px 12px;
-            gap: 8px;
+            padding: 6px 12px 6px;   /* 上下內縮減少佔用 */
+            gap: 6px;               /* 縮小間距 */
             overflow: hidden;
         }
 
-        /* ========== 頂部與底部欄 ========== */
+        /* ========== 頂部與底部欄（更緊湊） ========== */
         .top-bar, .bottom-bar {
             flex-shrink: 0;
             z-index: 10;
         }
 
         .top-bar {
-            min-height: 44px;
+            min-height: 38px;       /* 從 44px 降低 */
             display: flex;
             align-items: center;
             justify-content: space-between;
-            padding: 4px 12px;
+            padding: 2px 10px;
             background: rgba(30,22,16,0.6);
             backdrop-filter: blur(8px);
-            border-radius: 20px;
+            border-radius: 16px;
             border: 1px solid rgba(200,170,130,0.12);
-            gap: 4px;
+            gap: 2px;
             flex-wrap: nowrap;
         }
 
         .bottom-bar {
             display: grid;
             grid-template-columns: 1fr 1fr;
-            gap: 12px;
-            height: 52px;
-            /* 為底部安全區域留白（Home Indicator） */
+            gap: 10px;
+            height: 46px;           /* 從 52px 降低 */
             padding-bottom: env(safe-area-inset-bottom);
         }
 
         .bottom-bar button {
             border: none;
-            border-radius: 16px;
+            border-radius: 14px;
             font-weight: 800;
-            font-size: 0.95rem;
+            font-size: 0.9rem;
             background: rgba(60,44,32,0.5);
             backdrop-filter: blur(4px);
             border: 1px solid rgba(200,170,130,0.15);
@@ -121,10 +117,10 @@
             color: #c9b89c;
         }
 
-        /* ========== 棋盤區域 ========== */
+        /* ========== 棋盤區域（佔滿剩餘空間） ========== */
         .board-area {
             flex: 1;
-            min-height: 0;
+            min-height: 0;          /* 防止 flex 溢出 */
             display: flex;
             align-items: center;
             justify-content: center;
@@ -137,8 +133,8 @@
             aspect-ratio: 4 / 8;
             background: linear-gradient(145deg, rgba(80,60,40,0.4), rgba(40,28,18,0.6));
             backdrop-filter: blur(4px);
-            border-radius: 20px;
-            padding: 8px;
+            border-radius: 16px;
+            padding: 4px;           /* 從 8px 減半 */
             border: 1px solid rgba(200,170,130,0.1);
             box-shadow: 0 12px 48px rgba(0,0,0,0.6), inset 0 1px 0 rgba(200,170,130,0.08);
         }
@@ -147,8 +143,8 @@
             width: 100%;
             height: 100%;
             background: linear-gradient(180deg, rgba(139,109,74,0.12), rgba(100,78,52,0.08));
-            border-radius: 14px;
-            padding: 5px;
+            border-radius: 12px;
+            padding: 3px;           /* 從 5px 降低 */
             box-shadow: none;
             position: relative;
         }
@@ -157,7 +153,7 @@
             display: grid;
             grid-template-columns: repeat(4, 1fr);
             grid-template-rows: repeat(8, 1fr);
-            gap: 3px;
+            gap: 2px;              /* 從 3px 降低 */
             width: 100%;
             height: 100%;
         }
@@ -165,7 +161,7 @@
         /* ========== 格子與棋子 ========== */
         .cell {
             background: radial-gradient(circle at 30% 30%, rgba(200,170,130,0.2), rgba(140,110,80,0.08));
-            border-radius: 8px;
+            border-radius: 6px;
             border: 1px solid rgba(180,150,110,0.15);
             display: flex;
             align-items: center;
@@ -199,16 +195,16 @@
             font-weight: 900;
         }
 
-        /* 棋子樣式（保留原有質感） */
+        /* 棋子樣式（縮小尺寸） */
         .piece {
-            width: 85%;
-            height: 85%;
+            width: 78%;             /* 從 85% 調低 */
+            height: 78%;
             border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
             font-weight: 900;
-            font-size: clamp(1.2rem, 5vw, 2rem);
+            font-size: clamp(1rem, 4.5vw, 1.8rem); /* 字體下限降低 */
             color: white;
             transition: transform 0.15s ease;
             cursor: pointer;
@@ -328,21 +324,87 @@
             animation: startPromptFade 3s ease forwards;
         }
 
-        /* ========== 響應式微調 ========== */
-        @media (max-width:420px) {
-            .top-bar { padding: 4px 8px; min-height: 40px; }
-            .bottom-bar { height: 44px; gap: 8px; }
-            .bottom-bar button { font-size: 0.8rem; border-radius: 12px; }
-            .board-wrapper { padding: 4px; }
-            .board-inner { padding: 3px; }
-            .board-grid { gap: 2px; }
-            .cell { border-radius: 4px; }
+        /* ========== 響應式微調（小屏手機） ========== */
+        @media (max-width: 420px) {
+            .top-bar {
+                min-height: 34px;
+                padding: 2px 8px;
+                border-radius: 12px;
+            }
+            .bottom-bar {
+                height: 40px;
+                gap: 8px;
+            }
+            .bottom-bar button {
+                font-size: 0.75rem;
+                border-radius: 10px;
+            }
+            .board-wrapper {
+                padding: 3px;
+                border-radius: 12px;
+            }
+            .board-inner {
+                padding: 2px;
+                border-radius: 8px;
+            }
+            .board-grid {
+                gap: 1.5px;
+            }
+            .cell {
+                border-radius: 4px;
+            }
+            .piece {
+                width: 74%;
+                height: 74%;
+                font-size: clamp(0.85rem, 4vw, 1.4rem);
+                border-width: 1.5px;
+            }
+            .app-container {
+                padding: 4px 8px 4px;
+                gap: 4px;
+            }
         }
 
         /* 針對 iPhone 全面屏額外保險 */
         @supports (padding: max(0px)) {
             .bottom-bar {
-                padding-bottom: max(env(safe-area-inset-bottom), 8px);
+                padding-bottom: max(env(safe-area-inset-bottom), 6px);
+            }
+        }
+
+        /* 針對極小高度（如 iPhone SE 橫屏或小螢幕）進一步縮小 */
+        @media (max-height: 700px) {
+            .top-bar {
+                min-height: 30px;
+                padding: 1px 6px;
+                font-size: 0.8rem;
+            }
+            .bottom-bar {
+                height: 36px;
+                gap: 6px;
+            }
+            .bottom-bar button {
+                font-size: 0.7rem;
+                border-radius: 8px;
+            }
+            .board-wrapper {
+                padding: 2px;
+            }
+            .board-inner {
+                padding: 1px;
+            }
+            .board-grid {
+                gap: 1px;
+            }
+            .piece {
+                width: 70%;
+                height: 70%;
+                font-size: clamp(0.7rem, 3.5vw, 1.2rem);
+                border-width: 1px;
+            }
+            .app-container {
+                padding: 2px 6px 2px;
+                gap: 3px;
             }
         }
     </style>
@@ -352,6 +414,11 @@
 
     <script type="module">
         // ========================= 以下為 JavaScript（與原始代碼完全一致） =========================
+        // 為了節省篇幅，此處省略 JS 重複內容（請複製您原有的完整 JS 部分）
+        // 但實際發佈時必須包含完整 JS，否則無法運行。
+        // 由於篇幅，此處僅示意，實際請使用您提供的完整 JS 代碼。
+        // 為了讓您可以直接使用，我會在回答中附上完整的 JS 部分（已在下方包含）。
+        // 請繼續...
         import React, { useState, useEffect, useCallback, useRef, memo } from 'https://esm.sh/react@18.3.1';
         import ReactDOM from 'https://esm.sh/react-dom@18.3.1/client';
         import htm from 'https://esm.sh/htm@3.1.1';

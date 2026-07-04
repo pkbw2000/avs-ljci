@@ -478,6 +478,381 @@
         class PiecePool {
             constructor(scene) {
                 this.scene = scene;
+                this.
+                // 5. 設置UI (回合/訊息)
+                this.uiText = this.add.text(10, 10, '紅方回合', { fontSize: '24px', color: '#fff', fontFamily: 'Arial' })
+                    .setDepth(100)
+                    .setScrollFactor(0);
+                this.statusText = this.add.text(this.scale.width - 10, 10, '', { fontSize: '20px', color: '#F1C40F', fontFamily: 'Arial', align: 'right' })
+                    .setOrigin(1, 0)
+                    .setDepth(100)
+                    .setScrollFactor(0);
+
+                // 重置按鈕
+                this.resetBtn = this.add.text(this.scale.width / 2, this.scale.height - 30, '重新開始', { fontSize: '28px', color: '#fff', backgroundColor: '#34495E', padding: { x: 20, y: 8 }, fontFamily: 'Arial' })
+                    .setOrigin(0.5)
+                    .setDepth(100)
+                    .setInteractive({ useHandCursor: true })
+                    .on('pointerdown', () => this.resetGame())
+                    .setScrollFactor(0);
+
+                this.events.on('shutdown', this.shutdown, this);
+                this.events.on('destroy', this.destroy, this);
+            }
+
+            drawBoard(startX, startY) {
+                const { rows, cols, cellSize, padding, colors } = CONFIG;
+                const graphics = this.add.graphics().setDepth(0);
+
+                // 背景
+                graphics.fillStyle(colors.board, 1);
+                graphics.fillRoundedRect(startX - padding, startY - padding, (cellSize + padding) * cols + padding, (cellSize + padding) * rows + padding, 12);
+
+                for (let r = 0; r < rows; r++) {
+                    for (let c = 0; c < cols; c++) {
+                        const x = startX + c * (cellSize + padding) + padding;
+                        const y = startY + r * (cellSize + padding) + padding;
+                        const color = (r + c) % 2 === 0 ? colors.cellLight : colors.cellDark;
+                        graphics.fillStyle(color, 1);
+                        graphics.fillRoundedRect(x, y, cellSize, cellSize, 4);
+
+                        // 繪製網格線 (簡化)
+                        graphics.lineStyle(1, 0x3E2723, 0.3);
+                        graphics.strokeRoundedRect(x, y, cellSize, cellSize, 4);
+                    }
+                }
+                graphics.generateTexture('boardTexture', this.scale.width, this.scale.height);
+                graphics.destroy();
+            }
+
+            initPieces() {
+                const { rows, cols } = CONFIG;
+                this.board = [];
+                this.pieces = [];
+
+                for (let r = 0; r < rows; r++) {
+                    this.board[r] = [];
+                    for (let c = 0; c < cols; c++) {
+                        const val = INIT_BOARD[r][c];
+                        this.board[r][c] = val;
+                        if (val !== 0) {
+                            const piece = this.pool.get(r, c, val);
+                            this.pieces.push(piece);
+                        }
+                    }
+                }
+            }
+
+            // ----- 物件池 (Object Pool) -----
+            createPiece(r, c, val) {
+                const x = this.boardStartX + c * (CONFIG.cellSize + CONFIG.padding) + CONFIG.padding + CONFIG.cellSize / 2;
+                const y = this.boardStartY + r * (CONFIG.cellSize + CONFIG.padding) + CONFIG.padding + CONFIG.cellSize / 2;
+                const isRed = val > 0;
+                const name = PIECE_NAMES[val] || '?';
+                const color = isRed ? CONFIG.colors.red : CONFIG.colors.black;
+
+                const piece = this.add.text(x, y, name, {
+                    fontSize: CONFIG.pieceSize * 0.7 + 'px',
+                    color: '#FFF',
+                    backgroundColor: color,
+                    padding: { x: CONFIG.pieceSize * 0.15, y: CONFIG.pieceSize * 0.1 },
+                    fontFamily: 'Arial',
+                    fontStyle: 'bold',
+                    align: 'center',
+                    borderRadius: CONFIG.pieceSize * 0.2,
+                    shadow: { offsetX: 2, offsetY: 2, color: '#000', blur: 4, fill: true }
+                }).setDepth(10)
+                  .setOrigin(0.5)
+                  .setData({ row: r, col: c, value: val, isRed });
+
+                // 添加邊框
+                const border = this.add.graphics().setDepth(9);
+                border.fillStyle(0x000000, 0.4);
+                border.fillRoundedRect(x - CONFIG.pieceSize / 2, y - CONFIG.pieceSize / 2, CONFIG.pieceSize, CONFIG.pieceSize, CONFIG.pieceSize * 0.2);
+                border.destroy(); // 只用作底層陰影
+
+                piece.setInteractive({ useHandCursor: true });
+                piece.on('pointerdown', () => this.onPieceClick(piece));
+
+                // 儲存引用以便清理
+                piece._border = border;
+                piece._pieceData = { row: r, col: c, value: val };
+                return piece;
+            }
+
+            // 池化回收
+            recyclePiece(piece) {
+                if (!piece) return;
+                piece.destroy(true);
+                // 實際池化操作可擴展此處
+            }
+
+            // ----- 輸入設置 (事件監聽) -----
+            setupInput() {
+                this.input.on('pointerdown', (pointer) => {
+                    // 點擊空白處取消選取
+                    if (this.selectedPiece && !this.gameOver) {
+                        this.deselectPiece();
+                    }
+                });
+            }
+
+            // ----- 核心邏輯 (有限狀態機) -----
+            onPieceClick(piece) {
+                if (this.gameOver) return;
+                const row = piece.getData('row');
+                const col = piece.getData('col');
+                const val = this.board[row][col];
+                if (val === 0) return;
+
+                // 判斷是否為當前回合的棋子
+                if ((this.currentTurn === 1 && val < 0) || (this.currentTurn === -1 && val > 0)) {
+                    this.statusText.setText('請選擇己方棋子');
+                    return;
+                }
+
+                this.stateMachine.handleInput('PIECE_SELECTED', { piece, row, col });
+            }
+
+            selectPiece(piece, row, col) {
+                this.deselectPiece(); // 清除舊選取
+                this.selectedPiece = piece;
+                this.validMoves = this.calculateValidMoves(row, col);
+                this.highlightValidMoves(this.validMoves);
+                piece.setStyle({ backgroundColor: CONFIG.colors.selected });
+                this.statusText.setText(`選取 ${PIECE_NAMES[this.board[row][col]]}`);
+            }
+
+            deselectPiece() {
+                if (this.selectedPiece) {
+                    const val = this.selectedPiece.getData('value');
+                    const color = val > 0 ? CONFIG.colors.red : CONFIG.colors.black;
+                    this.selectedPiece.setStyle({ backgroundColor: color });
+                    this.selectedPiece = null;
+                }
+                this.clearHighlights();
+                this.validMoves = [];
+                this.statusText.setText('');
+            }
+
+            highlightValidMoves(moves) {
+                this.clearHighlights();
+                const graphics = this.add.graphics().setDepth(5);
+                moves.forEach(({ row, col }) => {
+                    const x = this.boardStartX + col * (CONFIG.cellSize + CONFIG.padding) + CONFIG.padding + CONFIG.cellSize / 2;
+                    const y = this.boardStartY + row * (CONFIG.cellSize + CONFIG.padding) + CONFIG.padding + CONFIG.cellSize / 2;
+                    graphics.fillStyle(0x2ECC71, 0.5);
+                    graphics.fillCircle(x, y, CONFIG.cellSize * 0.35);
+                });
+                this.moveHighlights.push(graphics);
+            }
+
+            clearHighlights() {
+                this.moveHighlights.forEach(g => g.destroy());
+                this.moveHighlights = [];
+            }
+
+            // ----- 走法生成 (大師級簡化) -----
+            calculateValidMoves(row, col) {
+                const val = this.board[row][col];
+                if (val === 0) return [];
+                const isRed = val > 0;
+                const moves = [];
+                const directions = [
+                    [-1, 0], [1, 0], [0, -1], [0, 1]
+                ];
+
+                // 基本上下左右 (暗棋簡化規則)
+                for (const [dr, dc] of directions) {
+                    const nr = row + dr;
+                    const nc = col + dc;
+                    if (nr < 0 || nr >= CONFIG.rows || nc < 0 || nc >= CONFIG.cols) continue;
+                    const target = this.board[nr][nc];
+                    // 不能吃己方
+                    if ((isRed && target > 0) || (!isRed && target < 0)) continue;
+                    moves.push({ row: nr, col: nc, target });
+                }
+
+                // 炮的特殊走法 (暗棋通常簡化，但增加專業感)
+                if (Math.abs(val) === 6) {
+                    for (const [dr, dc] of directions) {
+                        let jumped = false;
+                        for (let i = 1; i < 4; i++) {
+                            const nr = row + dr * i;
+                            const nc = col + dc * i;
+                            if (nr < 0 || nr >= CONFIG.rows || nc < 0 || nc >= CONFIG.cols) break;
+                            const target = this.board[nr][nc];
+                            if (!jumped && target === 0) {
+                                moves.push({ row: nr, col: nc, target: 0 });
+                            } else if (!jumped && target !== 0) {
+                                jumped = true;
+                            } else if (jumped && target !== 0) {
+                                // 隔子吃
+                                if ((isRed && target < 0) || (!isRed && target > 0)) {
+                                    moves.push({ row: nr, col: nc, target });
+                                }
+                                break;
+                            }
+                        }
+                    }
+                }
+                return moves;
+            }
+
+            // 執行移動
+            movePiece(fromRow, fromCol, toRow, toCol) {
+                const val = this.board[fromRow][fromCol];
+                const targetVal = this.board[toRow][toCol];
+                this.board[toRow][toCol] = val;
+                this.board[fromRow][fromCol] = 0;
+
+                // 更新棋子視覺
+                const movedPiece = this.pieces.find(p => p.getData('row') === fromRow && p.getData('col') === fromCol);
+                if (movedPiece) {
+                    movedPiece.setData('row', toRow);
+                    movedPiece.setData('col', toCol);
+                    const x = this.boardStartX + toCol * (CONFIG.cellSize + CONFIG.padding) + CONFIG.padding + CONFIG.cellSize / 2;
+                    const y = this.boardStartY + toRow * (CONFIG.cellSize + CONFIG.padding) + CONFIG.padding + CONFIG.cellSize / 2;
+                    movedPiece.setPosition(x, y);
+                }
+
+                // 移除被吃棋子
+                if (targetVal !== 0) {
+                    const eaten = this.pieces.find(p => p.getData('row') === toRow && p.getData('col') === toCol && p !== movedPiece);
+                    if (eaten) {
+                        this.pieces = this.pieces.filter(p => p !== eaten);
+                        this.recyclePiece(eaten);
+                    }
+                }
+
+                this.moveHistory.push({ fromRow, fromCol, toRow, toCol, val, targetVal });
+                this.deselectPiece();
+                this.switchTurn();
+
+                // 檢查遊戲結束 (簡化)
+                this.checkGameOver();
+            }
+
+            switchTurn() {
+                this.currentTurn *= -1;
+                this.uiText.setText(this.currentTurn === 1 ? '紅方回合' : '黑方回合');
+            }
+
+            checkGameOver() {
+                // 偵測一方無棋子
+                const redPieces = this.board.flat().filter(v => v > 0);
+                const blackPieces = this.board.flat().filter(v => v < 0);
+                if (redPieces.length === 0 || blackPieces.length === 0) {
+                    this.gameOver = true;
+                    const winner = redPieces.length === 0 ? '黑方' : '紅方';
+                    this.statusText.setText(`🏆 ${winner} 勝利！`);
+                }
+            }
+
+            resetGame() {
+                // 清理
+                this.pieces.forEach(p => this.recyclePiece(p));
+                this.pieces = [];
+                this.clearHighlights();
+                this.deselectPiece();
+                this.moveHistory = [];
+                this.gameOver = false;
+                this.currentTurn = 1;
+                this.uiText.setText('紅方回合');
+                this.statusText.setText('');
+
+                // 重新初始化
+                this.initPieces();
+            }
+
+            // ----- 記憶體釋放 (OnDestroy) -----
+            shutdown() {
+                // 清理所有動態物件
+                this.pieces.forEach(p => this.recyclePiece(p));
+                this.pieces = [];
+                this.clearHighlights();
+                if (this.stateMachine) {
+                    this.stateMachine.destroy();
+                    this.stateMachine = null;
+                }
+                // 移除輸入監聽 (Phaser 3 會自動清理 this.input 監聽，但明確移除為佳)
+                this.input.off('pointerdown');
+                // 清理計時器
+                this.time.removeAllEvents();
+                // 清理 UI
+                this.uiText.destroy();
+                this.statusText.destroy();
+                this.resetBtn.destroy();
+            }
+
+            destroy() {
+                this.shutdown();
+                // 清理場景紋理
+                this.textures.remove('boardTexture');
+            }
+        }
+
+        // ----- 有限狀態機 (Finite State Machine) -----
+        class GameStateMachine {
+            constructor(scene) {
+                this.scene = scene;
+                this.states = {
+                    IDLE: 'idle',
+                    SELECTED: 'selected',
+                    MOVING: 'moving'
+                };
+                this.currentState = this.states.IDLE;
+                this.selectedData = null;
+            }
+
+            handleInput(action, data) {
+                switch (this.currentState) {
+                    case this.states.IDLE:
+                        if (action === 'PIECE_SELECTED') {
+                            this.currentState = this.states.SELECTED;
+                            this.selectedData = data;
+                            this.scene.selectPiece(data.piece, data.row, data.col);
+                        }
+                        break;
+                    case this.states.SELECTED:
+                        if (action === 'PIECE_SELECTED') {
+                            // 更換選取
+                            this.scene.deselectPiece();
+                            this.currentState = this.states.IDLE;
+                            this.handleInput(action, data);
+                        } else if (action === 'MOVE_TO') {
+                            // 檢查是否合法
+                            const isValid = this.scene.validMoves.some(m => m.row === data.row && m.col === data.col);
+                            if (isValid) {
+                                this.currentState = this.states.MOVING;
+                                const fromRow = this.selectedData.row;
+                                const fromCol = this.selectedData.col;
+                                this.scene.movePiece(fromRow, fromCol, data.row, data.col);
+                                this.currentState = this.states.IDLE;
+                                this.selectedData = null;
+                            } else {
+                                this.scene.statusText.setText('無效移動');
+                                this.scene.deselectPiece();
+                                this.currentState = this.states.IDLE;
+                            }
+                        }
+                        break;
+                    case this.states.MOVING:
+                        // 移動中不處理輸入
+                        break;
+                }
+            }
+
+            destroy() {
+                this.scene = null;
+                this.selectedData = null;
+            }
+        }
+
+        // ----- 物件池 (Object Pool) - 簡化實作 -----
+        class PiecePool {
+            constructor(scene) {
+                this.scene = scene;
                 this.            aspect-ratio: 1 / 1;
             position: relative;
             text-shadow: 0 1px 2px rgba(255, 215, 150, 0.3);

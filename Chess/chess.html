@@ -7,7 +7,7 @@
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="theme-color" content="#0d0a07" />
-    <title>暗棋 V8 · 大師版</title>
+    <title>暗棋 V8 · 大師挑戰版</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
         tailwind.config = {
@@ -40,10 +40,10 @@
             user-select: none;
         }
 
-        /* ========== iOS 專用佈局（高度動態適應） ========== */
+        /* ========== iOS 動態視口 ========== */
         #root {
             height: 100vh;          /* 回退 */
-            height: 100dvh;         /* iOS 15.4+ 動態視口 */
+            height: 100dvh;         /* iOS 15.4+ */
             display: flex;
             align-items: center;
             justify-content: center;
@@ -59,44 +59,45 @@
             max-height: 100%;
             display: flex;
             flex-direction: column;
-            padding: 6px 12px 6px;   /* 上下內縮減少佔用 */
-            gap: 6px;               /* 縮小間距 */
+            padding: 4px 8px 4px;    /* 進一步緊縮 */
+            gap: 4px;
             overflow: hidden;
         }
 
-        /* ========== 頂部與底部欄（更緊湊） ========== */
+        /* ========== 頂部與底部欄（極簡） ========== */
         .top-bar, .bottom-bar {
             flex-shrink: 0;
             z-index: 10;
         }
 
         .top-bar {
-            min-height: 38px;       /* 從 44px 降低 */
+            min-height: 32px;
             display: flex;
             align-items: center;
             justify-content: space-between;
-            padding: 2px 10px;
+            padding: 2px 8px;
             background: rgba(30,22,16,0.6);
             backdrop-filter: blur(8px);
-            border-radius: 16px;
+            border-radius: 12px;
             border: 1px solid rgba(200,170,130,0.12);
             gap: 2px;
             flex-wrap: nowrap;
+            font-size: 0.75rem;
         }
 
         .bottom-bar {
             display: grid;
             grid-template-columns: 1fr 1fr;
-            gap: 10px;
-            height: 46px;           /* 從 52px 降低 */
+            gap: 8px;
+            height: 38px;
             padding-bottom: env(safe-area-inset-bottom);
         }
 
         .bottom-bar button {
             border: none;
-            border-radius: 14px;
+            border-radius: 10px;
             font-weight: 800;
-            font-size: 0.9rem;
+            font-size: 0.75rem;
             background: rgba(60,44,32,0.5);
             backdrop-filter: blur(4px);
             border: 1px solid rgba(200,170,130,0.15);
@@ -117,10 +118,10 @@
             color: #c9b89c;
         }
 
-        /* ========== 棋盤區域（佔滿剩餘空間） ========== */
+        /* ========== 棋盤區域（縮小版） ========== */
         .board-area {
             flex: 1;
-            min-height: 0;          /* 防止 flex 溢出 */
+            min-height: 0;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -133,8 +134,8 @@
             aspect-ratio: 4 / 8;
             background: linear-gradient(145deg, rgba(80,60,40,0.4), rgba(40,28,18,0.6));
             backdrop-filter: blur(4px);
-            border-radius: 16px;
-            padding: 4px;           /* 從 8px 減半 */
+            border-radius: 12px;
+            padding: 2px;           /* 再縮小 */
             border: 1px solid rgba(200,170,130,0.1);
             box-shadow: 0 12px 48px rgba(0,0,0,0.6), inset 0 1px 0 rgba(200,170,130,0.08);
         }
@@ -143,8 +144,8 @@
             width: 100%;
             height: 100%;
             background: linear-gradient(180deg, rgba(139,109,74,0.12), rgba(100,78,52,0.08));
-            border-radius: 12px;
-            padding: 3px;           /* 從 5px 降低 */
+            border-radius: 8px;
+            padding: 1px;           /* 再縮小 */
             box-shadow: none;
             position: relative;
         }
@@ -153,15 +154,15 @@
             display: grid;
             grid-template-columns: repeat(4, 1fr);
             grid-template-rows: repeat(8, 1fr);
-            gap: 2px;              /* 從 3px 降低 */
+            gap: 1px;              /* 再縮小 */
             width: 100%;
             height: 100%;
         }
 
-        /* ========== 格子與棋子 ========== */
+        /* ========== 格子與棋子（超緊湊） ========== */
         .cell {
             background: radial-gradient(circle at 30% 30%, rgba(200,170,130,0.2), rgba(140,110,80,0.08));
-            border-radius: 6px;
+            border-radius: 4px;
             border: 1px solid rgba(180,150,110,0.15);
             display: flex;
             align-items: center;
@@ -177,8 +178,8 @@
         .cell-highlight-move::after {
             content: "";
             position: absolute;
-            width: 12px;
-            height: 12px;
+            width: 10px;
+            height: 10px;
             border-radius: 50%;
             background: rgba(120,200,120,0.4);
             border: 2px solid rgba(120,200,120,0.7);
@@ -190,27 +191,27 @@
         .cell-highlight-capture::after {
             content: "✕";
             position: absolute;
-            font-size: 18px;
+            font-size: 14px;
             color: rgba(230,120,120,0.6);
             font-weight: 900;
         }
 
-        /* 棋子樣式（縮小尺寸） */
+        /* 棋子尺寸大幅縮小 */
         .piece {
-            width: 78%;             /* 從 85% 調低 */
-            height: 78%;
+            width: 62%;             /* 從 78% 再降 */
+            height: 62%;
             border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
             font-weight: 900;
-            font-size: clamp(1rem, 4.5vw, 1.8rem); /* 字體下限降低 */
+            font-size: clamp(0.65rem, 3vw, 1.1rem);
             color: white;
             transition: transform 0.15s ease;
             cursor: pointer;
             touch-action: manipulation;
             position: relative;
-            border: 2px solid rgba(255,255,255,0.1);
+            border: 1.5px solid rgba(255,255,255,0.1);
             box-shadow: 
                 inset 0 2px 4px rgba(255,255,255,0.3),
                 inset 0 -4px 6px rgba(0,0,0,0.4),
@@ -225,11 +226,11 @@
         .piece-text { text-shadow: 0 1px 1px rgba(0,0,0,0.8), 0 -1px 0 rgba(255,255,255,0.2); }
 
         .piece-selected {
-            box-shadow: 0 0 0 4px #fbbf24, 0 8px 12px rgba(0,0,0,0.5) !important;
-            transform: translateY(-4px);
+            box-shadow: 0 0 0 3px #fbbf24, 0 8px 12px rgba(0,0,0,0.5) !important;
+            transform: translateY(-2px);
         }
 
-        /* 動畫 */
+        /* 動畫（保持不變） */
         .piece-enter { animation: piecePop 0.28s cubic-bezier(0.34,1.56,0.64,1) forwards; }
         @keyframes piecePop {
             0% { transform: scale(0.85); opacity: 0.6; }
@@ -248,7 +249,7 @@
             100% { transform: scale(1); opacity: 1; }
         }
 
-        /* ========== 勝利遮罩 ========== */
+        /* ========== 勝利遮罩（不變） ========== */
         .victory-overlay {
             position: absolute;
             inset: 0;
@@ -327,84 +328,89 @@
         /* ========== 響應式微調（小屏手機） ========== */
         @media (max-width: 420px) {
             .top-bar {
-                min-height: 34px;
-                padding: 2px 8px;
-                border-radius: 12px;
-            }
-            .bottom-bar {
-                height: 40px;
-                gap: 8px;
-            }
-            .bottom-bar button {
-                font-size: 0.75rem;
+                min-height: 28px;
+                padding: 1px 6px;
+                font-size: 0.65rem;
                 border-radius: 10px;
             }
-            .board-wrapper {
-                padding: 3px;
-                border-radius: 12px;
+            .bottom-bar {
+                height: 34px;
+                gap: 6px;
             }
-            .board-inner {
-                padding: 2px;
+            .bottom-bar button {
+                font-size: 0.65rem;
                 border-radius: 8px;
             }
+            .board-wrapper {
+                padding: 1px;
+                border-radius: 8px;
+            }
+            .board-inner {
+                padding: 1px;
+                border-radius: 6px;
+            }
             .board-grid {
-                gap: 1.5px;
+                gap: 1px;
             }
             .cell {
-                border-radius: 4px;
+                border-radius: 3px;
             }
             .piece {
-                width: 74%;
-                height: 74%;
-                font-size: clamp(0.85rem, 4vw, 1.4rem);
-                border-width: 1.5px;
+                width: 58%;
+                height: 58%;
+                font-size: clamp(0.55rem, 2.5vw, 0.9rem);
+                border-width: 1px;
             }
             .app-container {
-                padding: 4px 8px 4px;
-                gap: 4px;
-            }
-        }
-
-        /* 針對 iPhone 全面屏額外保險 */
-        @supports (padding: max(0px)) {
-            .bottom-bar {
-                padding-bottom: max(env(safe-area-inset-bottom), 6px);
+                padding: 2px 6px 2px;
+                gap: 3px;
             }
         }
 
         /* 針對極小高度（如 iPhone SE 橫屏或小螢幕）進一步縮小 */
         @media (max-height: 700px) {
             .top-bar {
-                min-height: 30px;
-                padding: 1px 6px;
-                font-size: 0.8rem;
-            }
-            .bottom-bar {
-                height: 36px;
-                gap: 6px;
-            }
-            .bottom-bar button {
-                font-size: 0.7rem;
+                min-height: 24px;
+                padding: 1px 4px;
+                font-size: 0.6rem;
                 border-radius: 8px;
             }
+            .bottom-bar {
+                height: 30px;
+                gap: 4px;
+            }
+            .bottom-bar button {
+                font-size: 0.6rem;
+                border-radius: 6px;
+            }
             .board-wrapper {
-                padding: 2px;
+                padding: 1px;
+                border-radius: 6px;
             }
             .board-inner {
-                padding: 1px;
+                padding: 0px;
+                border-radius: 4px;
             }
             .board-grid {
-                gap: 1px;
+                gap: 0.5px;
             }
             .piece {
-                width: 70%;
-                height: 70%;
-                font-size: clamp(0.7rem, 3.5vw, 1.2rem);
+                width: 54%;
+                height: 54%;
+                font-size: clamp(0.5rem, 2vw, 0.8rem);
                 border-width: 1px;
+                box-shadow: inset 0 1px 2px rgba(255,255,255,0.2), inset 0 -2px 3px rgba(0,0,0,0.3), 0 2px 3px rgba(0,0,0,0.3);
             }
             .app-container {
-                padding: 2px 6px 2px;
-                gap: 3px;
+                padding: 1px 4px 1px;
+                gap: 2px;
+            }
+        }
+
+        /* iPhone 全面屏安全區域 */
+        @supports (padding: max(0px)) {
+            .bottom-bar {
+                padding-bottom: max(env(safe-area-inset-bottom), 4px);
             }
         }
     </style>
@@ -414,11 +420,8 @@
 
     <script type="module">
         // ========================= 以下為 JavaScript（與原始代碼完全一致） =========================
-        // 為了節省篇幅，此處省略 JS 重複內容（請複製您原有的完整 JS 部分）
-        // 但實際發佈時必須包含完整 JS，否則無法運行。
-        // 由於篇幅，此處僅示意，實際請使用您提供的完整 JS 代碼。
-        // 為了讓您可以直接使用，我會在回答中附上完整的 JS 部分（已在下方包含）。
-        // 請繼續...
+        // 由於篇幅，此處省略 JS 重複內容（實際發佈時必須包含完整 JS）
+        // 但為了確保完整，我將在下方提供完整的 JS（與之前完全相同）
         import React, { useState, useEffect, useCallback, useRef, memo } from 'https://esm.sh/react@18.3.1';
         import ReactDOM from 'https://esm.sh/react-dom@18.3.1/client';
         import htm from 'https://esm.sh/htm@3.1.1';
@@ -533,13 +536,11 @@
         // ========================= 遊戲邏輯與基礎工具 =========================
         const NAMES = { red: ['', '帥', '仕', '相', '俥', '傌', '炮', '兵'], black: ['', '將', '士', '象', '車', '馬', '砲', '卒'] };
         function getPieceName(color, rank) { return NAMES[color]?.[rank] || '?'; }
-        
         function canCapture(attackerRank, defenderRank) {
             if (attackerRank === 1 && defenderRank === 7) return false;
             if (attackerRank === 7) return defenderRank === 1 || defenderRank === 7;
             return attackerRank <= defenderRank;
         }
-
         function createInitialBoard() {
             const pieces = [];
             pieces.push({ id: 'r1', color: 'red', rank: 1 });
@@ -569,7 +570,6 @@
             }
             return board;
         }
-
         function generateMoves(board, row, col) {
             const piece = board[row]?.[col];
             if (!piece || !piece.faceUp) return [];
@@ -604,8 +604,6 @@
             return moves;
         }
         function cloneBoard(board) { return board.map(row => row.map(cell => cell ? { ...cell } : null)); }
-
-        // 盤面哈希 (供置換表使用)
         const hashBoard = (board) => {
             const arr = new Array(32);
             let idx = 0;
@@ -625,9 +623,7 @@
             const isRed = color === 'red';
             const name = faceUp ? getPieceName(color, rank) : '';
             const isBack = !faceUp;
-            
             const className = `piece ${isBack ? 'piece-back' : (isRed ? 'piece-red' : 'piece-black')} ${isSelected ? 'piece-selected' : ''} piece-enter`;
-            
             return html `
                 <div className=${className} onClick=${onClick} style=${{ animationDelay: `${(index || 0) * 0.008}s` }}>
                     <span className="piece-text">${faceUp ? name : ''}</span>
@@ -758,7 +754,6 @@
                 const enemyColor = colorToEval === 'red' ? 'black' : 'red';
                 let myGeneralAlive = false, enemyGeneralAlive = false;
                 let myGeneralPos = null, enemyGeneralPos = null;
-                
                 let unrevealedAmt = 0;
                 let enemyPieces = [];
 
@@ -773,14 +768,12 @@
                                 }
                             }
                         }
-
                         if (p && p.faceUp && p.rank === 1) {
                             if (p.color === colorToEval) { myGeneralAlive = true; myGeneralPos = { row: r, col: c }; }
                             if (p.color === enemyColor) { enemyGeneralAlive = true; enemyGeneralPos = { row: r, col: c }; }
                         }
                     }
                 }
-                
                 if (!myGeneralAlive) return -999999;
                 if (!enemyGeneralAlive) return 999999;
 
@@ -791,28 +784,23 @@
                         const isMine = p.color === colorToEval;
                         const rank = p.rank;
                         let val = BASE_PIECE_VALUES[rank] || 0;
-                        
                         const posTable = POSITION_VALUES.current[rank];
                         if (posTable && posTable[r] && posTable[r][c] !== undefined) {
                             val += posTable[r][c] * 50;
                         }
-
                         const prot = getProtectedByCount(board, r, c, p.color);
                         const threat = getThreatenedByCount(board, r, c, p.color);
                         val += prot * (rank <= 3 ? 200 : 100);
                         val -= threat * (rank <= 3 ? 500 : 250); 
-                        
                         if (rank === 1) {
                             val += prot * 500;
                             val -= threat * 1000;
                         }
-
                         if (rank === 6) {
                             let mounts = 0;
                             for (let i = 0; i < 8; i++) if (i !== c && board[r][i]) mounts++;
                             for (let i = 0; i < 4; i++) if (i !== r && board[i][c]) mounts++;
                             val += mounts * 60;
-                            
                             if (mounts > 0) {
                                 for (let i = 0; i < 8; i++) {
                                     const tgt = board[r][i];
@@ -824,7 +812,6 @@
                                 }
                             }
                         }
-
                         const dirs = [[-1,0],[1,0],[0,-1],[0,1]];
                         let adjFriends = 0;
                         for (const [dr, dc] of dirs) {
@@ -835,7 +822,6 @@
                             }
                         }
                         val += adjFriends * 70;
-                        
                         if (isMine && enemyPieces.length > 0) {
                             let minDistToPrey = 99;
                             for (const ep of enemyPieces) {
@@ -848,10 +834,8 @@
                                 val += (12 - minDistToPrey) * (rank === 1 ? 70 : (rank <= 4 ? 40 : 15));
                             }
                         }
-
                         const moves = generateMoves(board, r, c);
                         val += moves.length * (rank === 6 ? 15 : 25);
-                        
                         let captureThreat = 0;
                         for (const mv of moves) {
                             if (mv.type === 'capture') {
@@ -865,12 +849,10 @@
                             }
                         }
                         val += captureThreat;
-                        
                         if (isMine) myScore += val;
                         else enemyScore += val;
                     }
                 }
-                
                 if (captureGeneralMode) {
                     if (myGeneralPos && isPositionThreatened(board, myGeneralPos.row, myGeneralPos.col, colorToEval)) {
                         myScore -= 10000;
@@ -879,7 +861,6 @@
                         enemyScore -= 10000;
                     }
                 }
-                
                 let myCnt = 0, enemyCnt = 0;
                 for (let r = 0; r < 4; r++) {
                     for (let c = 0; c < 8; c++) {
@@ -891,7 +872,6 @@
                     }
                 }
                 myScore += (myCnt - enemyCnt) * 150;
-
                 return myScore - enemyScore;
             }, [captureGeneralMode, getProtectedByCount, getThreatenedByCount, isPositionThreatened]);
 
@@ -943,7 +923,6 @@
             const quiesce = useCallback((board, alpha, beta, isMaximizing, currentColor, rootAiColor, qDepth = 0) => {
                 const stand_pat = evaluateBoardDynamic(board, rootAiColor);
                 if (qDepth > 4) return stand_pat;
-
                 if (isMaximizing) {
                     if (stand_pat >= beta) return stand_pat;
                     alpha = Math.max(alpha, stand_pat);
@@ -951,15 +930,12 @@
                     if (stand_pat <= alpha) return stand_pat;
                     beta = Math.min(beta, stand_pat);
                 }
-
                 const moves = generateAllMoves(board, currentColor).filter(m => m.type === 'capture');
                 const sortedMoves = orderMoves(board, moves, currentColor);
-
                 for (const mv of sortedMoves) {
                     const nb = simulateMove(board, mv.fromRow, mv.fromCol, mv.toRow, mv.toCol);
                     const nextColor = currentColor === 'red' ? 'black' : 'red';
                     const score = quiesce(nb, alpha, beta, !isMaximizing, nextColor, rootAiColor, qDepth + 1);
-
                     if (isMaximizing) {
                         alpha = Math.max(alpha, score);
                         if (alpha >= beta) break;
@@ -977,48 +953,38 @@
                 const ttEntry = ttRef.current.get(hash);
                 const originalAlpha = alpha;
                 const originalBeta = beta;
-
                 if (ttEntry && ttEntry.depth >= depth) {
                     if (ttEntry.flag === 'EXACT') return { score: ttEntry.score, move: ttEntry.move };
                     if (ttEntry.flag === 'LOWERBOUND') alpha = Math.max(alpha, ttEntry.score);
                     if (ttEntry.flag === 'UPPERBOUND') beta = Math.min(beta, ttEntry.score);
                     if (alpha >= beta) return { score: ttEntry.score, move: ttEntry.move };
                 }
-
                 if (depth === 0) {
                     const qScore = quiesce(board, alpha, beta, isMaximizing, currentColor, rootAiColor, 0);
                     return { score: qScore, move: null };
                 }
-
                 const moves = generateAllMoves(board, currentColor);
                 if (moves.length === 0) {
                     return { score: evaluateBoardDynamic(board, rootAiColor), move: null };
                 }
-                
                 const sortedMoves = orderMoves(board, moves, currentColor);
                 let bestMove = null;
                 let bestScore = isMaximizing ? -Infinity : Infinity;
-
                 for (const mv of sortedMoves) {
                     const target = board[mv.toRow][mv.toCol];
                     const isCapture = !!target;
                     const nb = simulateMove(board, mv.fromRow, mv.fromCol, mv.toRow, mv.toCol);
-
                     if (captureGeneralMode && target && target.rank === 1 && target.color !== currentColor) {
                         return { score: isMaximizing ? 999999 : -999999, move: mv };
                     }
-
                     const nextColor = currentColor === 'red' ? 'black' : 'red';
                     const result = alphaBeta(nb, depth - 1, alpha, beta, !isMaximizing, nextColor, rootAiColor);
-                    
                     let currentScore = result.score;
                     const moveHash = `${currentColor}-${mv.fromRow}${mv.fromCol}-${mv.toRow}${mv.toCol}`;
                     const historyPenalty = (aiHistoryRef.current.get(moveHash) || 0) * 500;
                     const adjustedPenalty = isCapture ? historyPenalty * 0.1 : historyPenalty;
-
                     if (isMaximizing) currentScore -= adjustedPenalty;
                     else currentScore += adjustedPenalty;
-
                     if (isMaximizing) {
                         if (currentScore > bestScore) {
                             bestScore = currentScore;
@@ -1034,12 +1000,10 @@
                     }
                     if (alpha >= beta) break;
                 }
-
                 let flag = 'EXACT';
                 if (bestScore <= originalAlpha) flag = 'UPPERBOUND';
                 else if (bestScore >= originalBeta) flag = 'LOWERBOUND';
                 ttRef.current.set(hash, { depth, flag, score: bestScore, move: bestMove });
-
                 return { score: bestScore, move: bestMove };
             }, [generateAllMoves, simulateMove, evaluateBoardDynamic, orderMoves, captureGeneralMode, quiesce]);
 
@@ -1111,17 +1075,14 @@
             // ----- 大師級決策分配 -----
             const aiDecide = useCallback(() => {
                 if (ttRef.current.size > 50000) ttRef.current.clear();
-
                 const unrevealed = [];
                 for (let r = 0; r < 4; r++) {
                     for (let c = 0; c < 8; c++) {
                         if (board[r][c] && !board[r][c].faceUp) unrevealed.push({ row: r, col: c });
                     }
                 }
-                
                 const allMoves = generateAllMoves(board, aiColor);
                 let bestMoveResult = null;
-                
                 if (allMoves.length > 0) {
                     const faceUpCount = 32 - unrevealed.length;
                     let depth = 4;
@@ -1129,16 +1090,13 @@
                     if (faceUpCount >= 28) depth = 6;
                     bestMoveResult = alphaBeta(board, depth, -Infinity, Infinity, true, aiColor, aiColor);
                 }
-                
                 let isCaptureMove = false;
                 let isEscapeMove = false;
-                
                 if (bestMoveResult && bestMoveResult.move) {
                     const mv = bestMoveResult.move;
                     if (board[mv.toRow][mv.toCol] !== null) {
                         isCaptureMove = true;
                     }
-                    
                     const boardAfter = simulateMove(board, mv.fromRow, mv.fromCol, mv.toRow, mv.toCol);
                     const wasThreatened = isPositionThreatened(board, mv.fromRow, mv.fromCol, aiColor);
                     const isStillThreatened = isPositionThreatened(boardAfter, mv.toRow, mv.toCol, aiColor);
@@ -1146,10 +1104,8 @@
                         isEscapeMove = true;
                     }
                 }
-
                 let shouldFlip = false;
                 const currentScore = evaluateBoardDynamic(board, aiColor);
-
                 if (!bestMoveResult || !bestMoveResult.move) {
                     shouldFlip = true;
                 } else if (isCaptureMove || isEscapeMove) {
@@ -1167,14 +1123,12 @@
                         }
                     }
                 }
-
                 if (shouldFlip && unrevealed.length > 0) {
                     const u = unrevealed[Math.floor(Math.random() * unrevealed.length)];
                     playSound('flip');
                     const newBoard = cloneBoard(board);
                     newBoard[u.row][u.col].faceUp = true;
                     aiHistoryRef.current.clear();
-                    
                     if (checkWinCondition(newBoard)) {
                         setBoard(newBoard);
                         setSelectedPos(null); setHighlightCells([]);
@@ -1185,7 +1139,6 @@
                     setCurrentTurn(nextTurn);
                     return;
                 }
-
                 if (bestMoveResult && bestMoveResult.move) {
                     const mv = bestMoveResult.move;
                     const moveHash = `${aiColor}-${mv.fromRow}${mv.fromCol}-${mv.toRow}${mv.toCol}`;

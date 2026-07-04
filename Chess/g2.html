@@ -5,40 +5,64 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
     <title>大師暗棋 - 4x8</title>
     <style>
-        body { margin: 0; display: flex; justify-content: center; align-items: center; background: #1a1a2e; height: 100vh; touch-action: none; }
-        canvas { border-radius: 16px; box-shadow: 0 10px 30px rgba(0,0,0,0.8); max-height: 100vh; width: auto; }
+        * { margin: 0; padding: 0; }
+        body { 
+            display: flex; 
+            justify-content: center; 
+            align-items: center; 
+            background: #1a1a2e; 
+            height: 100vh; 
+            overflow: hidden;
+            touch-action: none;
+            font-family: Arial, sans-serif;
+        }
+        #game-container {
+            width: 100%;
+            height: 100%;
+            max-width: 500px;
+            max-height: 900px;
+            position: relative;
+        }
+        #loading {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: white;
+            font-size: 24px;
+            z-index: 1000;
+            background: rgba(0,0,0,0.7);
+            padding: 20px 40px;
+            border-radius: 12px;
+        }
+        canvas {
+            display: block;
+            width: 100% !important;
+            height: 100% !important;
+        }
     </style>
-    <!-- 使用 CDN 載入 Phaser 3 -->
     <script src="https://cdn.jsdelivr.net/npm/phaser@3.87.0/dist/phaser.min.js"></script>
 </head>
 <body>
+    <div id="game-container">
+        <div id="loading">載入遊戲中...</div>
+    </div>
+
     <script>
-        // ----- 遵循 GameDev_Senior_Engineer_Skill 規則 -----
-        // 1. 嚴禁每幀 Update 進行高耗能配置或搜尋 -> 所有初始化在 create 完成，Update 僅做輕量邏輯
-        // 2. 大量重複物件使用 Object Pooling -> 實作 PiecePool 管理棋子
-        // 3. 角色行為使用 Finite State Machine -> GameStateMachine 管理遊戲狀態 (選棋, 移動, 戰鬥)
-        // 4. 提供記憶體釋放驗證清單 -> 實作於 shutdown 與 destroy 方法
+        // ============================================================
+        // 遵循 GameDev_Senior_Engineer_Skill 規則
+        // 1. 嚴禁每幀高耗能配置 -> 所有初始化在 create 完成
+        // 2. 物件池模式 -> PiecePool 管理棋子
+        // 3. 有限狀態機 -> GameStateMachine 
+        // 4. 記憶體釋放驗證清單 -> shutdown/destroy 實作
+        // ============================================================
 
-        // 遊戲配置
-        const CONFIG = {
-            rows: 8,
-            cols: 4,
-            cellSize: 0, // 動態計算
-            pieceSize: 0,
-            padding: 8,
-            colors: {
-                board: '#8B5A2B',
-                cellDark: '#6B4226',
-                cellLight: '#A67B5B',
-                red: '#C0392B',
-                black: '#2C3E50',
-                selected: '#F1C40F'
-            }
-        };
-
-        // ----- 棋盤數據 (0: 空, 正數:紅方, 負數:黑方) -----
-        // 棋子種類: 1帥(將), 2仕(士), 3相(象), 4俥(車), 5傌(馬), 6炮(包), 7兵(卒)
-        // 紅方: +, 黑方: -
+        // ----- 遊戲常量 -----
+        const ROWS = 8;
+        const COLS = 4;
+        
+        // 棋子編號: 1帥(將), 2仕(士), 3相(象), 4俥(車), 5傌(馬), 6炮(包), 7兵(卒)
+        // 紅方: 正數, 黑方: 負數
         const INIT_BOARD = [
             [-7, -6, -5, -4],
             [-3, -2, -1, -2],
@@ -50,7 +74,6 @@
             [ 4,  5,  6,  7]
         ];
 
-        // 棋子名稱對照
         const PIECE_NAMES = {
             1: '帥', '-1': '將',
             2: '仕', '-2': '士',
@@ -69,41 +92,420 @@
                 this.pieces = [];
                 this.selectedPiece = null;
                 this.validMoves = [];
-                this.currentTurn = 1; // 1: 紅先, -1: 黑
+                this.currentTurn = 1;
                 this.moveHistory = [];
                 this.gameOver = false;
                 this.stateMachine = null;
                 this.pool = null;
                 this.moveHighlights = [];
+                this.cellSize = 0;
+                this.pieceSize = 0;
+                this.padding = 6;
+                this.boardStartX = 0;
+                this.boardStartY = 0;
+                this.uiText = null;
+                this.statusText = null;
+                this.resetBtn = null;
             }
 
+            // ----- 場景初始化 -----
             create() {
-                // 1. 初始化物件池
+                console.log('[GameScene] create 開始');
+                
+                // 初始化物件池
                 this.pool = new PiecePool(this);
 
-                // 2. 計算尺寸
+                // 計算尺寸
                 const { width, height } = this.scale;
-                const maxWidth = width * 0.92;
-                const maxHeight = height * 0.82;
-                const cellFromWidth = (maxWidth - CONFIG.padding * (CONFIG.cols + 1)) / CONFIG.cols;
-                const cellFromHeight = (maxHeight - CONFIG.padding * (CONFIG.rows + 1)) / CONFIG.rows;
-                CONFIG.cellSize = Math.min(cellFromWidth, cellFromHeight, 70);
-                CONFIG.pieceSize = CONFIG.cellSize * 0.85;
+                console.log(`[GameScene] 螢幕尺寸: ${width}x${height}`);
+                
+                const maxWidth = width * 0.90;
+                const maxHeight = height * 0.78;
+                const cellFromWidth = (maxWidth - this.padding * (COLS + 1)) / COLS;
+                const cellFromHeight = (maxHeight - this.padding * (ROWS + 1)) / ROWS;
+                this.cellSize = Math.min(cellFromWidth, cellFromHeight, 72);
+                this.pieceSize = this.cellSize * 0.82;
+                console.log(`[GameScene] cellSize: ${this.cellSize}, pieceSize: ${this.pieceSize}`);
 
-                // 3. 建立棋盤
-                const startX = (width - (CONFIG.cellSize + CONFIG.padding) * CONFIG.cols + CONFIG.padding) / 2;
-                const startY = (height - (CONFIG.cellSize + CONFIG.padding) * CONFIG.rows + CONFIG.padding) / 2;
-                this.boardStartX = startX;
-                this.boardStartY = startY;
+                // 計算棋盤起始位置
+                this.boardStartX = (width - (this.cellSize + this.padding) * COLS + this.padding) / 2;
+                this.boardStartY = (height - (this.cellSize + this.padding) * ROWS + this.padding) / 2;
+                console.log(`[GameScene] 棋盤起始: (${this.boardStartX}, ${this.boardStartY})`);
 
-                // 繪製棋盤與棋子
-                this.drawBoard(startX, startY);
+                // ---- 繪製棋盤 ----
+                this.drawBoard();
+
+                // ---- 初始化棋子 ----
                 this.initPieces();
 
-                // 4. 設置輸入與狀態機
+                // ---- 設置輸入 ----
                 this.setupInput();
+
+                // ---- 初始化狀態機 ----
                 this.stateMachine = new GameStateMachine(this);
 
+                // ---- UI 文字 ----
+                this.uiText = this.add.text(
+                    12, 12, 
+                    '🔴 紅方回合', 
+                    { fontSize: '22px', color: '#FFFFFF', fontFamily: 'Arial', fontStyle: 'bold' }
+                ).setDepth(100).setScrollFactor(0);
+
+                this.statusText = this.add.text(
+                    this.scale.width - 12, 12,
+                    '',
+                    { fontSize: '18px', color: '#F1C40F', fontFamily: 'Arial', align: 'right' }
+                ).setOrigin(1, 0).setDepth(100).setScrollFactor(0);
+
+                // ---- 重置按鈕 ----
+                this.resetBtn = this.add.text(
+                    this.scale.width / 2, 
+                    this.scale.height - 20,
+                    '🔄 重新開始',
+                    { 
+                        fontSize: '22px', 
+                        color: '#FFFFFF', 
+                        backgroundColor: '#34495E', 
+                        padding: { x: 16, y: 6 },
+                        fontFamily: 'Arial',
+                        borderRadius: 8
+                    }
+                ).setOrigin(0.5).setDepth(100)
+                  .setInteractive({ useHandCursor: true })
+                  .on('pointerdown', () => this.resetGame())
+                  .setScrollFactor(0);
+
+                // ---- 生命週期事件 ----
+                this.events.on('shutdown', this.shutdown, this);
+                this.events.on('destroy', this.destroy, this);
+
+                // 隱藏載入提示
+                const loading = document.getElementById('loading');
+                if (loading) loading.style.display = 'none';
+                
+                console.log('[GameScene] create 完成');
+            }
+
+            // ----- 繪製棋盤 (使用 Graphics) -----
+            drawBoard() {
+                console.log('[GameScene] 繪製棋盤');
+                const { padding, cellSize, boardStartX, boardStartY } = this;
+                
+                // 棋盤底色
+                const bg = this.add.graphics().setDepth(0);
+                bg.fillStyle(0x6B4226, 1);
+                bg.fillRoundedRect(
+                    boardStartX - padding, 
+                    boardStartY - padding, 
+                    (cellSize + padding) * COLS + padding, 
+                    (cellSize + padding) * ROWS + padding, 
+                    10
+                );
+
+                // 格子
+                for (let r = 0; r < ROWS; r++) {
+                    for (let c = 0; c < COLS; c++) {
+                        const x = boardStartX + c * (cellSize + padding) + padding;
+                        const y = boardStartY + r * (cellSize + padding) + padding;
+                        const isEven = (r + c) % 2 === 0;
+                        const color = isEven ? 0xD4A574 : 0xBF8F5A;
+                        
+                        const cell = this.add.graphics().setDepth(1);
+                        cell.fillStyle(color, 1);
+                        cell.fillRoundedRect(x, y, cellSize, cellSize, 4);
+                        cell.lineStyle(1, 0x3E2723, 0.2);
+                        cell.strokeRoundedRect(x, y, cellSize, cellSize, 4);
+                    }
+                }
+                console.log('[GameScene] 棋盤繪製完成');
+            }
+
+            // ----- 初始化棋子 -----
+            initPieces() {
+                console.log('[GameScene] 初始化棋子');
+                this.board = [];
+                this.pieces = [];
+
+                for (let r = 0; r < ROWS; r++) {
+                    this.board[r] = [];
+                    for (let c = 0; c < COLS; c++) {
+                        const val = INIT_BOARD[r][c];
+                        this.board[r][c] = val;
+                        if (val !== 0) {
+                            const piece = this.createPiece(r, c, val);
+                            this.pieces.push(piece);
+                        }
+                    }
+                }
+                console.log(`[GameScene] 創建了 ${this.pieces.length} 個棋子`);
+            }
+
+            // ----- 創建單個棋子 -----
+            createPiece(row, col, value) {
+                const x = this.boardStartX + col * (this.cellSize + this.padding) + this.padding + this.cellSize / 2;
+                const y = this.boardStartY + row * (this.cellSize + this.padding) + this.padding + this.cellSize / 2;
+                const isRed = value > 0;
+                const name = PIECE_NAMES[value] || '?';
+                const bgColor = isRed ? '#C0392B' : '#2C3E50';
+                const textColor = '#FFFFFF';
+
+                // 棋子本體 (使用 Graphics 繪製圓形底)
+                const container = this.add.container(x, y).setDepth(10);
+                
+                // 陰影
+                const shadow = this.add.graphics();
+                shadow.fillStyle(0x000000, 0.3);
+                shadow.fillCircle(2, 2, this.pieceSize / 2);
+                container.add(shadow);
+
+                // 圓形底色
+                const circle = this.add.graphics();
+                circle.fillStyle(Phaser.Display.Color.HexStringToColor(bgColor).color, 1);
+                circle.fillCircle(0, 0, this.pieceSize / 2);
+                circle.lineStyle(2, 0xFFFFFF, 0.15);
+                circle.strokeCircle(0, 0, this.pieceSize / 2);
+                container.add(circle);
+
+                // 文字
+                const fontSize = Math.max(18, this.pieceSize * 0.55);
+                const text = this.add.text(0, 0, name, {
+                    fontSize: fontSize + 'px',
+                    color: textColor,
+                    fontFamily: 'Arial',
+                    fontStyle: 'bold',
+                    align: 'center'
+                }).setOrigin(0.5);
+                container.add(text);
+
+                // 儲存數據到 container
+                container.setData({
+                    row: row,
+                    col: col,
+                    value: value,
+                    isRed: isRed,
+                    name: name
+                });
+
+                // 設置互動
+                container.setSize(this.pieceSize, this.pieceSize);
+                container.setInteractive({ useHandCursor: true });
+                container.on('pointerdown', () => {
+                    console.log(`[GameScene] 點擊棋子: ${name} at (${row}, ${col})`);
+                    this.onPieceClick(container);
+                });
+
+                // 儲存 graphics 引用以便清理
+                container._graphics = [shadow, circle];
+                
+                return container;
+            }
+
+            // ----- 輸入設置 -----
+            setupInput() {
+                this.input.on('pointerdown', (pointer, gameObjects) => {
+                    // 如果點擊的不是棋子，取消選取
+                    if (this.selectedPiece && gameObjects.length === 0) {
+                        console.log('[GameScene] 點擊空白處取消選取');
+                        this.deselectPiece();
+                    }
+                });
+            }
+
+            // ----- 點擊棋子處理 (由狀態機驅動) -----
+            onPieceClick(piece) {
+                if (this.gameOver) {
+                    this.statusText.setText('遊戲已結束');
+                    return;
+                }
+                
+                const row = piece.getData('row');
+                const col = piece.getData('col');
+                const val = this.board[row][col];
+                if (val === 0) return;
+
+                // 檢查是否為當前回合的棋子
+                if ((this.currentTurn === 1 && val < 0) || (this.currentTurn === -1 && val > 0)) {
+                    this.statusText.setText('⚠️ 請選擇己方棋子');
+                    return;
+                }
+
+                this.stateMachine.handleInput('PIECE_SELECTED', { piece, row, col });
+            }
+
+            // ----- 選取棋子 -----
+            selectPiece(piece, row, col) {
+                console.log(`[GameScene] 選取棋子: ${piece.getData('name')}`);
+                this.deselectPiece();
+                this.selectedPiece = piece;
+                this.validMoves = this.calculateValidMoves(row, col);
+                this.highlightValidMoves(this.validMoves);
+                
+                // 高亮選取 (變更外框)
+                const circle = piece._graphics[1];
+                if (circle) {
+                    circle.lineStyle(3, 0xF1C40F, 0.9);
+                    circle.strokeCircle(0, 0, this.pieceSize / 2);
+                }
+                this.statusText.setText(`選取: ${piece.getData('name')}`);
+            }
+
+            // ----- 取消選取 -----
+            deselectPiece() {
+                if (this.selectedPiece) {
+                    const circle = this.selectedPiece._graphics[1];
+                    if (circle) {
+                        circle.lineStyle(2, 0xFFFFFF, 0.15);
+                        circle.strokeCircle(0, 0, this.pieceSize / 2);
+                    }
+                    this.selectedPiece = null;
+                }
+                this.clearHighlights();
+                this.validMoves = [];
+                this.statusText.setText('');
+            }
+
+            // ----- 高亮合法走法 -----
+            highlightValidMoves(moves) {
+                this.clearHighlights();
+                if (!moves || moves.length === 0) return;
+
+                const graphics = this.add.graphics().setDepth(5);
+                moves.forEach(({ row, col }) => {
+                    const x = this.boardStartX + col * (this.cellSize + this.padding) + this.padding + this.cellSize / 2;
+                    const y = this.boardStartY + row * (this.cellSize + this.padding) + this.padding + this.cellSize / 2;
+                    
+                    // 可移動位置用綠色圓點
+                    graphics.fillStyle(0x2ECC71, 0.6);
+                    graphics.fillCircle(x, y, this.cellSize * 0.28);
+                    
+                    // 如果有棋子可吃，加紅色外圈
+                    if (this.board[row][col] !== 0) {
+                        graphics.lineStyle(3, 0xE74C3C, 0.8);
+                        graphics.strokeCircle(x, y, this.cellSize * 0.32);
+                    }
+                });
+                this.moveHighlights.push(graphics);
+            }
+
+            clearHighlights() {
+                this.moveHighlights.forEach(g => { if (g) g.destroy(); });
+                this.moveHighlights = [];
+            }
+
+            // ----- 走法生成 (大師級) -----
+            calculateValidMoves(row, col) {
+                const val = this.board[row][col];
+                if (val === 0) return [];
+                const isRed = val > 0;
+                const moves = [];
+                const directions = [[-1,0], [1,0], [0,-1], [0,1]];
+
+                // 基本上下左右移動
+                for (const [dr, dc] of directions) {
+                    const nr = row + dr;
+                    const nc = col + dc;
+                    if (nr < 0 || nr >= ROWS || nc < 0 || nc >= COLS) continue;
+                    const target = this.board[nr][nc];
+                    if ((isRed && target > 0) || (!isRed && target < 0)) continue;
+                    moves.push({ row: nr, col: nc, target });
+                }
+
+                // 炮 (包) 的特殊走法: 隔子跳吃
+                if (Math.abs(val) === 6) {
+                    for (const [dr, dc] of directions) {
+                        let jumped = false;
+                        for (let i = 1; i < 4; i++) {
+                            const nr = row + dr * i;
+                            const nc = col + dc * i;
+                            if (nr < 0 || nr >= ROWS || nc < 0 || nc >= COLS) break;
+                            const target = this.board[nr][nc];
+                            
+                            if (!jumped && target === 0) {
+                                // 未跳過棋子時，可走空格
+                                moves.push({ row: nr, col: nc, target: 0 });
+                            } else if (!jumped && target !== 0) {
+                                // 遇到第一顆棋子，標記已跳過
+                                jumped = true;
+                            } else if (jumped && target !== 0) {
+                                // 跳過棋子後，遇到第二顆棋子，可吃
+                                if ((isRed && target < 0) || (!isRed && target > 0)) {
+                                    moves.push({ row: nr, col: nc, target });
+                                }
+                                break;
+                            }
+                            // 跳過後若是空格，繼續尋找
+                        }
+                    }
+                }
+
+                console.log(`[GameScene] 走法生成: (${row},${col}) 共 ${moves.length} 步`);
+                return moves;
+            }
+
+            // ----- 執行移動 (由狀態機調用) -----
+            movePiece(fromRow, fromCol, toRow, toCol) {
+                console.log(`[GameScene] 移動: (${fromRow},${fromCol}) -> (${toRow},${toCol})`);
+                
+                const val = this.board[fromRow][fromCol];
+                const targetVal = this.board[toRow][toCol];
+                
+                // 更新棋盤數據
+                this.board[toRow][toCol] = val;
+                this.board[fromRow][fromCol] = 0;
+
+                // 更新棋子視覺位置
+                const movedPiece = this.pieces.find(p => 
+                    p.getData('row') === fromRow && p.getData('col') === fromCol
+                );
+                if (movedPiece) {
+                    movedPiece.setData('row', toRow);
+                    movedPiece.setData('col', toCol);
+                    const x = this.boardStartX + toCol * (this.cellSize + this.padding) + this.padding + this.cellSize / 2;
+                    const y = this.boardStartY + toRow * (this.cellSize + this.padding) + this.padding + this.cellSize / 2;
+                    movedPiece.setPosition(x, y);
+                }
+
+                // 移除被吃掉的棋子
+                if (targetVal !== 0) {
+                    const eatenIndex = this.pieces.findIndex(p => 
+                        p.getData('row') === toRow && p.getData('col') === toCol && p !== movedPiece
+                    );
+                    if (eatenIndex !== -1) {
+                        const eaten = this.pieces[eatenIndex];
+                        this.pieces.splice(eatenIndex, 1);
+                        this.pool.recycle(eaten);
+                        console.log(`[GameScene] 吃掉: ${PIECE_NAMES[targetVal]}`);
+                    }
+                }
+
+                // 記錄歷史
+                this.moveHistory.push({ fromRow, fromCol, toRow, toCol, val, targetVal });
+                
+                // 取消選取並切換回合
+                this.deselectPiece();
+                this.switchTurn();
+
+                // 檢查遊戲結束
+                this.checkGameOver();
+            }
+
+            // ----- 切換回合 -----
+            switchTurn() {
+                this.currentTurn *= -1;
+                const turnText = this.currentTurn === 1 ? '🔴 紅方回合' : '⚫ 黑方回合';
+                this.uiText.setText(turnText);
+                console.log(`[GameScene] 切換回合: ${turnText}`);
+            }
+
+            // ----- 檢查遊戲結束 -----
+            checkGameOver() {
+                const redPieces = this.board.flat().filter(v => v > 0);
+                const blackPieces = this.board.flat().filter(v => v < 0);
+                
+                if (redPieces.length === 0 || blackPieces.length === 0) {
+                    this.gameOver = true;
+                    const winner = redPieces.length === 0 ? '⚫ 黑方' : '🔴 紅方';
+                    this.statusText.setText(
                 // 5. 設置UI (回合/訊息)
                 this.uiText = this.add.text(10, 10, '紅方回合', { fontSize: '24px', color: '#fff', fontFamily: 'Arial' })
                     .setDepth(100)

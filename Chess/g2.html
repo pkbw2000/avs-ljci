@@ -3,109 +3,144 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>大師級暗棋 · 毛玻璃擬物版</title>
+<title>大師級暗棋 · 極致立體擬物版</title>
 <style>
   :root {
-    --glass-bg: rgba(255, 255, 255, 0.15);
-    --glass-border: rgba(255, 255, 255, 0.3);
-    --glass-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.2);
+    --glass-bg: rgba(255, 255, 255, 0.06);
+    --glass-border: rgba(255, 255, 255, 0.1);
+    --board-shadow: 0 25px 60px rgba(0, 0, 0, 0.6), inset 0 2px 5px rgba(255,255,255,0.1);
   }
 
   body { 
     margin: 0; padding: 0; display: flex; flex-direction: column; align-items: center; justify-content: center;
     min-height: 100vh; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
     touch-action: manipulation; overflow: hidden;
-    /* 動態流體漸層背景 (襯托毛玻璃的關鍵) */
-    background: linear-gradient(-45deg, #ff9a9e, #fecfef, #a18cd1, #fbc2eb);
-    background-size: 400% 400%;
-    animation: gradientBG 15s ease infinite;
+    /* 配合立體棋子，背景改為神祕低調的深色流體，使棋子立體感更強烈 */
+    background: linear-gradient(135deg, #1f242d 0%, #0d1013 100%);
   }
 
-  @keyframes gradientBG {
-    0% { background-position: 0% 50%; }
-    50% { background-position: 100% 50%; }
-    100% { background-position: 0% 50%; }
-  }
-
-  /* 頂部 HUD (毛玻璃膠囊) */
+  /* 頂部 HUD */
   #hud {
     width: 88vw; max-width: 380px; display: flex; justify-content: space-between; align-items: center;
-    margin-bottom: 20px; padding: 12px 18px; 
-    background: var(--glass-bg); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
+    margin-bottom: 25px; padding: 12px 18px; 
+    background: var(--glass-bg); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
     border: 1px solid var(--glass-border); border-radius: 20px;
-    box-shadow: var(--glass-shadow); color: #333;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.3); color: #fff;
   }
   .hud-box { display: flex; flex-direction: column; gap: 2px; }
-  .hud-label { font-size: 0.75rem; color: rgba(0,0,0,0.6); font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; }
-  .hud-val { font-size: 1.05rem; font-weight: 800; }
+  .hud-label { font-size: 0.75rem; color: rgba(255,255,255,0.5); font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; }
+  .hud-val { font-size: 1.05rem; font-weight: 800; text-shadow: 0 2px 4px rgba(0,0,0,0.3); }
   
   #turn-indicator { 
     padding: 6px 14px; border-radius: 16px; font-size: 0.9rem; font-weight: 700; 
-    background: rgba(255,255,255,0.4); border: 1px solid rgba(255,255,255,0.5);
-    box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+    border: 1px solid rgba(255,255,255,0.15);
+    box-shadow: 0 4px 10px rgba(0,0,0,0.2);
     transition: all 0.3s ease;
   }
 
-  /* 核心棋盤 (巨大毛玻璃底板) */
+  /* 核心棋盤 (下沉式托盤質感) */
   #board {
     display: grid; grid-template-columns: repeat(4, 1fr); grid-template-rows: repeat(8, 1fr);
-    gap: 8px; padding: 12px; width: 88vw; max-width: 380px; aspect-ratio: 4 / 8;
-    background: rgba(255, 255, 255, 0.25);
-    backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
-    border: 1px solid rgba(255, 255, 255, 0.5);
-    border-radius: 24px; box-shadow: var(--glass-shadow);
+    gap: 12px; padding: 16px; width: 88vw; max-width: 380px; aspect-ratio: 4 / 8;
+    background: #181b22;
+    border: 1px solid rgba(255,255,255,0.05);
+    border-radius: 28px; box-shadow: var(--board-shadow);
   }
   
+  /* 棋格：做成深度下凹的圓形內嵌槽，棋子放上去才會有空間感 */
   .cell {
-    background: rgba(255, 255, 255, 0.1); border-radius: 14px; 
+    background: #111318; border-radius: 50%; 
     display: flex; justify-content: center; align-items: center; position: relative;
-    box-shadow: inset 0 2px 5px rgba(0,0,0,0.05);
+    box-shadow: inset 0 4px 10px rgba(0,0,0,0.7), inset 0 -1px 3px rgba(255,255,255,0.05);
+    border: 1px solid rgba(0,0,0,0.4);
   }
 
-  /* 棋子頂級微動效設計 (彈簧曲線) */
+  /* 棋子核心 3D 物理交互設計 */
   .piece {
-    width: 86%; height: 86%; border-radius: 50%; display: flex; 
-    justify-content: center; align-items: center; font-size: 1.55rem; font-weight: 900; 
-    cursor: pointer; user-select: none; 
-    /* 核心精髓：Apple 級彈簧回彈動畫 */
-    transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.3s, background 0.3s;
+    width: 92%; height: 92%; border-radius: 50%; display: flex; 
+    justify-content: center; align-items: center; font-size: 1.65rem; font-weight: 900; 
+    cursor: pointer; user-select: none; position: relative;
+    /* 核心精髓：硬體加速與實體彈簧曲線 */
+    transform-style: preserve-3d;
+    transition: transform 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275), box-shadow 0.25s;
   }
   
-  /* 未翻開：高透光磨砂圓盤 */
+  /* 【未翻開】：極致實體暗金屬徽章 (利用多層硬邊陰影疊加出 5px 的側邊厚度) */
   .unrevealed { 
-    background: linear-gradient(135deg, rgba(255,255,255,0.5) 0%, rgba(255,255,255,0.1) 100%);
-    backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
-    border: 1px solid rgba(255,255,255,0.8);
-    box-shadow: 0 4px 12px rgba(0,0,0,0.08), inset 0 2px 2px rgba(255,255,255,0.4);
-    color: transparent;
+    background: radial-gradient(circle at 30% 30%, #3e4452 0%, #252932 60%, #15181e 100%);
+    border: 1px solid rgba(255,255,255,0.12);
+    /* 3D 疊加側邊厚度 */
+    box-shadow: 
+      0 1px 0 #121418,
+      0 2px 0 #0e1013,
+      0 3px 0 #0a0b0e,
+      0 4px 0 #07080a,
+      0 5px 0 #040405,
+      0 8px 15px rgba(0,0,0,0.6),
+      inset 0 2px 3px rgba(255,255,255,0.2);
+    transform: translateY(-5px); /* 預設在槽位上方飄起，顯現厚度 */
   }
   .unrevealed::after {
-    content: ''; width: 35%; height: 35%; border-radius: 50%; 
-    background: radial-gradient(circle, rgba(255,255,255,0.8) 0%, rgba(255,255,255,0) 70%);
-    opacity: 0.6;
+    content: '?'; color: rgba(255,255,255,0.15); font-size: 1.3rem;
   }
-  .unrevealed:active { transform: scale(0.9); } /* 按壓凹陷感 */
+  .unrevealed:active { 
+    transform: translateY(-1px); /* 按壓下沉 */
+    box-shadow: 0 1px 0 #0a0b0e, 0 3px 6px rgba(0,0,0,0.5), inset 0 2px 3px rgba(255,255,255,0.1);
+  }
 
-  /* 已翻開：純白立體擬物瓷磚 */
+  /* 【已翻開】：球面高光象牙瓷磚質感 */
   .revealed { 
-    background: rgba(255, 255, 255, 0.95);
-    border: 1px solid rgba(255, 255, 255, 1);
+    background: radial-gradient(circle at 30% 30%, #ffffff 0%, #f6f6f6 45%, #e0e0e0 85%, #d5d5d5 100%);
+    transform: translateY(-5px); /* 預設浮起高度展現立體厚度 */
   }
-  .red { color: #ff4757; box-shadow: 0 6px 16px rgba(255, 71, 87, 0.2), inset 0 -3px 5px rgba(0,0,0,0.05); }
-  .black { color: #2f3542; box-shadow: 0 6px 16px rgba(47, 53, 66, 0.2), inset 0 -3px 5px rgba(0,0,0,0.05); }
   
-  /* 高階交互狀態 (浮空與光暈) */
+  /* 紅方：3D 側面與陰刻雕工字體 */
+  .red { 
+    color: #d63031; 
+    border: 1px solid #ff7675;
+    box-shadow: 
+      0 1px 0 #c2c2c2,
+      0 2px 0 #b0b0b0,
+      0 3px 0 #9e9e9e,
+      0 4px 0 #8c8c8c,
+      0 5px 0 #7a7a7a,
+      0 9px 16px rgba(214, 48, 49, 0.3),
+      inset 0 2px 5px rgba(255,255,255,1),
+      inset 0 -3px 8px rgba(0,0,0,0.06);
+    /* 陰刻文字效果 (字體凹陷感) */
+    text-shadow: 1px 1px 1px rgba(255,255,255,0.9), -1px -1px 1px rgba(0,0,0,0.3);
+  }
+  
+  /* 黑方：3D 側面與陰刻雕工字體 */
+  .black { 
+    color: #2d3436; 
+    border: 1px solid #b2bec3;
+    box-shadow: 
+      0 1px 0 #c2c2c2,
+      0 2px 0 #b0b0b0,
+      0 3px 0 #9e9e9e,
+      0 4px 0 #8c8c8c,
+      0 5px 0 #7a7a7a,
+      0 9px 16px rgba(0, 0, 0, 0.45),
+      inset 0 2px 5px rgba(255,255,255,1),
+      inset 0 -3px 8px rgba(0,0,0,0.06);
+    text-shadow: 1px 1px 1px rgba(255,255,255,0.9), -1px -1px 1px rgba(0,0,0,0.4);
+  }
+  
+  /* 【高階交互狀態】：選中時強烈垂直拔高，陰影範圍放大，側面厚度拉長 */
   .selected { 
-    transform: scale(1.18) translateY(-6px) !important; /* 強烈的浮現感 */
-    z-index: 10;
+    transform: scale(1.04) translateY(-14px) !important; 
+    z-index: 50;
   }
   .selected.red { 
-    box-shadow: 0 15px 25px rgba(255, 71, 87, 0.3), 0 0 0 3px rgba(255, 71, 87, 0.5); 
-    border-color: #ff4757;
+    box-shadow: 
+      0 1px 0 #cc6666, 0 3px 0 #b35959, 0 5px 0 #994d4d, 0 7px 0 #804040, 0 9px 0 #662b2b,
+      0 20px 30px rgba(214, 48, 49, 0.5), inset 0 2px 5px rgba(255,255,255,1);
   }
   .selected.black { 
-    box-shadow: 0 15px 25px rgba(47, 53, 66, 0.3), 0 0 0 3px rgba(47, 53, 66, 0.5); 
-    border-color: #2f3542;
+    box-shadow: 
+      0 1px 0 #777, 0 3px 0 #555, 0 5px 0 #444, 0 7px 0 #333, 0 9px 0 #222,
+      0 20px 30px rgba(0, 0, 0, 0.6), inset 0 2px 5px rgba(255,255,255,1);
   }
 
 </style>
@@ -114,7 +149,7 @@
 
 <div id="hud">
   <div class="hud-box">
-    <span class="hud-label">陣營狀態</span>
+    <span class="hud-label">對弈陣營</span>
     <span id="status" class="hud-val">點擊棋子開局</span>
   </div>
   <div id="turn-indicator">初始化中</div>
@@ -178,26 +213,26 @@ function render() {
 
 function updateUI() {
   if (playerColor) {
-    const pStr = playerColor === 'red' ? '<span style="color:#ff4757">紅方</span>' : '<span style="color:#2f3542">黑方</span>';
-    const aStr = aiColor === 'red' ? '<span style="color:#ff4757">紅方</span>' : '<span style="color:#2f3542">黑方</span>';
+    const pStr = playerColor === 'red' ? '<span style="color:#ff7675">紅方</span>' : '<span style="color:#b2bec3">黑方</span>';
+    const aStr = aiColor === 'red' ? '<span style="color:#ff7675">紅方</span>' : '<span style="color:#b2bec3">黑方</span>';
     document.getElementById('status').innerHTML = `您:${pStr} ｜ AI:${aStr}`;
   }
   
   const ti = document.getElementById('turn-indicator');
   if (turn === 'player') {
     ti.innerText = playerColor ? '您的回合' : '首翻開局';
-    ti.style.background = 'rgba(46, 204, 113, 0.2)';
-    ti.style.color = '#27ae60';
-    ti.style.borderColor = 'rgba(46, 204, 113, 0.4)';
+    ti.style.background = 'rgba(46, 204, 113, 0.15)';
+    ti.style.color = '#2ecc71';
+    ti.style.borderColor = 'rgba(46, 204, 113, 0.3)';
   } else {
     ti.innerText = 'AI 思考中';
-    ti.style.background = 'rgba(243, 156, 18, 0.2)';
-    ti.style.color = '#d35400';
-    ti.style.borderColor = 'rgba(243, 156, 18, 0.4)';
+    ti.style.background = 'rgba(230, 126, 34, 0.15)';
+    ti.style.color = '#e67e22';
+    ti.style.borderColor = 'rgba(230, 126, 34, 0.3)';
   }
 }
 
-// --- 核心邏輯 ---
+// --- 核心規則判斷 (包含砲無窮迴圈修正) ---
 function isValidMove(from, to, currentBoard) {
   if (from === to) return false; 
 
@@ -237,7 +272,7 @@ function handlePlayerAction(idx) {
     executeFlip(idx, true);
   } 
   else if (!cell.isEmpty && cell.isRevealed && cell.piece.color === playerColor) {
-    selectedIdx = idx === selectedIdx ? -1 : idx; // 點擊同一個取消選取
+    selectedIdx = idx === selectedIdx ? -1 : idx; 
     render();
   } 
   else if (selectedIdx !== -1) {
@@ -272,7 +307,7 @@ function endTurn() {
   turn = turn === 'player' ? 'ai' : 'player';
   render();
   updateUI();
-  if (turn === 'ai') setTimeout(aiPlay, 600); // 稍微延長延遲，讓使用者欣賞回彈動畫
+  if (turn === 'ai') setTimeout(aiPlay, 500); 
 }
 
 function checkWin() {
@@ -297,7 +332,7 @@ function isThreatenedByEnemy(targetIdx, myColor) {
   return false;
 }
 
-// --- AI 邏輯 ---
+// --- AI 運算邏輯 ---
 function aiPlay() {
   if (!isGameActive) return;
   let unrevealed = [];

@@ -3,9 +3,8 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-    <title>大师暗棋 · 8x4</title>
+    <title>大师暗棋 · 4x8 竖屏</title>
     <style>
-        /* ===== 全局重置 & 字体 ===== */
         * {
             box-sizing: border-box;
             margin: 0;
@@ -22,12 +21,12 @@
             justify-content: center;
             align-items: center;
             touch-action: manipulation;
+            padding: 8px;
         }
 
-        /* ===== 游戏容器 — 竖屏优先 ===== */
         .game-container {
             width: 100%;
-            max-width: 420px;
+            max-width: 400px;
             padding: 12px 10px 20px;
             margin: 0 auto;
             display: flex;
@@ -38,7 +37,6 @@
             box-shadow: 0 20px 40px rgba(0, 0, 0, 0.8), inset 0 1px 2px rgba(255, 215, 150, 0.15);
         }
 
-        /* ===== 标题 & 状态栏 ===== */
         .header {
             width: 100%;
             display: flex;
@@ -69,19 +67,18 @@
             backdrop-filter: blur(4px);
             -webkit-text-fill-color: #f0dbbc;
         }
-
         .turn-indicator .highlight {
             color: #ffd78a;
             font-weight: 700;
         }
 
-        /* ===== 棋盘 — 8x4 网格 ===== */
+        /* 竖屏棋盘：4列 x 8行 */
         .board {
             width: 100%;
-            aspect-ratio: 8 / 4;
+            aspect-ratio: 4 / 8;
             display: grid;
-            grid-template-columns: repeat(8, 1fr);
-            grid-template-rows: repeat(4, 1fr);
+            grid-template-columns: repeat(4, 1fr);
+            grid-template-rows: repeat(8, 1fr);
             gap: 5px;
             background: #8b6b4b;
             padding: 6px;
@@ -91,7 +88,6 @@
             touch-action: manipulation;
         }
 
-        /* ===== 每个格子 ===== */
         .cell {
             background: #a88663;
             border-radius: 10px;
@@ -104,6 +100,452 @@
             box-shadow: inset 0 -3px 0 #6b4f34, inset 0 3px 6px rgba(255, 215, 150, 0.2);
             transition: all 0.12s ease;
             cursor: pointer;
+            touch-action: manipulation;
+            aspect-ratio: 1 / 1;
+            position: relative;
+            text-shadow: 0 1px 2px rgba(255, 215, 150, 0.3);
+        }
+
+        .cell[data-color="red"] {
+            color: #c02a1a;
+            text-shadow: 0 0 6px rgba(255, 60, 30, 0.4);
+        }
+        .cell[data-color="black"] {
+            color: #1a1a1a;
+            text-shadow: 0 0 6px rgba(0, 0, 0, 0.3);
+        }
+
+        .cell.face-down {
+            background: #5d4a34;
+            background-image: radial-gradient(circle at 30% 30%, #7a6248, #3f2f1e);
+            color: transparent;
+            text-shadow: none;
+            box-shadow: inset 0 -3px 0 #3f2f1e, inset 0 3px 8px rgba(0, 0, 0, 0.5);
+            cursor: pointer;
+        }
+        .cell.face-down::after {
+            content: "?";
+            color: rgba(255, 215, 150, 0.15);
+            font-size: 1.8rem;
+            font-weight: 300;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+            height: 100%;
+        }
+
+        .cell.selectable {
+            box-shadow: inset 0 0 0 3px #ffd966, 0 0 16px rgba(255, 215, 0, 0.5);
+            transform: scale(1.02);
+            z-index: 2;
+            cursor: pointer;
+        }
+        .cell.target-highlight {
+            box-shadow: inset 0 0 0 3px #6fcf97, 0 0 16px rgba(46, 204, 113, 0.5);
+            transform: scale(1.02);
+            z-index: 2;
+            cursor: pointer;
+        }
+        .cell.enemy-highlight {
+            box-shadow: inset 0 0 0 3px #e74c3c, 0 0 16px rgba(231, 76, 60, 0.5);
+            transform: scale(1.02);
+            z-index: 2;
+            cursor: pointer;
+        }
+
+        .cell:active {
+            transform: scale(0.92);
+        }
+
+        .footer {
+            width: 100%;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 14px;
+            padding: 0 4px;
+            gap: 10px;
+        }
+
+        .btn {
+            background: rgba(60, 40, 28, 0.8);
+            border: 1px solid rgba(255, 215, 150, 0.2);
+            color: #edd6b0;
+            padding: 8px 18px;
+            border-radius: 40px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            backdrop-filter: blur(4px);
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.4);
+            cursor: pointer;
+            transition: all 0.15s ease;
+            touch-action: manipulation;
+            letter-spacing: 0.5px;
+        }
+        .btn:active {
+            transform: scale(0.94);
+            background: rgba(80, 55, 40, 0.9);
+        }
+        .btn-primary {
+            background: #a67c52;
+            border-color: #dbbd94;
+            color: #1f130a;
+            font-weight: 700;
+        }
+        .btn-primary:active {
+            background: #c49a6c;
+        }
+
+        .status-msg {
+            color: #c9b088;
+            font-size: 0.8rem;
+            padding: 4px 12px;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 40px;
+            flex: 1;
+            text-align: center;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        @media (max-width: 400px) {
+            .game-container { padding: 8px 6px 14px; }
+            .cell { font-size: 1.6rem; border-radius: 8px; }
+            .title { font-size: 1rem; }
+            .turn-indicator { font-size: 0.75rem; padding: 2px 10px; }
+            .btn { font-size: 0.7rem; padding: 6px 12px; }
+        }
+        @media (max-width: 360px) {
+            .cell { font-size: 1.3rem; }
+            .board { gap: 3px; padding: 4px; }
+        }
+
+        .cell.flipping { animation: flipCard 0.2s ease; }
+        @keyframes flipCard {
+            0% { transform: scale(0.9) rotateY(0deg); }
+            50% { transform: scale(1.05) rotateY(90deg); }
+            100% { transform: scale(1) rotateY(0deg); }
+        }
+        .cell.eaten { animation: eatPulse 0.25s ease forwards; }
+        @keyframes eatPulse {
+            0% { transform: scale(1.2); opacity: 1; }
+            100% { transform: scale(0); opacity: 0; }
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <div class="header">
+            <span class="title">♟ 暗棋 · 大师</span>
+            <span class="turn-indicator" id="turnIndicator">⚔️ <span class="highlight" id="turnText">红方</span></span>
+        </div>
+        <div class="board" id="board"></div>
+        <div class="footer">
+            <button class="btn" id="btnRestart">🔄 重开</button>
+            <span class="status-msg" id="statusMsg">点击棋子翻牌</span>
+            <button class="btn btn-primary" id="btnAI">🤖 AI 走一步</button>
+        </div>
+    </div>
+
+    <script>
+        // ================================================================
+        //  暗棋 4x8 竖屏 · 完整游戏 (AI 会翻牌)
+        // ================================================================
+
+        const RANK = { KING:0, ADVISOR:1, ELEPHANT:2, ROOK:3, KNIGHT:4, CANNON:5, PAWN:6 };
+        const PIECE_CHARS = {
+            red:   { 0:'帅',1:'仕',2:'相',3:'俥',4:'傌',5:'炮',6:'兵' },
+            black: { 0:'将',1:'士',2:'象',3:'车',4:'马',5:'砲',6:'卒' }
+        };
+        const SCORE = { 0:1000, 1:200, 2:200, 3:600, 4:400, 5:450, 6:100 };
+        const ALL_RANKS = [0,1,2,3,4,5,6,6,6,6,6];
+
+        // 棋盘状态 8行 x 4列
+        let board = [];
+        let faceUp = [];
+        let currentTurn = 'red';   // 'red' 或 'black'
+        let gameOver = false;
+        let selectedPos = null;
+
+        const boardEl = document.getElementById('board');
+        const turnText = document.getElementById('turnText');
+        const statusMsg = document.getElementById('statusMsg');
+
+        // ---------- 初始化 ----------
+        function initGame() {
+            const pieces = [];
+            for (let i = 0; i < 2; i++) {
+                for (const r of ALL_RANKS) {
+                    pieces.push({ rank: r, color: 'red' });
+                }
+            }
+            for (let i = 0; i < 2; i++) {
+                for (const r of ALL_RANKS) {
+                    pieces.push({ rank: r, color: 'black' });
+                }
+            }
+            // 打乱
+            for (let i = pieces.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [pieces[i], pieces[j]] = [pieces[j], pieces[i]];
+            }
+
+            board = [];
+            faceUp = [];
+            let idx = 0;
+            for (let r = 0; r < 8; r++) {
+                const row = [], fRow = [];
+                for (let c = 0; c < 4; c++) {
+                    row.push(pieces[idx++]);
+                    fRow.push(false);
+                }
+                board.push(row);
+                faceUp.push(fRow);
+            }
+
+            currentTurn = 'red';
+            gameOver = false;
+            selectedPos = null;
+            updateTurnDisplay();
+            setStatus('游戏开始！红方先行');
+            render();
+        }
+
+        // ---------- 渲染 ----------
+        function render() {
+            boardEl.innerHTML = '';
+            for (let r = 0; r < 8; r++) {
+                for (let c = 0; c < 4; c++) {
+                    const cell = document.createElement('div');
+                    cell.className = 'cell';
+                    cell.dataset.row = r;
+                    cell.dataset.col = c;
+
+                    const piece = board[r][c];
+                    const isUp = faceUp[r][c];
+
+                    if (!piece) {
+                        cell.style.background = '#7a6045';
+                        cell.style.boxShadow = 'inset 0 -2px 0 #5a4430';
+                        cell.textContent = '';
+                    } else if (isUp) {
+                        const charMap = piece.color === 'red' ? PIECE_CHARS.red : PIECE_CHARS.black;
+                        cell.textContent = charMap[piece.rank] || '?';
+                        cell.dataset.color = piece.color;
+                        if (piece.color === 'red') {
+                            cell.style.textShadow = '0 0 8px rgba(255,60,30,0.3)';
+                        } else {
+                            cell.style.textShadow = '0 0 8px rgba(0,0,0,0.3)';
+                        }
+                        cell.classList.remove('face-down');
+                    } else {
+                        cell.classList.add('face-down');
+                        cell.dataset.color = '';
+                    }
+
+                    if (selectedPos && selectedPos.row === r && selectedPos.col === c) {
+                        cell.classList.add('selectable');
+                    }
+
+                    cell.addEventListener('click', () => onCellClick(r, c));
+                    cell.addEventListener('touchstart', (e) => { e.preventDefault(); }, { passive: true });
+                    boardEl.appendChild(cell);
+                }
+            }
+        }
+
+        // ---------- 辅助 ----------
+        function getPiece(r, c) {
+            if (r < 0 || r >= 8 || c < 0 || c >= 4) return null;
+            return board[r][c];
+        }
+        function isOnBoard(r, c) { return r >= 0 && r < 8 && c >= 0 && c < 4; }
+        function setStatus(msg) { statusMsg.textContent = msg; }
+        function updateTurnDisplay() {
+            if (gameOver) { turnText.textContent = '🏁 结束'; return; }
+            turnText.textContent = currentTurn === 'red' ? '红方' : '黑方';
+            turnText.style.color = currentTurn === 'red' ? '#ff6b4a' : '#cccccc';
+        }
+
+        // ---------- 获取移动走法 (与原来相同，但行列范围改为8x4) ----------
+        function getLegalMoves(row, col) {
+            const piece = getPiece(row, col);
+            if (!piece || !faceUp[row][col] || piece.color !== currentTurn) return [];
+
+            const moves = [];
+            const rank = piece.rank;
+            const color = piece.color;
+            const enemy = color === 'red' ? 'black' : 'red';
+            const dirs = {
+                [RANK.KING]: [[-1,0],[1,0],[0,-1],[0,1]],
+                [RANK.ADVISOR]: [[-1,-1],[-1,1],[1,-1],[1,1]],
+                [RANK.ELEPHANT]: [[-2,-2],[-2,2],[2,-2],[2,2]],
+                [RANK.ROOK]: [],
+                [RANK.KNIGHT]: [[-2,-1],[-2,1],[-1,-2],[-1,2],[1,-2],[1,2],[2,-1],[2,1]],
+                [RANK.CANNON]: [],
+                [RANK.PAWN]: [[-1,0],[1,0],[0,-1],[0,1]]
+            };
+
+            if (rank === RANK.KING || rank === RANK.ADVISOR) {
+                for (const d of dirs[rank]) {
+                    const nr = row + d[0], nc = col + d[1];
+                    if (!isOnBoard(nr, nc)) continue;
+                    const target = getPiece(nr, nc);
+                    if (target && target.color === color) continue;
+                    moves.push({ row: nr, col: nc, eat: target || null });
+                }
+                return moves;
+            }
+
+            if (rank === RANK.ELEPHANT) {
+                for (const d of dirs[RANK.ELEPHANT]) {
+                    const nr = row + d[0], nc = col + d[1];
+                    if (!isOnBoard(nr, nc)) continue;
+                    const eyeR = row + d[0]/2, eyeC = col + d[1]/2;
+                    if (getPiece(eyeR, eyeC)) continue;
+                    const target = getPiece(nr, nc);
+                    if (target && target.color === color) continue;
+                    moves.push({ row: nr, col: nc, eat: target || null });
+                }
+                return moves;
+            }
+
+            if (rank === RANK.ROOK) {
+                const directions = [[-1,0],[1,0],[0,-1],[0,1]];
+                for (const d of directions) {
+                    let r = row + d[0], c = col + d[1];
+                    while (isOnBoard(r, c)) {
+                        const target = getPiece(r, c);
+                        if (target) {
+                            if (target.color !== color) moves.push({ row: r, col: c, eat: target });
+                            break;
+                        }
+                        moves.push({ row: r, col: c, eat: null });
+                        r += d[0]; c += d[1];
+                    }
+                }
+                return moves;
+            }
+
+            if (rank === RANK.KNIGHT) {
+                for (const d of dirs[RANK.KNIGHT]) {
+                    const nr = row + d[0], nc = col + d[1];
+                    if (!isOnBoard(nr, nc)) continue;
+                    const legR = row + (Math.abs(d[0]) === 2 ? d[0]/2 : 0);
+                    const legC = col + (Math.abs(d[1]) === 2 ? d[1]/2 : 0);
+                    if (getPiece(legR, legC)) continue;
+                    const target = getPiece(nr, nc);
+                    if (target && target.color === color) continue;
+                    moves.push({ row: nr, col: nc, eat: target || null });
+                }
+                return moves;
+            }
+
+            if (rank === RANK.CANNON) {
+                const directions = [[-1,0],[1,0],[0,-1],[0,1]];
+                for (const d of directions) {
+                    let r = row + d[0], c = col + d[1];
+                    let jumped = false;
+                    while (isOnBoard(r, c)) {
+                        const target = getPiece(r, c);
+                        if (!jumped) {
+                            if (target) { jumped = true; }
+                            else { moves.push({ row: r, col: c, eat: null }); }
+                        } else {
+                            if (target) {
+                                if (target.color !== color) moves.push({ row: r, col: c, eat: target });
+                                break;
+                            }
+                        }
+                        r += d[0]; c += d[1];
+                    }
+                }
+                return moves;
+            }
+
+            if (rank === RANK.PAWN) {
+                for (const d of dirs[RANK.PAWN]) {
+                    const nr = row + d[0], nc = col + d[1];
+                    if (!isOnBoard(nr, nc)) continue;
+                    const target = getPiece(nr, nc);
+                    if (target && target.color === color) continue;
+                    moves.push({ row: nr, col: nc, eat: target || null });
+                }
+                return moves;
+            }
+            return moves;
+        }
+
+        // ---------- 执行移动 (返回是否结束游戏) ----------
+        function makeMove(fromR, fromC, toR, toC) {
+            const piece = board[fromR][fromC];
+            const target = board[toR][toC];
+            board[toR][toC] = piece;
+            board[fromR][fromC] = null;
+            faceUp[toR][toC] = true;
+
+            if (target && target.rank === RANK.KING) {
+                gameOver = true;
+                const winner = currentTurn === 'red' ? '红方' : '黑方';
+                setStatus(`🏆 ${winner} 获胜！吃掉了将/帅！`);
+                updateTurnDisplay();
+                render();
+                return true;
+            }
+
+            // 切换回合
+            currentTurn = (currentTurn === 'red' ? 'black' : 'red');
+            selectedPos = null;
+            updateTurnDisplay();
+            setStatus(`${currentTurn === 'red' ? '红方' : '黑方'} 走棋`);
+            render();
+
+            // 检查是否无子可走（包括不能翻牌？翻牌也是走法，所以需要检查是否有任何可翻或可走的）
+            if (!hasAnyLegalAction(currentTurn)) {
+                gameOver = true;
+                const winner = currentTurn === 'red' ? '黑方' : '红方';
+                setStatus(`🏆 ${winner} 获胜！对方无子可走！`);
+                updateTurnDisplay();
+                render();
+                return true;
+            }
+
+            // 若轮到黑方，触发 AI
+            if (!gameOver && currentTurn === 'black') {
+                setTimeout(() => aiTurn(), 300);
+            }
+            return false;
+        }
+
+        // ---------- 检查某方是否有任何合法动作（翻牌或移动） ----------
+        function hasAnyLegalAction(color) {
+            for (let r = 0; r < 8; r++) {
+                for (let c = 0; c < 4; c++) {
+                    const p = getPiece(r, c);
+                    if (!p || p.color !== color) continue;
+                    if (!faceUp[r][c]) {
+                        // 可以翻牌（任何面朝下的己方棋子）
+                        return true;
+                    } else {
+                        // 面朝上，检查是否有移动走法
+                        const moves = getLegalMovesForColor(r, c, color);
+                        if (moves.length > 0) return true;
+                    }
+                }
+            }
+            return false;
+        }
+
+        // 获取某个棋子针对特定颜色的走法（不考虑 currentTurn）
+        function getLegalMovesForColor(row, col, color) {
+            const piece = getPiece(row, col);
+            if (!piece || !faceUp[row][col] || piece.color !== color) return [];
+            // 保存当前回合，临时切换
+            const oldTurn = currentTurn;
+            currentTurn = color;
+            const moves            cursor: pointer;
             touch-action: manipulation;
             aspect-ratio: 1 / 1;
             position: relative;

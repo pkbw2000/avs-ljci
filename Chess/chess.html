@@ -42,8 +42,8 @@
 
         /* ========== iOS 動態視口 ========== */
         #root {
-            height: 100vh;          /* 回退 */
-            height: 100dvh;         /* iOS 15.4+ */
+            height: 100vh;
+            height: 100dvh;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -59,7 +59,7 @@
             max-height: 100%;
             display: flex;
             flex-direction: column;
-            padding: 4px 8px 4px;    /* 進一步緊縮 */
+            padding: 4px 8px 4px;
             gap: 4px;
             overflow: hidden;
         }
@@ -118,7 +118,7 @@
             color: #c9b89c;
         }
 
-        /* ========== 棋盤區域（縮小版） ========== */
+        /* ========== 棋盤區域（緊湊且棋子飽滿） ========== */
         .board-area {
             flex: 1;
             min-height: 0;
@@ -135,7 +135,7 @@
             background: linear-gradient(145deg, rgba(80,60,40,0.4), rgba(40,28,18,0.6));
             backdrop-filter: blur(4px);
             border-radius: 12px;
-            padding: 2px;           /* 再縮小 */
+            padding: 1px;           /* 進一步縮小 */
             border: 1px solid rgba(200,170,130,0.1);
             box-shadow: 0 12px 48px rgba(0,0,0,0.6), inset 0 1px 0 rgba(200,170,130,0.08);
         }
@@ -145,7 +145,7 @@
             height: 100%;
             background: linear-gradient(180deg, rgba(139,109,74,0.12), rgba(100,78,52,0.08));
             border-radius: 8px;
-            padding: 1px;           /* 再縮小 */
+            padding: 1px;
             box-shadow: none;
             position: relative;
         }
@@ -154,21 +154,23 @@
             display: grid;
             grid-template-columns: repeat(4, 1fr);
             grid-template-rows: repeat(8, 1fr);
-            gap: 1px;              /* 再縮小 */
+            gap: 0.5px;            /* 極小間隙 */
             width: 100%;
             height: 100%;
         }
 
-        /* ========== 格子與棋子（超緊湊） ========== */
+        /* ========== 格子與棋子（優化比例） ========== */
         .cell {
             background: radial-gradient(circle at 30% 30%, rgba(200,170,130,0.2), rgba(140,110,80,0.08));
             border-radius: 4px;
-            border: 1px solid rgba(180,150,110,0.15);
+            border: 0.5px solid rgba(180,150,110,0.15); /* 更細邊框 */
             display: flex;
             align-items: center;
             justify-content: center;
             transition: box-shadow 0.15s;
             position: relative;
+            /* 確保無內邊距 */
+            padding: 0;
         }
 
         .cell-highlight-move {
@@ -196,16 +198,16 @@
             font-weight: 900;
         }
 
-        /* 棋子尺寸大幅縮小 */
+        /* 棋子尺寸調回 78%，讓棋子更飽滿 */
         .piece {
-            width: 62%;             /* 從 78% 再降 */
-            height: 62%;
+            width: 78%;
+            height: 78%;
             border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
             font-weight: 900;
-            font-size: clamp(0.65rem, 3vw, 1.1rem);
+            font-size: clamp(0.75rem, 3.5vw, 1.4rem);
             color: white;
             transition: transform 0.15s ease;
             cursor: pointer;
@@ -325,7 +327,7 @@
             animation: startPromptFade 3s ease forwards;
         }
 
-        /* ========== 響應式微調（小屏手機） ========== */
+        /* ========== 響應式微調 ========== */
         @media (max-width: 420px) {
             .top-bar {
                 min-height: 28px;
@@ -350,15 +352,16 @@
                 border-radius: 6px;
             }
             .board-grid {
-                gap: 1px;
+                gap: 0.5px;
             }
             .cell {
                 border-radius: 3px;
+                border-width: 0.5px;
             }
             .piece {
-                width: 58%;
-                height: 58%;
-                font-size: clamp(0.55rem, 2.5vw, 0.9rem);
+                width: 75%;
+                height: 75%;
+                font-size: clamp(0.65rem, 3vw, 1.1rem);
                 border-width: 1px;
             }
             .app-container {
@@ -367,7 +370,6 @@
             }
         }
 
-        /* 針對極小高度（如 iPhone SE 橫屏或小螢幕）進一步縮小 */
         @media (max-height: 700px) {
             .top-bar {
                 min-height: 24px;
@@ -384,20 +386,20 @@
                 border-radius: 6px;
             }
             .board-wrapper {
-                padding: 1px;
+                padding: 0.5px;
                 border-radius: 6px;
             }
             .board-inner {
-                padding: 0px;
+                padding: 0.5px;
                 border-radius: 4px;
             }
             .board-grid {
                 gap: 0.5px;
             }
             .piece {
-                width: 54%;
-                height: 54%;
-                font-size: clamp(0.5rem, 2vw, 0.8rem);
+                width: 72%;
+                height: 72%;
+                font-size: clamp(0.55rem, 2.5vw, 0.9rem);
                 border-width: 1px;
                 box-shadow: inset 0 1px 2px rgba(255,255,255,0.2), inset 0 -2px 3px rgba(0,0,0,0.3), 0 2px 3px rgba(0,0,0,0.3);
             }
@@ -418,10 +420,12 @@
 <body>
     <div id="root"></div>
 
+    <!-- ========== JavaScript（與原始代碼完全一致，此處省略重複，實際使用時需包含） ========== -->
     <script type="module">
-        // ========================= 以下為 JavaScript（與原始代碼完全一致） =========================
-        // 由於篇幅，此處省略 JS 重複內容（實際發佈時必須包含完整 JS）
-        // 但為了確保完整，我將在下方提供完整的 JS（與之前完全相同）
+        // 為節省篇幅，此處未重複貼上 JS，但實際運行時請務必包含完整的 JS（即您原先的完整腳本）
+        // 您可以直接將您之前版本中的全部 JS 複製到此處，因為此修改僅涉及 CSS。
+        // 若需要完整文件，請告知，我再提供包含 JS 的完整版。
+        // 但為了讓您能直接使用，我已在下方附上完整的 JS（與之前完全一致）。
         import React, { useState, useEffect, useCallback, useRef, memo } from 'https://esm.sh/react@18.3.1';
         import ReactDOM from 'https://esm.sh/react-dom@18.3.1/client';
         import htm from 'https://esm.sh/htm@3.1.1';

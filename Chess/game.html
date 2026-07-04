@@ -7,10 +7,8 @@
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="theme-color" content="#0d0a07" />
-    <title>暗棋 V5 · 極致</title>
-
-    <script src="https://cdn.tailwindcss.com">
-    </script>
+    <title>暗棋 V8 · 大師挑戰版</title>
+    <script src="https://cdn.tailwindcss.com"></script>
     <script>
         tailwind.config = {
             theme: {
@@ -24,384 +22,52 @@
         }
     </script>
     <style>
-        * {
-            box-sizing: border-box;
-            -webkit-tap-highlight-color: transparent;
-            outline: none;
-        }
-        html,
-        body {
-            margin: 0;
-            padding: 0;
-            height: 100%;
-            overflow: hidden;
-            font-family: 'Inter', system-ui, sans-serif;
-            background: #0d0a07;
-            touch-action: none;
-            -webkit-user-select: none;
-            user-select: none;
-        }
-        #root {
-            height: 100%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            background: radial-gradient(ellipse at 50% 20%, #2a1f16 0%, #150f0a 50%, #0a0705 100%);
-            padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
-        }
-        .app-container {
-            width: 100%;
-            max-width: 450px;
-            height: 100vh;
-            max-height: 100%;
-            display: flex;
-            flex-direction: column;
-            padding: 8px 12px 12px;
-            gap: 8px;
-            overflow: hidden;
-        }
-        .top-bar,
-        .bottom-bar {
-            flex-shrink: 0;
-            z-index: 10;
-        }
-        .top-bar {
-            min-height: 44px;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding: 4px 12px;
-            background: rgba(30, 22, 16, 0.6);
-            backdrop-filter: blur(8px);
-            border-radius: 20px;
-            border: 1px solid rgba(200, 170, 130, 0.12);
-            gap: 4px;
-            flex-wrap: nowrap;
-        }
-        .bottom-bar {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 12px;
-            height: 52px;
-        }
-        .bottom-bar button {
-            border: none;
-            border-radius: 16px;
-            font-weight: 800;
-            font-size: 0.95rem;
-            background: rgba(60, 44, 32, 0.5);
-            backdrop-filter: blur(4px);
-            border: 1px solid rgba(200, 170, 130, 0.15);
-            color: #d0c0a8;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-            transition: transform 0.1s, background 0.1s;
-            cursor: pointer;
-            touch-action: manipulation;
-        }
-        .bottom-bar button:active {
-            transform: scale(0.96);
-        }
-        .bottom-bar .btn-primary {
-            background: linear-gradient(135deg, #8a6240, #6f4d30);
-            color: #f0e6d8;
-            border-color: rgba(200, 170, 130, 0.3);
-        }
-        .bottom-bar .btn-secondary {
-            background: rgba(30, 22, 16, 0.5);
-            color: #c9b89c;
-        }
-        .board-area {
-            flex: 1;
-            min-height: 0;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            width: 100%;
-        }
-        .board-wrapper {
-            width: 100%;
-            max-height: 100%;
-            aspect-ratio: 4 / 8;
-            background: linear-gradient(145deg, rgba(80, 60, 40, 0.4), rgba(40, 28, 18, 0.6));
-            backdrop-filter: blur(4px);
-            border-radius: 20px;
-            padding: 8px;
-            border: 1px solid rgba(200, 170, 130, 0.1);
-            box-shadow: 0 12px 48px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(200, 170, 130, 0.08);
-        }
-        .board-inner {
-            width: 100%;
-            height: 100%;
-            background: linear-gradient(180deg, rgba(139, 109, 74, 0.12), rgba(100, 78, 52, 0.08));
-            border-radius: 14px;
-            padding: 5px;
-            box-shadow: none;
-            position: relative;
-        }
-        .board-grid {
-            display: grid;
-            grid-template-columns: repeat(4, 1fr);
-            grid-template-rows: repeat(8, 1fr);
-            gap: 3px;
-            width: 100%;
-            height: 100%;
-        }
-        .cell {
-            background: radial-gradient(circle at 30% 30%, rgba(200, 170, 130, 0.2), rgba(140, 110, 80, 0.08));
-            border-radius: 8px;
-            border: 1px solid rgba(180, 150, 110, 0.15);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            transition: box-shadow 0.15s;
-            position: relative;
-        }
-        .cell-highlight-move {
-            box-shadow: inset 0 0 0 2px rgba(120, 200, 120, 0.6), 0 0 20px rgba(120, 200, 120, 0.15);
-            position: relative;
-        }
-        .cell-highlight-move::after {
-            content: "";
-            position: absolute;
-            width: 12px;
-            height: 12px;
-            border-radius: 50%;
-            background: rgba(120, 200, 120, 0.4);
-            border: 2px solid rgba(120, 200, 120, 0.7);
-        }
-        .cell-highlight-capture {
-            box-shadow: inset 0 0 0 2px rgba(230, 120, 120, 0.6), 0 0 20px rgba(230, 120, 120, 0.15);
-            position: relative;
-        }
-        .cell-highlight-capture::after {
-            content: "✕";
-            position: absolute;
-            font-size: 18px;
-            color: rgba(230, 120, 120, 0.6);
-            font-weight: 900;
-        }
-        .piece {
-            width: 88%;
-            height: 88%;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: 900;
-            font-size: clamp(1.4rem, 5.5vw, 2.4rem);
-            color: white;
-            text-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
-            box-shadow: 0 4px 0 rgba(0, 0, 0, 0.2), 0 8px 20px rgba(0, 0, 0, 0.3);
-            transition: transform 0.15s ease, box-shadow 0.15s ease;
-            cursor: pointer;
-            touch-action: manipulation;
-            position: relative;
-            line-height: 1;
-            padding: 0;
-            will-change: transform;
-        }
-        .piece:active {
-            transform: scale(0.93);
-        }
-        .piece-red {
-            background: radial-gradient(circle at 35% 30%, #e86050, #c0392b, #922b21);
-            border: 1.5px solid rgba(255, 200, 150, 0.35);
-            box-shadow: 0 3px 0 rgba(0, 0, 0, 0.25), 0 6px 16px rgba(0, 0, 0, 0.35);
-        }
-        .piece-black {
-            background: radial-gradient(circle at 35% 30%, #6a6a6a, #3a3a3a, #1a1a1a);
-            border: 1.5px solid rgba(200, 200, 200, 0.15);
-            box-shadow: 0 3px 0 rgba(0, 0, 0, 0.25), 0 6px 16px rgba(0, 0, 0, 0.35);
-        }
-        .piece-back {
-            background: radial-gradient(circle at 35% 30%, #8a6e4b, #543a22, #2d1f12);
-            border: 1px solid rgba(160, 130, 90, 0.3);
-        }
-        .piece-back::after {
-            content: "♟";
-            position: absolute;
-            font-size: clamp(1rem, 4vw, 1.6rem);
-            color: rgba(200, 180, 150, 0.2);
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            pointer-events: none;
-        }
-        .piece-selected {
-            box-shadow: 0 0 0 3px #fbbf24, 0 0 0 5px rgba(251, 191, 36, 0.3), 0 4px 0 rgba(0, 0, 0, 0.25), 0 8px 20px rgba(0, 0, 0, 0.35) !important;
-            transform: scale(1.05);
-        }
-        .piece-enter {
-            animation: piecePop 0.28s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
-        }
-        @keyframes piecePop {
-            0% {
-                transform: scale(0.85);
-                opacity: 0.6;
-            }
-            100% {
-                transform: scale(1);
-                opacity: 1;
-            }
-        }
-        .piece-enter.piece-selected {
-            animation: piecePopSelected 0.28s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
-        }
-        @keyframes piecePopSelected {
-            0% {
-                transform: scale(0.85);
-                opacity: 0.6;
-            }
-            100% {
-                transform: scale(1.05);
-                opacity: 1;
-            }
-        }
-        .cell-enter {
-            animation: cellPop 0.3s ease-out forwards;
-        }
-        @keyframes cellPop {
-            0% {
-                transform: scale(0.92);
-                opacity: 0;
-            }
-            100% {
-                transform: scale(1);
-                opacity: 1;
-            }
-        }
-        .victory-overlay {
-            position: absolute;
-            inset: 0;
-            background: rgba(0, 0, 0, 0.88);
-            backdrop-filter: blur(12px);
-            border-radius: inherit;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            z-index: 20;
-            gap: 12px;
-            opacity: 0;
-            animation: victoryOverlayFade 0.6s ease 0.1s forwards;
-        }
-        @keyframes victoryOverlayFade {
-            0% {
-                opacity: 0;
-            }
-            100% {
-                opacity: 1;
-            }
-        }
-        .victory-text {
-            font-size: clamp(2rem, 8vw, 4rem);
-            font-weight: 900;
-            text-shadow: 0 4px 20px rgba(0, 0, 0, 0.8);
-            letter-spacing: 4px;
-            opacity: 0;
-            animation: victoryBounce 0.8s ease 0.2s forwards;
-        }
-        @keyframes victoryBounce {
-            0% {
-                opacity: 0;
-                transform: translateY(-20px);
-            }
-            100% {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-        .victory-red {
-            color: #ff6b6b;
-        }
-        .victory-black {
-            color: #d0d0d0;
-        }
-        .victory-sub {
-            font-size: clamp(1rem, 4vw, 1.3rem);
-            font-weight: bold;
-            color: #f7efe6;
-            background: rgba(255, 255, 255, 0.08);
-            padding: 4px 16px;
-            border-radius: 12px;
-            margin-bottom: 8px;
-            opacity: 0;
-            animation: victoryFadeIn 0.6s ease 0.4s forwards;
-        }
-        @keyframes victoryFadeIn {
-            0% {
-                opacity: 0;
-                transform: scale(0.9);
-            }
-            100% {
-                opacity: 1;
-                transform: scale(1);
-            }
-        }
-        .victory-overlay button {
-            padding: 12px 32px;
-            background: linear-gradient(135deg, #c9a884, #8a6240);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            border-radius: 40px;
-            font-weight: 900;
-            color: #0d0a07;
-            font-size: 1.1rem;
-            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.6);
-            cursor: pointer;
-            transition: transform 0.1s;
-            opacity: 0;
-            animation: victoryFadeIn 0.6s ease 0.6s forwards;
-        }
-        .victory-overlay button:active {
-            transform: scale(0.95);
-        }
-        @keyframes startPromptFade {
-            0% {
-                opacity: 0;
-                transform: scale(0.95);
-            }
-            15% {
-                opacity: 1;
-                transform: scale(1);
-            }
-            85% {
-                opacity: 1;
-                transform: scale(1);
-            }
-            100% {
-                opacity: 0;
-                transform: scale(0.95);
-            }
-        }
-        .start-prompt {
-            animation: startPromptFade 3s ease forwards;
-        }
-        @media (max-width: 420px) {
-            .top-bar {
-                padding: 4px 8px;
-                min-height: 40px;
-            }
-            .bottom-bar {
-                height: 44px;
-                gap: 8px;
-            }
-            .bottom-bar button {
-                font-size: 0.8rem;
-                border-radius: 12px;
-            }
-            .board-wrapper {
-                padding: 4px;
-            }
-            .board-inner {
-                padding: 3px;
-            }
-            .board-grid {
-                gap: 2px;
-            }
-            .cell {
-                border-radius: 4px;
-            }
-        }
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; outline: none; }
+        html, body { margin: 0; padding: 0; height: 100%; overflow: hidden; font-family: 'Inter', system-ui, sans-serif; background: #0d0a07; touch-action: none; -webkit-user-select: none; user-select: none; }
+        #root { height: 100%; display: flex; align-items: center; justify-content: center; background: radial-gradient(ellipse at 50% 20%, #2a1f16 0%, #150f0a 50%, #0a0705 100%); padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left); }
+        .app-container { width: 100%; max-width: 450px; height: 100vh; max-height: 100%; display: flex; flex-direction: column; padding: 8px 12px 12px; gap: 8px; overflow: hidden; }
+        .top-bar, .bottom-bar { flex-shrink: 0; z-index: 10; }
+        .top-bar { min-height: 44px; display: flex; align-items: center; justify-content: space-between; padding: 4px 12px; background: rgba(30,22,16,0.6); backdrop-filter: blur(8px); border-radius: 20px; border: 1px solid rgba(200,170,130,0.12); gap: 4px; flex-wrap: nowrap; }
+        .bottom-bar { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; height: 52px; }
+        .bottom-bar button { border: none; border-radius: 16px; font-weight: 800; font-size: 0.95rem; background: rgba(60,44,32,0.5); backdrop-filter: blur(4px); border: 1px solid rgba(200,170,130,0.15); color: #d0c0a8; box-shadow: 0 4px 12px rgba(0,0,0,0.3); transition: transform 0.1s, background 0.1s; cursor: pointer; touch-action: manipulation; }
+        .bottom-bar button:active { transform: scale(0.96); }
+        .bottom-bar .btn-primary { background: linear-gradient(135deg, #8a6240, #6f4d30); color: #f0e6d8; border-color: rgba(200,170,130,0.3); }
+        .bottom-bar .btn-secondary { background: rgba(30,22,16,0.5); color: #c9b89c; }
+        .board-area { flex: 1; min-height: 0; display: flex; align-items: center; justify-content: center; width: 100%; }
+        .board-wrapper { width: 100%; max-height: 100%; aspect-ratio: 4/8; background: linear-gradient(145deg, rgba(80,60,40,0.4), rgba(40,28,18,0.6)); backdrop-filter: blur(4px); border-radius: 20px; padding: 8px; border: 1px solid rgba(200,170,130,0.1); box-shadow: 0 12px 48px rgba(0,0,0,0.6), inset 0 1px 0 rgba(200,170,130,0.08); }
+        .board-inner { width: 100%; height: 100%; background: linear-gradient(180deg, rgba(139,109,74,0.12), rgba(100,78,52,0.08)); border-radius: 14px; padding: 5px; box-shadow: none; position: relative; }
+        .board-grid { display: grid; grid-template-columns: repeat(4,1fr); grid-template-rows: repeat(8,1fr); gap: 3px; width: 100%; height: 100%; }
+        .cell { background: radial-gradient(circle at 30% 30%, rgba(200,170,130,0.2), rgba(140,110,80,0.08)); border-radius: 8px; border: 1px solid rgba(180,150,110,0.15); display: flex; align-items: center; justify-content: center; transition: box-shadow 0.15s; position: relative; }
+        .cell-highlight-move { box-shadow: inset 0 0 0 2px rgba(120,200,120,0.6), 0 0 20px rgba(120,200,120,0.15); position: relative; }
+        .cell-highlight-move::after { content: ""; position: absolute; width: 12px; height: 12px; border-radius: 50%; background: rgba(120,200,120,0.4); border: 2px solid rgba(120,200,120,0.7); }
+        .cell-highlight-capture { box-shadow: inset 0 0 0 2px rgba(230,120,120,0.6), 0 0 20px rgba(230,120,120,0.15); position: relative; }
+        .cell-highlight-capture::after { content: "✕"; position: absolute; font-size: 18px; color: rgba(230,120,120,0.6); font-weight: 900; }
+        .piece { width: 88%; height: 88%; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: clamp(1.4rem,5.5vw,2.4rem); color: white; text-shadow: 0 2px 8px rgba(0,0,0,0.5); box-shadow: 0 4px 0 rgba(0,0,0,0.2), 0 8px 20px rgba(0,0,0,0.3); transition: transform 0.15s ease, box-shadow 0.15s ease; cursor: pointer; touch-action: manipulation; position: relative; line-height: 1; padding: 0; will-change: transform; }
+        .piece:active { transform: scale(0.93); }
+        .piece-red { background: radial-gradient(circle at 35% 30%, #e86050, #c0392b, #922b21); border: 1.5px solid rgba(255,200,150,0.35); box-shadow: 0 3px 0 rgba(0,0,0,0.25), 0 6px 16px rgba(0,0,0,0.35); }
+        .piece-black { background: radial-gradient(circle at 35% 30%, #6a6a6a, #3a3a3a, #1a1a1a); border: 1.5px solid rgba(200,200,200,0.15); box-shadow: 0 3px 0 rgba(0,0,0,0.25), 0 6px 16px rgba(0,0,0,0.35); }
+        .piece-back { background: radial-gradient(circle at 35% 30%, #8a6e4b, #543a22, #2d1f12); border: 1px solid rgba(160,130,90,0.3); }
+        .piece-back::after { content: "♟"; position: absolute; font-size: clamp(1rem,4vw,1.6rem); color: rgba(200,180,150,0.2); top: 50%; left: 50%; transform: translate(-50%,-50%); pointer-events: none; }
+        .piece-selected { box-shadow: 0 0 0 3px #fbbf24, 0 0 0 5px rgba(251,191,36,0.3), 0 4px 0 rgba(0,0,0,0.25), 0 8px 20px rgba(0,0,0,0.35) !important; transform: scale(1.05); }
+        .piece-enter { animation: piecePop 0.28s cubic-bezier(0.34,1.56,0.64,1) forwards; }
+        @keyframes piecePop { 0% { transform: scale(0.85); opacity: 0.6; } 100% { transform: scale(1); opacity: 1; } }
+        .piece-enter.piece-selected { animation: piecePopSelected 0.28s cubic-bezier(0.34,1.56,0.64,1) forwards; }
+        @keyframes piecePopSelected { 0% { transform: scale(0.85); opacity: 0.6; } 100% { transform: scale(1.05); opacity: 1; } }
+        .cell-enter { animation: cellPop 0.3s ease-out forwards; }
+        @keyframes cellPop { 0% { transform: scale(0.92); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
+        .victory-overlay { position: absolute; inset: 0; background: rgba(0,0,0,0.88); backdrop-filter: blur(12px); border-radius: inherit; display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 20; gap: 12px; opacity: 0; animation: victoryOverlayFade 0.6s ease 0.1s forwards; }
+        @keyframes victoryOverlayFade { 0% { opacity: 0; } 100% { opacity: 1; } }
+        .victory-text { font-size: clamp(2rem,8vw,4rem); font-weight: 900; text-shadow: 0 4px 20px rgba(0,0,0,0.8); letter-spacing: 4px; opacity: 0; animation: victoryBounce 0.8s ease 0.2s forwards; }
+        @keyframes victoryBounce { 0% { opacity: 0; transform: translateY(-20px); } 100% { opacity: 1; transform: translateY(0); } }
+        .victory-red { color: #ff6b6b; }
+        .victory-black { color: #d0d0d0; }
+        .victory-sub { font-size: clamp(1rem,4vw,1.3rem); font-weight: bold; color: #f7efe6; background: rgba(255,255,255,0.08); padding: 4px 16px; border-radius: 12px; margin-bottom: 8px; opacity: 0; animation: victoryFadeIn 0.6s ease 0.4s forwards; }
+        @keyframes victoryFadeIn { 0% { opacity: 0; transform: scale(0.9); } 100% { opacity: 1; transform: scale(1); } }
+        .victory-overlay button { padding: 12px 32px; background: linear-gradient(135deg, #c9a884, #8a6240); border: 1px solid rgba(255,255,255,0.2); border-radius: 40px; font-weight: 900; color: #0d0a07; font-size: 1.1rem; box-shadow: 0 4px 16px rgba(0,0,0,0.6); cursor: pointer; transition: transform 0.1s; opacity: 0; animation: victoryFadeIn 0.6s ease 0.6s forwards; }
+        .victory-overlay button:active { transform: scale(0.95); }
+        @keyframes startPromptFade { 0% { opacity: 0; transform: scale(0.95); } 15% { opacity: 1; transform: scale(1); } 85% { opacity: 1; transform: scale(1); } 100% { opacity: 0; transform: scale(0.95); } }
+        .start-prompt { animation: startPromptFade 3s ease forwards; }
+        @media (max-width:420px) { .top-bar { padding: 4px 8px; min-height: 40px; } .bottom-bar { height: 44px; gap: 8px; } .bottom-bar button { font-size: 0.8rem; border-radius: 12px; } .board-wrapper { padding: 4px; } .board-inner { padding: 3px; } .board-grid { gap: 2px; } .cell { border-radius: 4px; } }
     </style>
 </head>
 <body>
@@ -416,7 +82,6 @@
 
         // ========================= 音效系統 =========================
         let globalAudioCtx = null;
-
         function getAudioCtx() {
             try {
                 const AudioContext = window.AudioContext || window.webkitAudioContext;
@@ -428,7 +93,6 @@
                 return globalAudioCtx;
             } catch (_) { return null; }
         }
-
         function playFlip() {
             const ctx = getAudioCtx();
             if (!ctx) return;
@@ -446,7 +110,6 @@
                 osc.stop(ctx.currentTime + 0.06);
             } catch (_) {}
         }
-
         function playMove() {
             const ctx = getAudioCtx();
             if (!ctx) return;
@@ -464,7 +127,6 @@
                 osc.stop(ctx.currentTime + 0.08);
             } catch (_) {}
         }
-
         function playCapture() {
             const ctx = getAudioCtx();
             if (!ctx) return;
@@ -495,7 +157,6 @@
                 noise.stop(ctx.currentTime + 0.05);
             } catch (_) {}
         }
-
         function playWin() {
             const ctx = getAudioCtx();
             if (!ctx) return;
@@ -515,29 +176,20 @@
                 });
             } catch (_) {}
         }
-
         const playSound = (type) => {
             switch (type) {
-                case 'flip':
-                    playFlip();
-                    break;
-                case 'move':
-                    playMove();
-                    break;
-                case 'capture':
-                    playCapture();
-                    break;
-                case 'win':
-                    playWin();
-                    break;
+                case 'flip': playFlip(); break;
+                case 'move': playMove(); break;
+                case 'capture': playCapture(); break;
+                case 'win': playWin(); break;
             }
         };
 
-        // ========================= 遊戲邏輯 =========================
+        // ========================= 遊戲邏輯與基礎工具 =========================
         const NAMES = { red: ['', '帥', '仕', '相', '俥', '傌', '炮', '兵'], black: ['', '將', '士', '象', '車', '馬', '砲', '卒'] };
-
         function getPieceName(color, rank) { return NAMES[color]?.[rank] || '?'; }
-
+        
+        // 核心吃子判斷
         function canCapture(attackerRank, defenderRank) {
             if (attackerRank === 1 && defenderRank === 7) return false;
             if (attackerRank === 7) return defenderRank === 1 || defenderRank === 7;
@@ -581,46 +233,46 @@
             const color = piece.color;
             const rank = piece.rank;
             const isCannon = rank === 6;
-            const dirs = [
-                [-1, 0],
-                [1, 0],
-                [0, -1],
-                [0, 1]
-            ];
+            const dirs = [[-1,0],[1,0],[0,-1],[0,1]];
             for (const [dr, dc] of dirs) {
                 if (isCannon) {
-                    const nr = row + dr,
-                        nc = col + dc;
+                    const nr = row + dr, nc = col + dc;
                     if (nr >= 0 && nr <= 3 && nc >= 0 && nc <= 7 && !board[nr][nc]) {
                         moves.push({ row: nr, col: nc, type: 'move' });
                     }
-                    let tr = row + dr,
-                        tc = col + dc;
+                    let tr = row + dr, tc = col + dc;
                     let blockFound = false;
                     while (tr >= 0 && tr <= 3 && tc >= 0 && tc <= 7) {
                         const target = board[tr][tc];
-                        if (!target) { tr += dr;
-                            tc += dc; continue; }
-                        if (!blockFound) { blockFound = true;
-                            tr += dr;
-                            tc += dc; continue; }
+                        if (!target) { tr += dr; tc += dc; continue; }
+                        if (!blockFound) { blockFound = true; tr += dr; tc += dc; continue; }
                         if (target.faceUp && target.color !== color) moves.push({ row: tr, col: tc, type: 'capture' });
                         break;
                     }
                 } else {
-                    const nr = row + dr,
-                        nc = col + dc;
+                    const nr = row + dr, nc = col + dc;
                     if (nr < 0 || nr > 3 || nc < 0 || nc > 7) continue;
                     const target = board[nr][nc];
                     if (!target) moves.push({ row: nr, col: nc, type: 'move' });
-                    else if (target.faceUp && target.color !== color && canCapture(rank, target.rank)) moves.push({ row: nr,
-                        col: nc, type: 'capture' });
+                    else if (target.faceUp && target.color !== color && canCapture(rank, target.rank)) moves.push({ row: nr, col: nc, type: 'capture' });
                 }
             }
             return moves;
         }
-
         function cloneBoard(board) { return board.map(row => row.map(cell => cell ? { ...cell } : null)); }
+
+        // 盤面哈希 (供置換表使用)
+        const hashBoard = (board) => {
+            const arr = new Array(32);
+            let idx = 0;
+            for(let r=0; r<4; r++){
+                for(let c=0; c<8; c++){
+                    const p = board[r][c];
+                    arr[idx++] = p ? (p.faceUp ? p.color[0]+p.rank : 'X') : '0';
+                }
+            }
+            return arr.join('');
+        };
 
         // ========================= React 組件 =========================
         const Piece = memo(({ piece, isSelected, onClick, index }) => {
@@ -629,18 +281,15 @@
             const isRed = color === 'red';
             const name = faceUp ? getPieceName(color, rank) : '';
             const isBack = !faceUp;
-
             let className = `piece ${isBack ? 'piece-back' : (isRed ? 'piece-red' : 'piece-black')}`;
             if (isSelected) className += ' piece-selected';
             className += ' piece-enter';
-
             const style = {
                 fontSize: faceUp ? 'clamp(1.4rem, 5.5vw, 2.4rem)' : '0',
                 color: faceUp ? (isRed ? '#fff8f0' : '#f0f0f0') : 'transparent',
                 animationDelay: `${(index || 0) * 0.008}s`,
             };
-
-            return html `<div className=${className} style=${style} onClick=${onClick} onTouchEnd=${onClick}>${faceUp ? name : ''}</div>`;
+            return html `<div className=${className} style=${style} onClick=${onClick}>${faceUp ? name : ''}</div>`;
         });
 
         const Cell = memo(({ row, col, piece, isHighlight, highlightType, isSelected, onCellClick, index }) => {
@@ -648,15 +297,17 @@
                 e.preventDefault();
                 onCellClick(row, col);
             };
+            const handlePieceClick = (e) => {
+                e.stopPropagation();
+                onCellClick(row, col);
+            };
             let highlightClass = '';
-            if (isHighlight) highlightClass = highlightType === 'capture' ? 'cell-highlight-capture' :
-            'cell-highlight-move';
+            if (isHighlight) highlightClass = highlightType === 'capture' ? 'cell-highlight-capture' : 'cell-highlight-move';
             const className = `cell ${highlightClass} cell-enter`;
             const style = { animationDelay: `${(index || 0) * 0.005}s` };
-
             return html `
-                <div className=${className} style=${style} onTouchEnd=${handleClick} onClick=${handleClick}>
-                    ${piece && html`<${Piece} piece=${piece} isSelected=${isSelected} onClick=${handleClick} index=${index} />`}
+                <div className=${className} style=${style} onClick=${handleClick}>
+                    ${piece && html`<${Piece} piece=${piece} isSelected=${isSelected} onClick=${handlePieceClick} index=${index} />`}
                 </div>
             `;
         });
@@ -676,13 +327,609 @@
             const [captureGeneralMode, setCaptureGeneralMode] = useState(false);
             const [redCaptures, setRedCaptures] = useState(0);
             const [blackCaptures, setBlackCaptures] = useState(0);
-            const [lastMove, setLastMove] = useState(null);
             const [showStartPrompt, setShowStartPrompt] = useState(true);
             const startTimerRef = useRef(null);
 
             const BASE_PIECE_VALUES = { 1: 10000, 2: 7000, 3: 4500, 4: 3000, 5: 1500, 6: 5000, 7: 1000 };
             const aiHistoryRef = useRef(new Map());
+            const ttRef = useRef(new Map());
 
+            // 位置權重，鼓勵往中間走
+            const POSITION_VALUES = useRef({
+                1: [[0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0]],
+                2: [[0,0,0,0,0,0,0,0],[0,2,4,6,6,4,2,0],[0,2,4,6,6,4,2,0],[0,0,0,0,0,0,0,0]],
+                3: [[0,1,2,3,3,2,1,0],[0,2,4,5,5,4,2,0],[0,1,2,3,3,2,1,0],[0,0,0,0,0,0,0,0]],
+                4: [[0,1,2,3,3,2,1,0],[1,3,6,8,8,6,3,1],[1,3,6,8,8,6,3,1],[0,1,2,3,3,2,1,0]],
+                5: [[0,1,2,3,3,2,1,0],[1,3,6,8,8,6,3,1],[1,3,6,8,8,6,3,1],[0,1,2,3,3,2,1,0]],
+                6: [[0,1,2,3,3,2,1,0],[1,3,5,7,7,5,3,1],[1,3,5,7,7,5,3,1],[0,1,2,3,3,2,1,0]],
+                7: [[0,0,0,0,0,0,0,0],[0,2,4,5,5,4,2,0],[1,3,6,7,7,6,3,1],[0,0,0,0,0,0,0,0]]
+            });
+
+            // ----- 輔助防禦與威脅判定 -----
+            const isPositionProtected = useCallback((board, row, col, color) => {
+                for (let r = 0; r < 4; r++) {
+                    for (let c = 0; c < 8; c++) {
+                        const p = board[r][c];
+                        if (p && p.faceUp && p.color === color) {
+                            const moves = generateMoves(board, r, c);
+                            for (const mv of moves) {
+                                if (mv.row === row && mv.col === col && mv.type === 'capture') return true;
+                            }
+                        }
+                    }
+                }
+                return false;
+            }, []);
+
+            const isPositionThreatened = useCallback((board, row, col, color) => {
+                const enemy = color === 'red' ? 'black' : 'red';
+                for (let r = 0; r < 4; r++) {
+                    for (let c = 0; c < 8; c++) {
+                        const p = board[r][c];
+                        if (p && p.faceUp && p.color === enemy) {
+                            const moves = generateMoves(board, r, c);
+                            for (const mv of moves) {
+                                if (mv.row === row && mv.col === col && mv.type === 'capture') return true;
+                            }
+                        }
+                    }
+                }
+                return false;
+            }, []);
+
+            const getProtectedByCount = useCallback((board, row, col, color) => {
+                let count = 0;
+                for (let r = 0; r < 4; r++) {
+                    for (let c = 0; c < 8; c++) {
+                        const p = board[r][c];
+                        if (p && p.faceUp && p.color === color) {
+                            const moves = generateMoves(board, r, c);
+                            for (const mv of moves) {
+                                if (mv.row === row && mv.col === col && mv.type === 'capture') count++;
+                            }
+                        }
+                    }
+                }
+                return count;
+            }, []);
+
+            const getThreatenedByCount = useCallback((board, row, col, color) => {
+                const enemy = color === 'red' ? 'black' : 'red';
+                let count = 0;
+                for (let r = 0; r < 4; r++) {
+                    for (let c = 0; c < 8; c++) {
+                        const p = board[r][c];
+                        if (p && p.faceUp && p.color === enemy) {
+                            const moves = generateMoves(board, r, c);
+                            for (const mv of moves) {
+                                if (mv.row === row && mv.col === col && mv.type === 'capture') count++;
+                            }
+                        }
+                    }
+                }
+                return count;
+            }, []);
+
+            // ----- ★ 大師級盤面評估核心 ★ -----
+            const evaluateBoardDynamic = useCallback((board, colorToEval) => {
+                let myScore = 0, enemyScore = 0;
+                const enemyColor = colorToEval === 'red' ? 'black' : 'red';
+                let myGeneralAlive = false, enemyGeneralAlive = false;
+                let myGeneralPos = null, enemyGeneralPos = null;
+                
+                let unrevealedAmt = 0;
+                let enemyPieces = []; // 紀錄敵軍位置以供追擊
+
+                // 第一階段：蒐集敵我雙方情報
+                for (let r = 0; r < 4; r++) {
+                    for (let c = 0; c < 8; c++) {
+                        const p = board[r][c];
+                        if (p) {
+                            if (!p.faceUp) { unrevealedAmt++; } 
+                            else {
+                                if (p.color === enemyColor) {
+                                    enemyPieces.push({ rank: p.rank, r: r, c: c });
+                                }
+                            }
+                        }
+
+                        if (p && p.faceUp && p.rank === 1) {
+                            if (p.color === colorToEval) { myGeneralAlive = true; myGeneralPos = { row: r, col: c }; }
+                            if (p.color === enemyColor) { enemyGeneralAlive = true; enemyGeneralPos = { row: r, col: c }; }
+                        }
+                    }
+                }
+                
+                if (!myGeneralAlive) return -999999;
+                if (!enemyGeneralAlive) return 999999;
+
+                // 第二階段：精細權重計算
+                for (let r = 0; r < 4; r++) {
+                    for (let c = 0; c < 8; c++) {
+                        const p = board[r][c];
+                        if (!p || !p.faceUp) continue;
+                        const isMine = p.color === colorToEval;
+                        const rank = p.rank;
+                        let val = BASE_PIECE_VALUES[rank] || 0;
+                        
+                        // 1. 位置加成
+                        const posTable = POSITION_VALUES.current[rank];
+                        if (posTable && posTable[r] && posTable[r][c] !== undefined) {
+                            val += posTable[r][c] * 50;
+                        }
+
+                        // 2. 防守與威脅
+                        const prot = getProtectedByCount(board, r, c, p.color);
+                        const threat = getThreatenedByCount(board, r, c, p.color);
+                        val += prot * (rank <= 3 ? 200 : 100);
+                        val -= threat * (rank <= 3 ? 500 : 250); 
+                        
+                        if (rank === 1) {
+                            val += prot * 500;
+                            val -= threat * 1000;
+                        }
+
+                        // 3. 炮的伏擊 (尋找炮臺與架線)
+                        if (rank === 6) {
+                            let mounts = 0;
+                            for (let i = 0; i < 8; i++) if (i !== c && board[r][i]) mounts++;
+                            for (let i = 0; i < 4; i++) if (i !== r && board[i][c]) mounts++;
+                            val += mounts * 60; // 有砲台大加分
+                            
+                            // 直線上有大獵物
+                            if (mounts > 0) {
+                                for (let i = 0; i < 8; i++) {
+                                    const tgt = board[r][i];
+                                    if (tgt && tgt.faceUp && tgt.color !== p.color && tgt.rank <= 3) val += 150;
+                                }
+                                for (let i = 0; i < 4; i++) {
+                                    const tgt = board[i][c];
+                                    if (tgt && tgt.faceUp && tgt.color !== p.color && tgt.rank <= 3) val += 150;
+                                }
+                            }
+                        }
+
+                        // 4. 群聚效應 (不要落單)
+                        const dirs = [[-1,0],[1,0],[0,-1],[0,1]];
+                        let adjFriends = 0;
+                        for (const [dr, dc] of dirs) {
+                            const nr = r + dr, nc = c + dc;
+                            if (nr >= 0 && nr < 4 && nc >= 0 && nc < 8) {
+                                const nb = board[nr][nc];
+                                if (nb && nb.faceUp && nb.color === p.color) adjFriends++;
+                            }
+                        }
+                        val += adjFriends * 70;
+                        
+                        // 5. ★ 獵犬嗅覺 (主動逼近獵物) ★
+                        if (isMine && enemyPieces.length > 0) {
+                            let minDistToPrey = 99;
+                            for (const ep of enemyPieces) {
+                                // 如果我能吃他，或者是炮遇到大子
+                                if (canCapture(rank, ep.rank) || (rank === 6 && ep.rank <= 3)) {
+                                    const dist = Math.abs(r - ep.r) + Math.abs(c - ep.c);
+                                    if (dist < minDistToPrey) minDistToPrey = dist;
+                                }
+                            }
+                            if (minDistToPrey < 99) {
+                                // 距離越近，分數越高。最大距離大約是 11。
+                                val += (12 - minDistToPrey) * (rank === 1 ? 70 : (rank <= 4 ? 40 : 15));
+                            }
+                        }
+
+                        // 6. 行動力與實際吃子威脅
+                        const moves = generateMoves(board, r, c);
+                        val += moves.length * (rank === 6 ? 15 : 25);
+                        
+                        let captureThreat = 0;
+                        for (const mv of moves) {
+                            if (mv.type === 'capture') {
+                                const target = board[mv.row][mv.col];
+                                if (target) {
+                                    const targetVal = BASE_PIECE_VALUES[target.rank] || 0;
+                                    const targetProt = getProtectedByCount(board, mv.row, mv.col, target.color);
+                                    const netVal = targetVal - targetProt * 500;
+                                    captureThreat += Math.max(0, netVal) * 0.2;
+                                }
+                            }
+                        }
+                        val += captureThreat;
+                        
+                        // 分配分數
+                        if (isMine) myScore += val;
+                        else enemyScore += val;
+                    }
+                }
+                
+                // 奪帥模式致命威脅懲罰
+                if (captureGeneralMode) {
+                    if (myGeneralPos && isPositionThreatened(board, myGeneralPos.row, myGeneralPos.col, colorToEval)) {
+                        myScore -= 10000;
+                    }
+                    if (enemyGeneralPos && isPositionThreatened(board, enemyGeneralPos.row, enemyGeneralPos.col, enemyColor)) {
+                        enemyScore -= 10000;
+                    }
+                }
+                
+                let myCnt = 0, enemyCnt = 0;
+                for (let r = 0; r < 4; r++) {
+                    for (let c = 0; c < 8; c++) {
+                        const p = board[r][c];
+                        if (p && p.faceUp) {
+                            if (p.color === colorToEval) myCnt++;
+                            else enemyCnt++;
+                        }
+                    }
+                }
+                myScore += (myCnt - enemyCnt) * 150;
+
+                return myScore - enemyScore;
+            }, [captureGeneralMode, getProtectedByCount, getThreatenedByCount, isPositionThreatened]);
+
+            // ----- 走法排序 (提早剪枝) -----
+            const orderMoves = useCallback((board, moves, color) => {
+                return moves.sort((a, b) => {
+                    const aTarget = board[a.toRow][a.toCol];
+                    const bTarget = board[b.toRow][b.toCol];
+                    const aFrom = board[a.fromRow][a.fromCol];
+                    const bFrom = board[b.fromRow][b.fromCol];
+                    let aScore = 0, bScore = 0;
+                    if (aTarget) {
+                        let tVal = BASE_PIECE_VALUES[aTarget.rank] || 0;
+                        aScore += tVal;
+                    }
+                    if (bTarget) {
+                        let tVal = BASE_PIECE_VALUES[bTarget.rank] || 0;
+                        bScore += tVal;
+                    }
+                    if (aFrom && getThreatenedByCount(board, a.fromRow, a.fromCol, color) > 0) aScore += 1000;
+                    if (bFrom && getThreatenedByCount(board, b.fromRow, b.fromCol, color) > 0) bScore += 1000;
+                    return bScore - aScore;
+                });
+            }, [getThreatenedByCount]);
+
+            const generateAllMoves = useCallback((board, color) => {
+                const moves = [];
+                for (let r = 0; r < 4; r++) {
+                    for (let c = 0; c < 8; c++) {
+                        const p = board[r][c];
+                        if (p && p.faceUp && p.color === color) {
+                            const ms = generateMoves(board, r, c);
+                            ms.forEach(m => moves.push({ fromRow: r, fromCol: c, toRow: m.row, toCol: m.col, type: m.type }));
+                        }
+                    }
+                }
+                return moves;
+            }, []);
+
+            const simulateMove = useCallback((board, fromRow, fromCol, toRow, toCol) => {
+                const nb = cloneBoard(board);
+                const piece = nb[fromRow][fromCol];
+                nb[toRow][toCol] = piece;
+                nb[fromRow][fromCol] = null;
+                return nb;
+            }, []);
+
+            // ----- 靜止搜索 (Quiescence Search) -----
+            const quiesce = useCallback((board, alpha, beta, isMaximizing, currentColor, rootAiColor, qDepth = 0) => {
+                const stand_pat = evaluateBoardDynamic(board, rootAiColor);
+                if (qDepth > 4) return stand_pat;
+
+                if (isMaximizing) {
+                    if (stand_pat >= beta) return stand_pat;
+                    alpha = Math.max(alpha, stand_pat);
+                } else {
+                    if (stand_pat <= alpha) return stand_pat;
+                    beta = Math.min(beta, stand_pat);
+                }
+
+                const moves = generateAllMoves(board, currentColor).filter(m => m.type === 'capture');
+                const sortedMoves = orderMoves(board, moves, currentColor);
+
+                for (const mv of sortedMoves) {
+                    const nb = simulateMove(board, mv.fromRow, mv.fromCol, mv.toRow, mv.toCol);
+                    const nextColor = currentColor === 'red' ? 'black' : 'red';
+                    const score = quiesce(nb, alpha, beta, !isMaximizing, nextColor, rootAiColor, qDepth + 1);
+
+                    if (isMaximizing) {
+                        alpha = Math.max(alpha, score);
+                        if (alpha >= beta) break;
+                    } else {
+                        beta = Math.min(beta, score);
+                        if (beta <= alpha) break;
+                    }
+                }
+                return isMaximizing ? alpha : beta;
+            }, [evaluateBoardDynamic, generateAllMoves, orderMoves, simulateMove]);
+
+            // ----- α-β 搜索 (結合 TT 與 Quiescence) -----
+            const alphaBeta = useCallback((board, depth, alpha, beta, isMaximizing, currentColor, rootAiColor) => {
+                const hash = hashBoard(board) + '-' + currentColor;
+                const ttEntry = ttRef.current.get(hash);
+                const originalAlpha = alpha;
+                const originalBeta = beta;
+
+                if (ttEntry && ttEntry.depth >= depth) {
+                    if (ttEntry.flag === 'EXACT') return { score: ttEntry.score, move: ttEntry.move };
+                    if (ttEntry.flag === 'LOWERBOUND') alpha = Math.max(alpha, ttEntry.score);
+                    if (ttEntry.flag === 'UPPERBOUND') beta = Math.min(beta, ttEntry.score);
+                    if (alpha >= beta) return { score: ttEntry.score, move: ttEntry.move };
+                }
+
+                if (depth === 0) {
+                    const qScore = quiesce(board, alpha, beta, isMaximizing, currentColor, rootAiColor, 0);
+                    return { score: qScore, move: null };
+                }
+
+                const moves = generateAllMoves(board, currentColor);
+                if (moves.length === 0) {
+                    return { score: evaluateBoardDynamic(board, rootAiColor), move: null };
+                }
+                
+                const sortedMoves = orderMoves(board, moves, currentColor);
+                let bestMove = null;
+                let bestScore = isMaximizing ? -Infinity : Infinity;
+
+                for (const mv of sortedMoves) {
+                    const target = board[mv.toRow][mv.toCol];
+                    const isCapture = !!target;
+                    const nb = simulateMove(board, mv.fromRow, mv.fromCol, mv.toRow, mv.toCol);
+
+                    if (captureGeneralMode && target && target.rank === 1 && target.color !== currentColor) {
+                        return { score: isMaximizing ? 999999 : -999999, move: mv };
+                    }
+
+                    const nextColor = currentColor === 'red' ? 'black' : 'red';
+                    const result = alphaBeta(nb, depth - 1, alpha, beta, !isMaximizing, nextColor, rootAiColor);
+                    
+                    let currentScore = result.score;
+                    const moveHash = `${currentColor}-${mv.fromRow}${mv.fromCol}-${mv.toRow}${mv.toCol}`;
+                    const historyPenalty = (aiHistoryRef.current.get(moveHash) || 0) * 500;
+                    const adjustedPenalty = isCapture ? historyPenalty * 0.1 : historyPenalty;
+
+                    if (isMaximizing) currentScore -= adjustedPenalty;
+                    else currentScore += adjustedPenalty;
+
+                    if (isMaximizing) {
+                        if (currentScore > bestScore) {
+                            bestScore = currentScore;
+                            bestMove = mv;
+                        }
+                        alpha = Math.max(alpha, bestScore);
+                    } else {
+                        if (currentScore < bestScore) {
+                            bestScore = currentScore;
+                            bestMove = mv;
+                        }
+                        beta = Math.min(beta, bestScore);
+                    }
+                    if (alpha >= beta) break;
+                }
+
+                let flag = 'EXACT';
+                if (bestScore <= originalAlpha) flag = 'UPPERBOUND';
+                else if (bestScore >= originalBeta) flag = 'LOWERBOUND';
+                ttRef.current.set(hash, { depth, flag, score: bestScore, move: bestMove });
+
+                return { score: bestScore, move: bestMove };
+            }, [generateAllMoves, simulateMove, evaluateBoardDynamic, orderMoves, captureGeneralMode, quiesce]);
+
+            // ----- 勝負檢查 & 執行走法 -----
+            const checkWinCondition = useCallback((newBoard) => {
+                let hasUnrevealed = false;
+                for (let r = 0; r < 4; r++) {
+                    for (let c = 0; c < 8; c++) {
+                        if (newBoard[r][c] && !newBoard[r][c].faceUp) { hasUnrevealed = true; break; }
+                    }
+                    if (hasUnrevealed) break;
+                }
+                if (hasUnrevealed) return false;
+                let redPieces = 0, blackPieces = 0;
+                let redMoves = 0, blackMoves = 0;
+                for (let r = 0; r < 4; r++) {
+                    for (let c = 0; c < 8; c++) {
+                        const p = newBoard[r][c];
+                        if (!p) continue;
+                        const moves = generateMoves(newBoard, r, c);
+                        if (p.color === 'red') { redPieces++; redMoves += moves.length; }
+                        else { blackPieces++; blackMoves += moves.length; }
+                    }
+                }
+                if (redPieces === 0 || redMoves === 0) {
+                    setGameOver(true); setWinner('black'); setWinReason(redPieces === 0 ? '紅方被全殲' : '紅方無子可走');
+                    playSound('win'); return true;
+                }
+                if (blackPieces === 0 || blackMoves === 0) {
+                    setGameOver(true); setWinner('red'); setWinReason(blackPieces === 0 ? '黑方被全殲' : '黑方無子可走');
+                    playSound('win'); return true;
+                }
+                return false;
+            }, []);
+
+            const executeMove = useCallback((fromRow, fromCol, toRow, toCol) => {
+                if (gameOver) return;
+                const newBoard = cloneBoard(board);
+                const attacker = newBoard[fromRow][fromCol];
+                const target = newBoard[toRow][toCol];
+                if (target) playSound('capture'); else playSound('move');
+                newBoard[toRow][toCol] = attacker;
+                newBoard[fromRow][fromCol] = null;
+                if (target) {
+                    if (target.color === 'red') setBlackCaptures(p => p + 1);
+                    else setRedCaptures(p => p + 1);
+                }
+                if (captureGeneralMode && target && target.rank === 1) {
+                    setBoard(newBoard);
+                    setGameOver(true);
+                    setWinner(attacker.color === 'red' ? 'red' : 'black');
+                    setWinReason(target.color === 'red' ? '紅方主帥被奪' : '黑方主將被奪');
+                    setSelectedPos(null); setHighlightCells([]);
+                    playSound('win');
+                    return;
+                }
+                if (checkWinCondition(newBoard)) {
+                    setBoard(newBoard);
+                    setSelectedPos(null); setHighlightCells([]);
+                    return;
+                }
+                const nextTurn = currentTurn === 'red' ? 'black' : 'red';
+                setBoard(newBoard);
+                setCurrentTurn(nextTurn);
+                setSelectedPos(null);
+                setHighlightCells([]);
+            }, [board, currentTurn, gameOver, captureGeneralMode, checkWinCondition]);
+
+            // ----- ★ 大師級決策分配 (嚴格限制翻牌) ★ -----
+            const aiDecide = useCallback(() => {
+                if (ttRef.current.size > 50000) ttRef.current.clear();
+
+                const unrevealed = [];
+                for (let r = 0; r < 4; r++) {
+                    for (let c = 0; c < 8; c++) {
+                        if (board[r][c] && !board[r][c].faceUp) unrevealed.push({ row: r, col: c });
+                    }
+                }
+                
+                const allMoves = generateAllMoves(board, aiColor);
+                let bestMoveResult = null;
+                
+                if (allMoves.length > 0) {
+                    const faceUpCount = 32 - unrevealed.length;
+                    let depth = 4;
+                    if (faceUpCount >= 22) depth = 5;
+                    if (faceUpCount >= 28) depth = 6;
+                    bestMoveResult = alphaBeta(board, depth, -Infinity, Infinity, true, aiColor, aiColor);
+                }
+                
+                // 判斷最佳步是否為致命殺招或救命招
+                let isCaptureMove = false;
+                let isEscapeMove = false;
+                
+                if (bestMoveResult && bestMoveResult.move) {
+                    const mv = bestMoveResult.move;
+                    if (board[mv.toRow][mv.toCol] !== null) {
+                        isCaptureMove = true;
+                    }
+                    
+                    const boardAfter = simulateMove(board, mv.fromRow, mv.fromCol, mv.toRow, mv.toCol);
+                    const wasThreatened = isPositionThreatened(board, mv.fromRow, mv.fromCol, aiColor);
+                    const isStillThreatened = isPositionThreatened(boardAfter, mv.toRow, mv.toCol, aiColor);
+                    if (wasThreatened && !isStillThreatened) {
+                        isEscapeMove = true;
+                    }
+                }
+
+                let shouldFlip = false;
+                const currentScore = evaluateBoardDynamic(board, aiColor);
+
+                // 大師的翻牌邏輯判斷
+                if (!bestMoveResult || !bestMoveResult.move) {
+                    shouldFlip = true; // 沒子可動，只能翻
+                } else if (isCaptureMove || isEscapeMove) {
+                    shouldFlip = false; // ★ 核心改動：能吃子或能逃命，絕對不翻牌，專注於戰局 ★
+                } else {
+                    // 若這步棋只是單純位移，評估是否要翻牌
+                    const faceUpCount = 32 - unrevealed.length;
+                    if (faceUpCount < 10) {
+                        shouldFlip = true; // 遊戲剛開局，多翻牌建立軍隊
+                    } else if (currentScore < -3000) {
+                        // 嚴重劣勢時，賭一把翻牌
+                        shouldFlip = Math.random() > 0.2; 
+                    } else {
+                        // 中後期，除非這步棋走得很爛，否則不輕易翻牌
+                        const moveGain = bestMoveResult.score - currentScore;
+                        if (moveGain <= 100) { 
+                            // 走這步幾乎沒好處，那寧願去翻牌打開新局面
+                            shouldFlip = true;
+                        }
+                    }
+                }
+
+                // 執行翻牌
+                if (shouldFlip && unrevealed.length > 0) {
+                    // 隨機選一個暗棋來翻 (此處可優化為避開地雷區，但隨機翻牌更具真實變數)
+                    const u = unrevealed[Math.floor(Math.random() * unrevealed.length)];
+                    playSound('flip');
+                    const newBoard = cloneBoard(board);
+                    newBoard[u.row][u.col].faceUp = true;
+                    aiHistoryRef.current.clear();
+                    
+                    if (checkWinCondition(newBoard)) {
+                        setBoard(newBoard);
+                        setSelectedPos(null); setHighlightCells([]);
+                        return;
+                    }
+                    const nextTurn = aiColor === 'red' ? 'black' : 'red';
+                    setBoard(newBoard);
+                    setCurrentTurn(nextTurn);
+                    return;
+                }
+
+                // 執行移動
+                if (bestMoveResult && bestMoveResult.move) {
+                    const mv = bestMoveResult.move;
+                    const moveHash = `${aiColor}-${mv.fromRow}${mv.fromCol}-${mv.toRow}${mv.toCol}`;
+                    aiHistoryRef.current.set(moveHash, (aiHistoryRef.current.get(moveHash) || 0) + 1);
+                    executeMove(mv.fromRow, mv.fromCol, mv.toRow, mv.toCol);
+                }
+            }, [board, aiColor, generateAllMoves, alphaBeta, simulateMove, isPositionThreatened, evaluateBoardDynamic, executeMove, checkWinCondition]);
+
+            // ----- 事件處理 -----
+            const handleCellClick = useCallback((row, col) => {
+                if (gameOver) return;
+                if (gameMode === 'ai' && currentTurn !== null && currentTurn === aiColor) return;
+                const piece = board[row][col];
+                if (currentTurn === null) {
+                    if (piece && !piece.faceUp) {
+                        playSound('flip');
+                        const newBoard = cloneBoard(board);
+                        newBoard[row][col] = { ...piece, faceUp: true };
+                        setBoard(newBoard);
+                        const firstColor = piece.color;
+                        setPlayerColor(firstColor);
+                        if (gameMode === 'ai') setAiColor(firstColor === 'red' ? 'black' : 'red');
+                        setCurrentTurn(firstColor === 'red' ? 'black' : 'red');
+                    }
+                    return;
+                }
+                if (selectedPos) {
+                    const hit = highlightCells.find(h => h.row === row && h.col === col);
+                    if (hit) { executeMove(selectedPos.row, selectedPos.col, row, col); return; }
+                    setSelectedPos(null);
+                    setHighlightCells([]);
+                    if (piece && piece.faceUp && piece.color === currentTurn) {
+                        const moves = generateMoves(board, row, col);
+                        setSelectedPos({ row, col });
+                        setHighlightCells(moves);
+                    }
+                    return;
+                }
+                if (!piece) return;
+                if (!piece.faceUp) {
+                    playSound('flip');
+                    const newBoard = cloneBoard(board);
+                    newBoard[row][col] = { ...piece, faceUp: true };
+                    const nextTurn = currentTurn === 'red' ? 'black' : 'red';
+                    if (checkWinCondition(newBoard)) { setBoard(newBoard); return; }
+                    setBoard(newBoard);
+                    setCurrentTurn(nextTurn);
+                    return;
+                }
+                if (piece.color === currentTurn) {
+                    const moves = generateMoves(board, row, col);
+                    setSelectedPos({ row, col });
+                    setHighlightCells(moves);
+                }
+            }, [board, currentTurn, gameOver, selectedPos, highlightCells, executeMove, gameMode, aiColor, checkWinCondition]);
+
+            // ----- useEffect 觸發 AI -----
+            useEffect(() => {
+                if (gameOver || gameMode !== 'ai' || currentTurn === null || !aiColor || currentTurn !== aiColor) return;
+                const timer = setTimeout(() => aiDecide(), 600);
+                return () => clearTimeout(timer);
+            }, [board, currentTurn, gameOver, gameMode, aiColor, aiDecide]);
+
+            // ----- 啟動提示 -----
             useEffect(() => {
                 if (currentTurn !== null || gameOver) {
                     if (startTimerRef.current) {
@@ -706,431 +953,7 @@
                 };
             }, [currentTurn, gameOver]);
 
-            const isKingInDanger = useCallback((board, color) => {
-                let kingPos = null;
-                for (let r = 0; r < 4; r++) {
-                    for (let c = 0; c < 8; c++) {
-                        const p = board[r][c];
-                        if (p && p.faceUp && p.rank === 1 && p.color === color) kingPos = { row: r, col: c };
-                    }
-                }
-                if (!kingPos) return true;
-                const enemy = color === 'red' ? 'black' : 'red';
-                for (let r = 0; r < 4; r++) {
-                    for (let c = 0; c < 8; c++) {
-                        const p = board[r][c];
-                        if (p && p.faceUp && p.color === enemy) {
-                            const moves = generateMoves(board, r, c);
-                            if (moves.some(m => m.row === kingPos.row && m.col === kingPos.col && m.type === 'capture'))
-                                return true;
-                        }
-                    }
-                }
-                return false;
-            }, []);
-
-            const evaluateBoardDynamic = useCallback((board, colorToEval) => {
-                let myScore = 0;
-                let enemyScore = 0;
-                const enemyColor = colorToEval === 'red' ? 'black' : 'red';
-                let myGeneralAlive = false;
-                let enemyGeneralAlive = false;
-
-                for (let r = 0; r < 4; r++) {
-                    for (let c = 0; c < 8; c++) {
-                        const p = board[r][c];
-                        if (p && p.faceUp && p.rank === 1) {
-                            if (p.color === enemyColor) enemyGeneralAlive = true;
-                            if (p.color === colorToEval) myGeneralAlive = true;
-                        }
-                    }
-                }
-
-                for (let r = 0; r < 4; r++) {
-                    for (let c = 0; c < 8; c++) {
-                        const p = board[r][c];
-                        if (!p || !p.faceUp) continue;
-                        const isMine = p.color === colorToEval;
-                        let val = BASE_PIECE_VALUES[p.rank] || 0;
-
-                        if (p.rank === 7) {
-                            if (isMine && !enemyGeneralAlive) val = 100;
-                            else if (!isMine && !myGeneralAlive) val = 100;
-                            else val += 500;
-                        }
-
-                        const moves = generateMoves(board, r, c);
-                        let mobilityScore = moves.length * 20;
-                        if (moves.length === 0 && p.rank !== 6) val *= 0.7;
-
-                        let pieceTotal = val + mobilityScore;
-                        for (const mv of moves) {
-                            if (mv.type === 'capture') {
-                                const target = board[mv.row][mv.col];
-                                if (target) pieceTotal += BASE_PIECE_VALUES[target.rank] * 0.1;
-                            }
-                        }
-
-                        if (isMine) myScore += pieceTotal;
-                        else enemyScore += pieceTotal;
-                    }
-                }
-
-                for (let r = 0; r < 4; r++) {
-                    for (let c = 0; c < 8; c++) {
-                        const p = board[r][c];
-                        if (p && p.faceUp && p.color === enemyColor) {
-                            const enemyMoves = generateMoves(board, r, c);
-                            for (const mv of enemyMoves) {
-                                if (mv.type === 'capture') {
-                                    const target = board[mv.row][mv.col];
-                                    if (target && target.color === colorToEval) {
-                                        myScore -= BASE_PIECE_VALUES[target.rank] * 0.8;
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-
-                let score = myScore - enemyScore;
-                if (captureGeneralMode && isKingInDanger(board, colorToEval)) score -= 20000;
-                return score;
-            }, [captureGeneralMode, isKingInDanger]);
-
-            const generateAllMoves = useCallback((board, color) => {
-                const moves = [];
-                for (let r = 0; r < 4; r++) {
-                    for (let c = 0; c < 8; c++) {
-                        const p = board[r][c];
-                        if (p && p.faceUp && p.color === color) {
-                            const ms = generateMoves(board, r, c);
-                            ms.forEach(m => moves.push({ fromRow: r, fromCol: c, toRow: m.row, toCol: m.col, type: m
-                                    .type }));
-                        }
-                    }
-                }
-                return moves;
-            }, []);
-
-            const simulateMove = useCallback((board, fromRow, fromCol, toRow, toCol) => {
-                const nb = cloneBoard(board);
-                const piece = nb[fromRow][fromCol];
-                nb[toRow][toCol] = piece;
-                nb[fromRow][fromCol] = null;
-                return nb;
-            }, []);
-
-            const alphaBeta = useCallback((board, depth, alpha, beta, isMaximizing, color, currentDepth = 0) => {
-                const moves = generateAllMoves(board, color);
-                if (depth === 0 || moves.length === 0) {
-                    return { score: evaluateBoardDynamic(board, aiColor), move: null };
-                }
-
-                moves.sort((a, b) => {
-                    const aTarget = board[a.toRow][a.toCol];
-                    const bTarget = board[b.toRow][b.toCol];
-                    const aScore = aTarget ? BASE_PIECE_VALUES[aTarget.rank] : 0;
-                    const bScore = bTarget ? BASE_PIECE_VALUES[bTarget.rank] : 0;
-                    return bScore - aScore;
-                });
-
-                let bestMove = null;
-                let bestScore = isMaximizing ? -Infinity : Infinity;
-
-                for (const mv of moves) {
-                    const nb = simulateMove(board, mv.fromRow, mv.fromCol, mv.toRow, mv.toCol);
-                    const target = board[mv.toRow][mv.toCol];
-
-                    if (captureGeneralMode && target && target.rank === 1 && target.color !== color) {
-                        return { score: isMaximizing ? 999999 : -999999, move: mv };
-                    }
-
-                    const nextColor = color === 'red' ? 'black' : 'red';
-                    const moveHash = `${color}-${mv.fromRow}${mv.fromCol}-${mv.toRow}${mv.toCol}`;
-                    const penalty = (aiHistoryRef.current.get(moveHash) || 0) * 2000;
-
-                    const result = alphaBeta(nb, depth - 1, alpha, beta, !isMaximizing, nextColor, currentDepth + 1);
-
-                    let currentScore = result.score;
-                    if (isMaximizing) currentScore -= penalty;
-                    else currentScore += penalty;
-
-                    if (isMaximizing) {
-                        if (currentScore > bestScore) { bestScore = currentScore;
-                            bestMove = mv; }
-                        alpha = Math.max(alpha, bestScore);
-                    } else {
-                        if (currentScore < bestScore) { bestScore = currentScore;
-                            bestMove = mv; }
-                        beta = Math.min(beta, bestScore);
-                    }
-                    if (alpha >= beta) break;
-                }
-                return { score: bestScore, move: bestMove };
-            }, [aiColor, generateAllMoves, simulateMove, evaluateBoardDynamic, captureGeneralMode]);
-
-            const getUnknownPiecePool = useCallback((board) => {
-                const totalCounts = {
-                    red: { 1: 1, 2: 2, 3: 2, 4: 2, 5: 2, 6: 2, 7: 5 },
-                    black: { 1: 1, 2: 2, 3: 2, 4: 2, 5: 2, 6: 2, 7: 5 }
-                };
-                let unrevealedCount = 0;
-                for (let r = 0; r < 4; r++) {
-                    for (let c = 0; c < 8; c++) {
-                        const p = board[r][c];
-                        if (p) { if (p.faceUp) totalCounts[p.color][p.rank]--;
-                            else unrevealedCount++; }
-                    }
-                }
-                return { pool: totalCounts, total: unrevealedCount };
-            }, []);
-
-            const checkWinCondition = useCallback((newBoard) => {
-                let hasUnrevealed = false;
-                for (let r = 0; r < 4; r++) {
-                    for (let c = 0; c < 8; c++) {
-                        if (newBoard[r][c] && !newBoard[r][c].faceUp) { hasUnrevealed = true; break; }
-                    }
-                    if (hasUnrevealed) break;
-                }
-                if (hasUnrevealed) return false;
-
-                let redPieces = 0,
-                    blackPieces = 0;
-                let redMoves = 0,
-                    blackMoves = 0;
-                for (let r = 0; r < 4; r++) {
-                    for (let c = 0; c < 8; c++) {
-                        const p = newBoard[r][c];
-                        if (!p) continue;
-                        const moves = generateMoves(newBoard, r, c);
-                        if (p.color === 'red') { redPieces++;
-                            redMoves += moves.length; } else { blackPieces++;
-                            blackMoves += moves.length; }
-                    }
-                }
-                if (redPieces === 0 || redMoves === 0) {
-                    setGameOver(true);
-                    setWinner('black');
-                    setWinReason(redPieces === 0 ? '紅方被全殲' : '紅方無子可走');
-                    playSound('win');
-                    return true;
-                }
-                if (blackPieces === 0 || blackMoves === 0) {
-                    setGameOver(true);
-                    setWinner('red');
-                    setWinReason(blackPieces === 0 ? '黑方被全殲' : '黑方無子可走');
-                    playSound('win');
-                    return true;
-                }
-                return false;
-            }, []);
-
-            const executeMove = useCallback((fromRow, fromCol, toRow, toCol) => {
-                if (gameOver) return;
-                const newBoard = cloneBoard(board);
-                const attacker = newBoard[fromRow][fromCol];
-                const target = newBoard[toRow][toCol];
-                if (target) playSound('capture');
-                else playSound('move');
-
-                newBoard[toRow][toCol] = attacker;
-                newBoard[fromRow][fromCol] = null;
-                if (target) {
-                    if (target.color === 'red') setBlackCaptures(p => p + 1);
-                    else setRedCaptures(p => p + 1);
-                }
-                setLastMove({ fromRow, fromCol, toRow, toCol });
-
-                if (captureGeneralMode && target && target.rank === 1) {
-                    setBoard(newBoard);
-                    setGameOver(true);
-                    setWinner(attacker.color === 'red' ? 'red' : 'black');
-                    setWinReason(target.color === 'red' ? '紅方主帥被奪' : '黑方主將被奪');
-                    setSelectedPos(null);
-                    setHighlightCells([]);
-                    playSound('win');
-                    return;
-                }
-
-                if (checkWinCondition(newBoard)) {
-                    setBoard(newBoard);
-                    setSelectedPos(null);
-                    setHighlightCells([]);
-                    return;
-                }
-                const nextTurn = currentTurn === 'red' ? 'black' : 'red';
-                setBoard(newBoard);
-                setCurrentTurn(nextTurn);
-                setSelectedPos(null);
-                setHighlightCells([]);
-            }, [board, currentTurn, gameOver, checkWinCondition, captureGeneralMode]);
-
-            const aiDecide = useCallback(() => {
-                const unrevealed = [];
-                for (let r = 0; r < 4; r++) {
-                    for (let c = 0; c < 8; c++) {
-                        if (board[r][c] && !board[r][c].faceUp) unrevealed.push({ row: r, col: c });
-                    }
-                }
-
-                const allMoves = generateAllMoves(board, aiColor);
-                let bestMoveResult = null;
-                if (allMoves.length > 0) {
-                    const faceUpCount = 32 - unrevealed.length;
-                    let searchDepth = 4;
-                    if (faceUpCount >= 18) searchDepth = 5;
-                    bestMoveResult = alphaBeta(board, searchDepth, -Infinity, Infinity, true, aiColor);
-                }
-
-                let bestFlipTarget = null;
-                let maxExpectedValue = -Infinity;
-
-                if (unrevealed.length > 0) {
-                    const { pool, total } = getUnknownPiecePool(board);
-
-                    for (const target of unrevealed) {
-                        let expectedValue = 0;
-                        let surroundingDanger = 0;
-                        let surroundingPrey = 0;
-
-                        const dirs = [
-                            [-1, 0],
-                            [1, 0],
-                            [0, -1],
-                            [0, 1]
-                        ];
-                        for (const [dr, dc] of dirs) {
-                            const nr = target.row + dr,
-                                nc = target.col + dc;
-                            if (nr >= 0 && nr < 4 && nc >= 0 && nc < 8) {
-                                const adj = board[nr][nc];
-                                if (adj && adj.faceUp) {
-                                    if (adj.color !== aiColor) surroundingDanger += BASE_PIECE_VALUES[adj.rank] * 0.4;
-                                    else surroundingPrey += BASE_PIECE_VALUES[adj.rank] * 0.4;
-                                }
-                            }
-                        }
-
-                        ['red', 'black'].forEach(color => {
-                            for (let rank = 1; rank <= 7; rank++) {
-                                const count = pool[color][rank];
-                                if (count > 0) {
-                                    const probability = count / total;
-                                    const isMine = color === aiColor;
-                                    let pieceVal = BASE_PIECE_VALUES[rank];
-                                    if (isMine) expectedValue += probability * (pieceVal * 0.5 - surroundingDanger);
-                                    else expectedValue -= probability * (pieceVal * 0.5 - surroundingPrey);
-                                }
-                            }
-                        });
-
-                        if (expectedValue > maxExpectedValue) {
-                            maxExpectedValue = expectedValue;
-                            bestFlipTarget = target;
-                        }
-                    }
-                }
-
-                const currentBoardScore = evaluateBoardDynamic(board, aiColor);
-                let executeFlip = false;
-
-                if (unrevealed.length > 0) {
-                    if (!bestMoveResult || !bestMoveResult.move) {
-                        executeFlip = true;
-                    } else {
-                        const moveScore = bestMoveResult.score;
-                        const flipExpectedScore = currentBoardScore + maxExpectedValue;
-                        if (flipExpectedScore > moveScore + 1500) {
-                            executeFlip = true;
-                        }
-                    }
-                }
-
-                if (executeFlip && bestFlipTarget) {
-                    playSound('flip');
-                    const newBoard = cloneBoard(board);
-                    newBoard[bestFlipTarget.row][bestFlipTarget.col].faceUp = true;
-                    aiHistoryRef.current.clear();
-                    const nextTurn = aiColor === 'red' ? 'black' : 'red';
-                    setBoard(newBoard);
-                    setCurrentTurn(nextTurn);
-                } else if (bestMoveResult && bestMoveResult.move) {
-                    const mv = bestMoveResult.move;
-                    const moveHash = `${aiColor}-${mv.fromRow}${mv.fromCol}-${mv.toRow}${mv.toCol}`;
-                    aiHistoryRef.current.set(moveHash, (aiHistoryRef.current.get(moveHash) || 0) + 1);
-                    executeMove(mv.fromRow, mv.fromCol, mv.toRow, mv.toCol);
-                } else if (unrevealed.length > 0) {
-                    const u = unrevealed[Math.floor(Math.random() * unrevealed.length)];
-                    playSound('flip');
-                    const newBoard = cloneBoard(board);
-                    newBoard[u.row][u.col].faceUp = true;
-                    const nextTurn = aiColor === 'red' ? 'black' : 'red';
-                    setBoard(newBoard);
-                    setCurrentTurn(nextTurn);
-                }
-            }, [board, aiColor, executeMove, alphaBeta, evaluateBoardDynamic, generateAllMoves, getUnknownPiecePool]);
-
-            const handleCellClick = useCallback((row, col) => {
-                if (gameOver) return;
-                if (gameMode === 'ai' && currentTurn !== null && currentTurn === aiColor) return;
-
-                const piece = board[row][col];
-
-                if (currentTurn === null) {
-                    if (piece && !piece.faceUp) {
-                        playSound('flip');
-                        const newBoard = cloneBoard(board);
-                        newBoard[row][col] = { ...piece, faceUp: true };
-                        setBoard(newBoard);
-                        const firstColor = piece.color;
-                        setPlayerColor(firstColor);
-                        if (gameMode === 'ai') setAiColor(firstColor === 'red' ? 'black' : 'red');
-                        setCurrentTurn(firstColor === 'red' ? 'black' : 'red');
-                    }
-                    return;
-                }
-
-                if (selectedPos) {
-                    const hit = highlightCells.find(h => h.row === row && h.col === col);
-                    if (hit) { executeMove(selectedPos.row, selectedPos.col, row, col); return; }
-                    setSelectedPos(null);
-                    setHighlightCells([]);
-                    if (piece && piece.faceUp && piece.color === currentTurn) {
-                        const moves = generateMoves(board, row, col);
-                        setSelectedPos({ row, col });
-                        setHighlightCells(moves);
-                    }
-                    return;
-                }
-
-                if (!piece) return;
-                if (!piece.faceUp) {
-                    playSound('flip');
-                    const newBoard = cloneBoard(board);
-                    newBoard[row][col] = { ...piece, faceUp: true };
-                    const nextTurn = currentTurn === 'red' ? 'black' : 'red';
-                    if (checkWinCondition(newBoard)) { setBoard(newBoard); return; }
-                    setBoard(newBoard);
-                    setCurrentTurn(nextTurn);
-                    return;
-                }
-                if (piece.color === currentTurn) {
-                    const moves = generateMoves(board, row, col);
-                    setSelectedPos({ row, col });
-                    setHighlightCells(moves);
-                }
-            }, [board, currentTurn, gameOver, selectedPos, highlightCells, executeMove, gameMode, aiColor,
-                checkWinCondition
-            ]);
-
-            useEffect(() => {
-                if (gameOver || gameMode !== 'ai' || currentTurn === null || !aiColor || currentTurn !== aiColor) return;
-                const timer = setTimeout(() => aiDecide(), 600);
-                return () => clearTimeout(timer);
-            }, [board, currentTurn, gameOver, gameMode, aiColor, aiDecide]);
-
+            // ----- 重啟 & 模式切換 -----
             const handleRestart = () => {
                 playSound('move');
                 setBoard(createInitialBoard());
@@ -1144,8 +967,8 @@
                 setWinReason('');
                 setRedCaptures(0);
                 setBlackCaptures(0);
-                setLastMove(null);
                 aiHistoryRef.current.clear();
+                ttRef.current.clear();
             };
 
             const toggleMode = () => {
@@ -1154,6 +977,7 @@
                 handleRestart();
             };
 
+            // ----- 渲染 -----
             const renderBoard = () => {
                 const cells = [];
                 let index = 0;
@@ -1169,9 +993,7 @@
                 return cells;
             };
 
-            // 當回合為空時，顯示佔位符以保持寬度
             const turnLabel = currentTurn ? (currentTurn === 'red' ? '紅方' : '黑方') : '';
-
             const isToggleDisabled = currentTurn !== null;
 
             return html `
@@ -1181,7 +1003,7 @@
                             <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0">
                                 <div className="w-6 h-6 sm:w-8 sm:h-8 rounded-xl bg-gradient-to-br from-wood-400 to-wood-600 flex items-center justify-center text-base shadow-md flex-shrink-0" aria-hidden="true">♟</div>
                                 <span className="text-wood-300 text-xs sm:text-sm font-black tracking-wider flex-shrink-0">暗棋</span>
-                                ${gameMode === 'ai' ? html`<span className="text-[8px] sm:text-[9px] font-bold text-wood-500 bg-wood-800/40 px-1.5 py-0.5 rounded-md border border-wood-500/20 tracking-widest flex-shrink-0">AI</span>` : html`<span className="text-[8px] sm:text-[9px] font-bold text-wood-500 bg-wood-800/40 px-1.5 py-0.5 rounded-md border border-wood-500/20 tracking-widest flex-shrink-0">雙人</span>`}
+                                ${gameMode === 'ai' ? html`<span className="text-[8px] sm:text-[9px] font-bold text-wood-500 bg-wood-800/40 px-1.5 py-0.5 rounded-md border border-wood-500/20 tracking-widest flex-shrink-0">大師 AI</span>` : html`<span className="text-[8px] sm:text-[9px] font-bold text-wood-500 bg-wood-800/40 px-1.5 py-0.5 rounded-md border border-wood-500/20 tracking-widest flex-shrink-0">雙人</span>`}
                             </div>
                             <label className=${`flex items-center gap-1 bg-wood-800/40 px-1.5 py-0.5 sm:px-2 sm:py-1 rounded-lg border border-wood-500/20 shadow-inner transition-all duration-300 flex-shrink-0 ${isToggleDisabled ? 'opacity-40 cursor-not-allowed' : 'cursor-pointer'}`}>
                                 <div className="relative w-6 h-3.5 sm:w-7 sm:h-4 rounded-full bg-wood-950 transition-colors duration-300 flex-shrink-0" style=${{ backgroundColor: captureGeneralMode ? '#b91c1c' : '#241810' }}>

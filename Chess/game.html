@@ -42,13 +42,33 @@
         .cell-highlight-move::after { content: ""; position: absolute; width: 12px; height: 12px; border-radius: 50%; background: rgba(120,200,120,0.4); border: 2px solid rgba(120,200,120,0.7); }
         .cell-highlight-capture { box-shadow: inset 0 0 0 2px rgba(230,120,120,0.6), 0 0 20px rgba(230,120,120,0.15); position: relative; }
         .cell-highlight-capture::after { content: "✕"; position: absolute; font-size: 18px; color: rgba(230,120,120,0.6); font-weight: 900; }
-        .piece { width: 88%; height: 88%; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: clamp(1.4rem,5.5vw,2.4rem); color: white; text-shadow: 0 2px 8px rgba(0,0,0,0.5); box-shadow: 0 4px 0 rgba(0,0,0,0.2), 0 8px 20px rgba(0,0,0,0.3); transition: transform 0.15s ease, box-shadow 0.15s ease; cursor: pointer; touch-action: manipulation; position: relative; line-height: 1; padding: 0; will-change: transform; }
-        .piece:active { transform: scale(0.93); }
-        .piece-red { background: radial-gradient(circle at 35% 30%, #e86050, #c0392b, #922b21); border: 1.5px solid rgba(255,200,150,0.35); box-shadow: 0 3px 0 rgba(0,0,0,0.25), 0 6px 16px rgba(0,0,0,0.35); }
-        .piece-black { background: radial-gradient(circle at 35% 30%, #6a6a6a, #3a3a3a, #1a1a1a); border: 1.5px solid rgba(200,200,200,0.15); box-shadow: 0 3px 0 rgba(0,0,0,0.25), 0 6px 16px rgba(0,0,0,0.35); }
-        .piece-back { background: radial-gradient(circle at 35% 30%, #8a6e4b, #543a22, #2d1f12); border: 1px solid rgba(160,130,90,0.3); }
-        .piece-back::after { content: "♟"; position: absolute; font-size: clamp(1rem,4vw,1.6rem); color: rgba(200,180,150,0.2); top: 50%; left: 50%; transform: translate(-50%,-50%); pointer-events: none; }
-        .piece-selected { box-shadow: 0 0 0 3px #fbbf24, 0 0 0 5px rgba(251,191,36,0.3), 0 4px 0 rgba(0,0,0,0.25), 0 8px 20px rgba(0,0,0,0.35) !important; transform: scale(1.05); }
+		/* 將原本的樣式替換為以下 */
+		.piece { 
+			width: 85%; height: 85%; border-radius: 50%; 
+			display: flex; align-items: center; justify-content: center; 
+			font-weight: 900; font-size: clamp(1.2rem, 5vw, 2rem); 
+			color: white; 
+			transition: transform 0.15s ease;
+			cursor: pointer; touch-action: manipulation;
+			position: relative;
+			/* 擬真象棋質感：內陰影與外陰影呈現厚度 */
+			border: 2px solid rgba(255,255,255,0.1);
+			box-shadow: 
+				inset 0 2px 4px rgba(255,255,255,0.3), 
+				inset 0 -4px 6px rgba(0,0,0,0.4),
+				0 4px 6px rgba(0,0,0,0.4);
+		}
+
+		.piece-red { background: radial-gradient(circle at 30% 30%, #d63031, #a61d1d); }
+		.piece-black { background: radial-gradient(circle at 30% 30%, #4a4a4a, #2d2d2d); }
+		.piece-back { background: radial-gradient(circle at 30% 30%, #e0c9a6, #c4a47a); box-shadow: inset 0 0 10px rgba(0,0,0,0.2), 0 4px 6px rgba(0,0,0,0.3); }
+
+		.piece-text { text-shadow: 0 1px 1px rgba(0,0,0,0.8), 0 -1px 0 rgba(255,255,255,0.2); }
+
+		.piece-selected { 
+			box-shadow: 0 0 0 4px #fbbf24, 0 8px 12px rgba(0,0,0,0.5) !important;
+			transform: translateY(-4px); 
+		}
         .piece-enter { animation: piecePop 0.28s cubic-bezier(0.34,1.56,0.64,1) forwards; }
         @keyframes piecePop { 0% { transform: scale(0.85); opacity: 0.6; } 100% { transform: scale(1); opacity: 1; } }
         .piece-enter.piece-selected { animation: piecePopSelected 0.28s cubic-bezier(0.34,1.56,0.64,1) forwards; }
@@ -275,22 +295,22 @@
         };
 
         // ========================= React 組件 =========================
-        const Piece = memo(({ piece, isSelected, onClick, index }) => {
-            if (!piece) return null;
-            const { color, rank, faceUp } = piece;
-            const isRed = color === 'red';
-            const name = faceUp ? getPieceName(color, rank) : '';
-            const isBack = !faceUp;
-            let className = `piece ${isBack ? 'piece-back' : (isRed ? 'piece-red' : 'piece-black')}`;
-            if (isSelected) className += ' piece-selected';
-            className += ' piece-enter';
-            const style = {
-                fontSize: faceUp ? 'clamp(1.4rem, 5.5vw, 2.4rem)' : '0',
-                color: faceUp ? (isRed ? '#fff8f0' : '#f0f0f0') : 'transparent',
-                animationDelay: `${(index || 0) * 0.008}s`,
-            };
-            return html `<div className=${className} style=${style} onClick=${onClick}>${faceUp ? name : ''}</div>`;
-        });
+		const Piece = memo(({ piece, isSelected, onClick, index }) => {
+			if (!piece) return null;
+			const { color, rank, faceUp } = piece;
+			const isRed = color === 'red';
+			const name = faceUp ? getPieceName(color, rank) : '';
+			const isBack = !faceUp;
+			
+			// 組合新的 CSS 類別名稱
+			const className = `piece ${isBack ? 'piece-back' : (isRed ? 'piece-red' : 'piece-black')} ${isSelected ? 'piece-selected' : ''} piece-enter`;
+			
+			return html `
+				<div className=${className} onClick=${onClick} style=${{ animationDelay: `${(index || 0) * 0.008}s` }}>
+					<span className="piece-text">${faceUp ? name : ''}</span>
+				</div>
+			`;
+		});
 
         const Cell = memo(({ row, col, piece, isHighlight, highlightType, isSelected, onCellClick, index }) => {
             const handleClick = (e) => {
@@ -1003,7 +1023,7 @@
                             <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0">
                                 <div className="w-6 h-6 sm:w-8 sm:h-8 rounded-xl bg-gradient-to-br from-wood-400 to-wood-600 flex items-center justify-center text-base shadow-md flex-shrink-0" aria-hidden="true">♟</div>
                                 <span className="text-wood-300 text-xs sm:text-sm font-black tracking-wider flex-shrink-0">暗棋</span>
-                                ${gameMode === 'ai' ? html`<span className="text-[8px] sm:text-[9px] font-bold text-wood-500 bg-wood-800/40 px-1.5 py-0.5 rounded-md border border-wood-500/20 tracking-widest flex-shrink-0">大師 AI</span>` : html`<span className="text-[8px] sm:text-[9px] font-bold text-wood-500 bg-wood-800/40 px-1.5 py-0.5 rounded-md border border-wood-500/20 tracking-widest flex-shrink-0">雙人</span>`}
+                                ${gameMode === 'ai' ? html`<span className="text-[8px] sm:text-[9px] font-bold text-wood-500 bg-wood-800/40 px-1.5 py-0.5 rounded-md border border-wood-500/20 tracking-widest flex-shrink-0">電腦</span>` : html`<span className="text-[8px] sm:text-[9px] font-bold text-wood-500 bg-wood-800/40 px-1.5 py-0.5 rounded-md border border-wood-500/20 tracking-widest flex-shrink-0">雙人</span>`}
                             </div>
                             <label className=${`flex items-center gap-1 bg-wood-800/40 px-1.5 py-0.5 sm:px-2 sm:py-1 rounded-lg border border-wood-500/20 shadow-inner transition-all duration-300 flex-shrink-0 ${isToggleDisabled ? 'opacity-40 cursor-not-allowed' : 'cursor-pointer'}`}>
                                 <div className="relative w-6 h-3.5 sm:w-7 sm:h-4 rounded-full bg-wood-950 transition-colors duration-300 flex-shrink-0" style=${{ backgroundColor: captureGeneralMode ? '#b91c1c' : '#241810' }}>

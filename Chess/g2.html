@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
     <title>大師暗棋 - 4x8</title>
     <style>
-        * { margin: 0; padding: 0; }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
         body { 
             display: flex; 
             justify-content: center; 
@@ -17,35 +17,94 @@
             font-family: Arial, sans-serif;
         }
         #game-container {
-            width: 100%;
-            height: 100%;
+            width: 100vw;
+            height: 100vh;
             max-width: 500px;
             max-height: 900px;
             position: relative;
+            background: #1a1a2e;
         }
         #loading {
             position: absolute;
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
-            color: white;
-            font-size: 24px;
+            color: #ffffff;
+            font-size: 28px;
             z-index: 1000;
-            background: rgba(0,0,0,0.7);
-            padding: 20px 40px;
-            border-radius: 12px;
+            background: rgba(0,0,0,0.8);
+            padding: 30px 50px;
+            border-radius: 16px;
+            text-align: center;
+            border: 2px solid #F1C40F;
+            pointer-events: none;
+        }
+        #loading .spinner {
+            display: inline-block;
+            width: 40px;
+            height: 40px;
+            border: 4px solid rgba(255,255,255,0.1);
+            border-top: 4px solid #F1C40F;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            margin-bottom: 12px;
+        }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        #loading .text {
+            display: block;
+            margin-top: 8px;
+            font-size: 20px;
+            color: #ddd;
         }
         canvas {
             display: block;
             width: 100% !important;
             height: 100% !important;
         }
+        #error-msg {
+            display: none;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: #ff6b6b;
+            background: rgba(0,0,0,0.9);
+            padding: 20px 30px;
+            border-radius: 12px;
+            z-index: 2000;
+            text-align: center;
+            border: 2px solid #ff6b6b;
+            max-width: 90%;
+        }
+        #error-msg .retry-btn {
+            margin-top: 16px;
+            padding: 10px 30px;
+            background: #F1C40F;
+            border: none;
+            border-radius: 8px;
+            font-size: 18px;
+            color: #1a1a2e;
+            cursor: pointer;
+            font-weight: bold;
+        }
     </style>
     <script src="https://cdn.jsdelivr.net/npm/phaser@3.87.0/dist/phaser.min.js"></script>
 </head>
 <body>
     <div id="game-container">
-        <div id="loading">載入遊戲中...</div>
+        <!-- 載入提示 -->
+        <div id="loading">
+            <div class="spinner"></div>
+            <span class="text">🎮 載入遊戲中...</span>
+        </div>
+        <!-- 錯誤訊息 -->
+        <div id="error-msg">
+            <div style="font-size: 48px; margin-bottom: 10px;">⚠️</div>
+            <div id="error-text">載入失敗，請重試</div>
+            <button class="retry-btn" onclick="location.reload()">🔄 重新載入</button>
+        </div>
     </div>
 
     <script>
@@ -61,8 +120,6 @@
         const ROWS = 8;
         const COLS = 4;
         
-        // 棋子編號: 1帥(將), 2仕(士), 3相(象), 4俥(車), 5傌(馬), 6炮(包), 7兵(卒)
-        // 紅方: 正數, 黑方: 負數
         const INIT_BOARD = [
             [-7, -6, -5, -4],
             [-3, -2, -1, -2],
@@ -84,7 +141,28 @@
             7: '兵', '-7': '卒'
         };
 
-        // ----- 主場景 -----
+        // 獲取 DOM 元素
+        const loadingEl = document.getElementById('loading');
+        const errorEl = document.getElementById('error-msg');
+        const errorText = document.getElementById('error-text');
+
+        // 隱藏載入提示
+        function hideLoading() {
+            if (loadingEl) loadingEl.style.display = 'none';
+        }
+
+        // 顯示錯誤
+        function showError(msg) {
+            if (errorEl) {
+                errorEl.style.display = 'block';
+                if (errorText) errorText.textContent = msg || '遊戲載入失敗，請重新整理頁面';
+            }
+            if (loadingEl) loadingEl.style.display = 'none';
+        }
+
+        // ============================================================
+        // 主場景
+        // ============================================================
         class GameScene extends Phaser.Scene {
             constructor() {
                 super('GameScene');
@@ -104,6 +182,350 @@
                 this.boardStartX = 0;
                 this.boardStartY = 0;
                 this.uiText = null;
+                this.statusText = null;
+                this.resetBtn = null;
+                this.isReady = false;
+            }
+
+            // ----- 場景初始化 -----
+            create() {
+                console.log('[GameScene] create 開始');
+                
+                try {
+                    // 初始化物件池
+                    this.pool = new PiecePool(this);
+
+                    // 計算尺寸
+                    const { width, height } = this.scale;
+                    console.log(`[GameScene] 螢幕尺寸: ${width}x${height}`);
+                    
+                    const maxWidth = width * 0.90;
+                    const maxHeight = height * 0.78;
+                    const cellFromWidth = (maxWidth - this.padding * (COLS + 1)) / COLS;
+                    const cellFromHeight = (maxHeight - this.padding * (ROWS + 1)) / ROWS;
+                    this.cellSize = Math.min(cellFromWidth, cellFromHeight, 72);
+                    this.pieceSize = this.cellSize * 0.82;
+                    console.log(`[GameScene] cellSize: ${this.cellSize}, pieceSize: ${this.pieceSize}`);
+
+                    // 計算棋盤起始位置
+                    this.boardStartX = (width - (this.cellSize + this.padding) * COLS + this.padding) / 2;
+                    this.boardStartY = (height - (this.cellSize + this.padding) * ROWS + this.padding) / 2;
+                    console.log(`[GameScene] 棋盤起始: (${this.boardStartX}, ${this.boardStartY})`);
+
+                    // ---- 繪製棋盤 ----
+                    this.drawBoard();
+
+                    // ---- 初始化棋子 ----
+                    this.initPieces();
+
+                    // ---- 設置輸入 ----
+                    this.setupInput();
+
+                    // ---- 初始化狀態機 ----
+                    this.stateMachine = new GameStateMachine(this);
+
+                    // ---- UI 文字 ----
+                    this.uiText = this.add.text(
+                        12, 12, 
+                        '🔴 紅方回合', 
+                        { fontSize: '22px', color: '#FFFFFF', fontFamily: 'Arial', fontStyle: 'bold' }
+                    ).setDepth(100).setScrollFactor(0);
+
+                    this.statusText = this.add.text(
+                        this.scale.width - 12, 12,
+                        '',
+                        { fontSize: '18px', color: '#F1C40F', fontFamily: 'Arial', align: 'right' }
+                    ).setOrigin(1, 0).setDepth(100).setScrollFactor(0);
+
+                    // ---- 重置按鈕 ----
+                    this.resetBtn = this.add.text(
+                        this.scale.width / 2, 
+                        this.scale.height - 20,
+                        '🔄 重新開始',
+                        { 
+                            fontSize: '22px', 
+                            color: '#FFFFFF', 
+                            backgroundColor: '#34495E', 
+                            padding: { x: 16, y: 6 },
+                            fontFamily: 'Arial',
+                            borderRadius: 8
+                        }
+                    ).setOrigin(0.5).setDepth(100)
+                      .setInteractive({ useHandCursor: true })
+                      .on('pointerdown', () => this.resetGame())
+                      .setScrollFactor(0);
+
+                    // ---- 生命週期事件 ----
+                    this.events.on('shutdown', this.shutdown, this);
+                    this.events.on('destroy', this.destroy, this);
+
+                    this.isReady = true;
+                    console.log('[GameScene] create 完成');
+                    
+                    // 隱藏載入提示
+                    hideLoading();
+                    
+                } catch (e) {
+                    console.error('[GameScene] 初始化錯誤:', e);
+                    showError('初始化失敗: ' + e.message);
+                }
+            }
+
+            // ----- 繪製棋盤 -----
+            drawBoard() {
+                console.log('[GameScene] 繪製棋盤');
+                const { padding, cellSize, boardStartX, boardStartY } = this;
+                
+                // 棋盤底色
+                const bg = this.add.graphics().setDepth(0);
+                bg.fillStyle(0x6B4226, 1);
+                bg.fillRoundedRect(
+                    boardStartX - padding, 
+                    boardStartY - padding, 
+                    (cellSize + padding) * COLS + padding, 
+                    (cellSize + padding) * ROWS + padding, 
+                    10
+                );
+
+                // 格子
+                for (let r = 0; r < ROWS; r++) {
+                    for (let c = 0; c < COLS; c++) {
+                        const x = boardStartX + c * (cellSize + padding) + padding;
+                        const y = boardStartY + r * (cellSize + padding) + padding;
+                        const isEven = (r + c) % 2 === 0;
+                        const color = isEven ? 0xD4A574 : 0xBF8F5A;
+                        
+                        const cell = this.add.graphics().setDepth(1);
+                        cell.fillStyle(color, 1);
+                        cell.fillRoundedRect(x, y, cellSize, cellSize, 4);
+                        cell.lineStyle(1, 0x3E2723, 0.2);
+                        cell.strokeRoundedRect(x, y, cellSize, cellSize, 4);
+                    }
+                }
+            }
+
+            // ----- 初始化棋子 -----
+            initPieces() {
+                console.log('[GameScene] 初始化棋子');
+                this.board = [];
+                this.pieces = [];
+
+                for (let r = 0; r < ROWS; r++) {
+                    this.board[r] = [];
+                    for (let c = 0; c < COLS; c++) {
+                        const val = INIT_BOARD[r][c];
+                        this.board[r][c] = val;
+                        if (val !== 0) {
+                            const piece = this.createPiece(r, c, val);
+                            this.pieces.push(piece);
+                        }
+                    }
+                }
+                console.log(`[GameScene] 創建了 ${this.pieces.length} 個棋子`);
+            }
+
+            // ----- 創建單個棋子 -----
+            createPiece(row, col, value) {
+                const x = this.boardStartX + col * (this.cellSize + this.padding) + this.padding + this.cellSize / 2;
+                const y = this.boardStartY + row * (this.cellSize + this.padding) + this.padding + this.cellSize / 2;
+                const isRed = value > 0;
+                const name = PIECE_NAMES[value] || '?';
+                const bgColor = isRed ? '#C0392B' : '#2C3E50';
+
+                // 使用 Container 組裝棋子
+                const container = this.add.container(x, y).setDepth(10);
+                
+                // 陰影
+                const shadow = this.add.graphics();
+                shadow.fillStyle(0x000000, 0.3);
+                shadow.fillCircle(2, 2, this.pieceSize / 2);
+                container.add(shadow);
+
+                // 圓形底色
+                const circle = this.add.graphics();
+                const colorNum = Phaser.Display.Color.HexStringToColor(bgColor).color;
+                circle.fillStyle(colorNum, 1);
+                circle.fillCircle(0, 0, this.pieceSize / 2);
+                circle.lineStyle(2, 0xFFFFFF, 0.15);
+                circle.strokeCircle(0, 0, this.pieceSize / 2);
+                container.add(circle);
+
+                // 文字
+                const fontSize = Math.max(18, this.pieceSize * 0.55);
+                const text = this.add.text(0, 0, name, {
+                    fontSize: fontSize + 'px',
+                    color: '#FFFFFF',
+                    fontFamily: 'Arial',
+                    fontStyle: 'bold',
+                    align: 'center'
+                }).setOrigin(0.5);
+                container.add(text);
+
+                // 儲存數據
+                container.setData({
+                    row: row,
+                    col: col,
+                    value: value,
+                    isRed: isRed,
+                    name: name
+                });
+
+                // 儲存 graphics 引用以便清理
+                container._graphics = [shadow, circle];
+
+                // 設置互動 (在場景 ready 後才啟用)
+                container.setSize(this.pieceSize, this.pieceSize);
+                container.setInteractive({ useHandCursor: true });
+                container.on('pointerdown', () => {
+                    if (!this.isReady || this.gameOver) return;
+                    this.onPieceClick(container);
+                });
+
+                return container;
+            }
+
+            // ----- 輸入設置 -----
+            setupInput() {
+                this.input.on('pointerdown', (pointer, gameObjects) => {
+                    if (!this.isReady) return;
+                    // 點擊空白處取消選取
+                    if (this.selectedPiece && gameObjects.length === 0) {
+                        this.deselectPiece();
+                    }
+                });
+            }
+
+            // ----- 點擊棋子處理 -----
+            onPieceClick(piece) {
+                if (this.gameOver) {
+                    this.statusText.setText('遊戲已結束');
+                    return;
+                }
+                
+                const row = piece.getData('row');
+                const col = piece.getData('col');
+                const val = this.board[row][col];
+                if (val === 0) return;
+
+                if ((this.currentTurn === 1 && val < 0) || (this.currentTurn === -1 && val > 0)) {
+                    this.statusText.setText('⚠️ 請選擇己方棋子');
+                    return;
+                }
+
+                this.stateMachine.handleInput('PIECE_SELECTED', { piece, row, col });
+            }
+
+            // ----- 選取棋子 -----
+            selectPiece(piece, row, col) {
+                this.deselectPiece();
+                this.selectedPiece = piece;
+                this.validMoves = this.calculateValidMoves(row, col);
+                this.highlightValidMoves(this.validMoves);
+                
+                const circle = piece._graphics[1];
+                if (circle) {
+                    circle.lineStyle(3, 0xF1C40F, 0.9);
+                    circle.strokeCircle(0, 0, this.pieceSize / 2);
+                }
+                this.statusText.setText(`選取: ${piece.getData('name')}`);
+            }
+
+            // ----- 取消選取 -----
+            deselectPiece() {
+                if (this.selectedPiece) {
+                    const circle = this.selectedPiece._graphics[1];
+                    if (circle) {
+                        circle.lineStyle(2, 0xFFFFFF, 0.15);
+                        circle.strokeCircle(0, 0, this.pieceSize / 2);
+                    }
+                    this.selectedPiece = null;
+                }
+                this.clearHighlights();
+                this.validMoves = [];
+                this.statusText.setText('');
+            }
+
+            // ----- 高亮合法走法 -----
+            highlightValidMoves(moves) {
+                this.clearHighlights();
+                if (!moves || moves.length === 0) return;
+
+                const graphics = this.add.graphics().setDepth(5);
+                moves.forEach(({ row, col }) => {
+                    const x = this.boardStartX + col * (this.cellSize + this.padding) + this.padding + this.cellSize / 2;
+                    const y = this.boardStartY + row * (this.cellSize + this.padding) + this.padding + this.cellSize / 2;
+                    
+                    graphics.fillStyle(0x2ECC71, 0.6);
+                    graphics.fillCircle(x, y, this.cellSize * 0.28);
+                    
+                    if (this.board[row][col] !== 0) {
+                        graphics.lineStyle(3, 0xE74C3C, 0.8);
+                        graphics.strokeCircle(x, y, this.cellSize * 0.32);
+                    }
+                });
+                this.moveHighlights.push(graphics);
+            }
+
+            clearHighlights() {
+                this.moveHighlights.forEach(g => { if (g) g.destroy(); });
+                this.moveHighlights = [];
+            }
+
+            // ----- 走法生成 -----
+            calculateValidMoves(row, col) {
+                const val = this.board[row][col];
+                if (val === 0) return [];
+                const isRed = val > 0;
+                const moves = [];
+                const directions = [[-1,0], [1,0], [0,-1], [0,1]];
+
+                for (const [dr, dc] of directions) {
+                    const nr = row + dr;
+                    const nc = col + dc;
+                    if (nr < 0 || nr >= ROWS || nc < 0 || nc >= COLS) continue;
+                    const target = this.board[nr][nc];
+                    if ((isRed && target > 0) || (!isRed && target < 0)) continue;
+                    moves.push({ row: nr, col: nc, target });
+                }
+
+                // 炮 (包) 特殊走法
+                if (Math.abs(val) === 6) {
+                    for (const [dr, dc] of directions) {
+                        let jumped = false;
+                        for (let i = 1; i < 4; i++) {
+                            const nr = row + dr * i;
+                            const nc = col + dc * i;
+                            if (nr < 0 || nr >= ROWS || nc < 0 || nc >= COLS) break;
+                            const target = this.board[nr][nc];
+                            
+                            if (!jumped && target === 0) {
+                                moves.push({ row: nr, col: nc, target: 0 });
+                            } else if (!jumped && target !== 0) {
+                                jumped = true;
+                            } else if (jumped && target !== 0) {
+                                if ((isRed && target < 0) || (!isRed && target > 0)) {
+                                    moves.push({ row: nr, col: nc, target });
+                                }
+                                break;
+                            }
+                        }
+                    }
+                }
+                return moves;
+            }
+
+            // ----- 執行移動 -----
+            movePiece(fromRow, fromCol, toRow, toCol) {
+                const val = this.board[fromRow][fromCol];
+                const targetVal = this.board[toRow][toCol];
+                
+                this.board[toRow][toCol] = val;
+                this.board[fromRow][fromCol] = 0;
+
+                const movedPiece = this.pieces.find(p => 
+                    p.getData('row') === fromRow && p.getData('col') === fromCol
+                );
+                i                this.uiText = null;
                 this.statusText = null;
                 this.resetBtn = null;
             }

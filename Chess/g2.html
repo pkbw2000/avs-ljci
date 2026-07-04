@@ -3,113 +3,113 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-<title>大師級暗棋 · RWD 完美適配版</title>
+<title>大師級暗棋 · 典雅土金版</title>
 <style>
   :root {
-    --glass-bg: rgba(255, 255, 255, 0.06);
-    --glass-border: rgba(255, 255, 255, 0.1);
-    --board-shadow: 0 20px 50px rgba(0, 0, 0, 0.6), inset 0 2px 5px rgba(255,255,255,0.1);
+    --glass-bg: rgba(255, 255, 255, 0.05);
+    --glass-border: rgba(255, 255, 255, 0.08);
+    /* 配合土金色棋盤，調整陰影使其與深色背景完美融合 */
+    --board-shadow: 0 22px 55px rgba(0, 0, 0, 0.65), inset 0 2px 4px rgba(255,255,255,0.15);
   }
 
   body { 
     margin: 0; padding: 0; display: flex; flex-direction: column; align-items: center; justify-content: center;
-    /* 核心修正：使用 dvh 完美適配 iOS Safari 動態高度，避免底部被遮擋 */
-    min-height: 100dvh; 
-    background: linear-gradient(135deg, #1f242d 0%, #0d1013 100%);
+    min-height: 100dvh; /* 完美適配 iOS Safari 動態高度 */
+    background: linear-gradient(135deg, #191d24 0%, #090b0e 100%);
     color: #fff; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
     touch-action: manipulation; overflow: hidden;
     box-sizing: border-box;
-    padding-bottom: env(safe-area-inset-bottom); /* 留出 iPhone 底部橫條安全區域 */
+    padding-bottom: env(safe-area-inset-bottom); /* 預留 iPhone 底部安全區 */
   }
 
-  /* 頂部 HUD - 寬度與棋盤精準同步 */
+  /* 頂部 HUD */
   #hud {
-    /* 使用 min 限制，高度不夠時自動縮小寬度，防溢出 */
     width: min(86vw, 340px, 40dvh);
     display: flex; justify-content: space-between; align-items: center;
-    margin-bottom: 12px; padding: 10px 14px; 
+    margin-bottom: 14px; padding: 10px 14px; 
     background: var(--glass-bg); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
     border: 1px solid var(--glass-border); border-radius: 16px;
     box-shadow: 0 10px 30px rgba(0,0,0,0.3);
   }
   .hud-box { display: flex; flex-direction: column; gap: 2px; }
-  .hud-label { font-size: 0.7rem; color: rgba(255,255,255,0.5); font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; }
+  .hud-label { font-size: 0.7rem; color: rgba(255,255,255,0.4); font-weight: 600; letter-spacing: 0.05em; }
   .hud-val { font-size: 0.95rem; font-weight: 800; text-shadow: 0 2px 4px rgba(0,0,0,0.3); }
   
   #turn-indicator { 
     padding: 5px 12px; border-radius: 12px; font-size: 0.8rem; font-weight: 700; 
-    border: 1px solid rgba(255,255,255,0.15);
+    border: 1px solid rgba(255,255,255,0.12);
     box-shadow: 0 4px 10px rgba(0,0,0,0.2);
     transition: all 0.3s ease;
   }
 
-  /* 核心棋盤 - 4x8 完美視區鎖定 */
+  /* 核心棋盤：完美改回質感土金色 (帶有細緻的向心漸層) */
   #board {
     display: grid; grid-template-columns: repeat(4, 1fr); grid-template-rows: repeat(8, 1fr);
     gap: 8px; padding: 12px; 
-    background: #181b22;
-    border: 1px solid rgba(255,255,255,0.05);
+    background: radial-gradient(circle at center, #c29d53 0%, #9c7a36 100%);
+    border: 2px solid #806226;
     border-radius: 24px; box-shadow: var(--board-shadow);
-    
-    /* 關鍵響應式公式：寬度最大不超過螢幕寬的 86%、不超過實體 340px、且高度換算絕不超過垂直可用空間的 40dvh */
     width: min(86vw, 340px, 40dvh); 
-    aspect-ratio: 4 / 8; /* 嚴格鎖定 1:2 棋盤比例 */
+    aspect-ratio: 4 / 8; /* 嚴格鎖定 1:2 棋盤比例，絕不溢出螢幕 */
   }
   
-  /* 下沉式棋格 */
+  /* 下沉式棋格：配合土金棋盤，內凹孔洞改為深沉的暗焦金色調 */
   .cell {
-    background: #111318; border-radius: 50%; 
+    background: #4a3814; border-radius: 50%; 
     display: flex; justify-content: center; align-items: center; position: relative;
-    box-shadow: inset 0 4px 8px rgba(0,0,0,0.7), inset 0 -1px 2px rgba(255,255,255,0.05);
-    border: 1px solid rgba(0,0,0,0.4);
+    box-shadow: inset 0 4px 8px rgba(0,0,0,0.65), inset 0 -1px 2px rgba(255,255,255,0.08);
+    border: 1px solid #36280b;
   }
 
-  /* 棋子 3D 物理質感 */
+  /* 棋子 3D 實體質感 */
   .piece {
     width: 92%; height: 92%; border-radius: 50%; display: flex; 
     justify-content: center; align-items: center; 
-    font-size: 1.4rem; /* 適度縮減字型以防小螢幕溢出 */
-    font-weight: 900; 
+    font-size: 1.4rem; font-weight: 900; 
     cursor: pointer; user-select: none; position: relative;
     transform-style: preserve-3d;
     transition: transform 0.22s cubic-bezier(0.175, 0.885, 0.32, 1.275), box-shadow 0.22s;
   }
   
-  /* 未翻開：立體暗金屬 */
+  /* 未翻開：復古暗金屬徽章 */
   .unrevealed { 
-    background: radial-gradient(circle at 30% 30%, #3e4452 0%, #252932 60%, #15181e 100%);
-    border: 1px solid rgba(255,255,255,0.12);
+    background: radial-gradient(circle at 30% 30%, #424957 0%, #292e38 60%, #161a22 100%);
+    border: 1px solid rgba(255,255,255,0.1);
     box-shadow: 
-      0 1px 0 #121418, 0 2px 0 #0e1013, 0 3px 0 #0a0b0e, 0 4px 0 #07080a,
-      0 6px 12px rgba(0,0,0,0.6), inset 0 2px 3px rgba(255,255,255,0.2);
+      0 1px 0 #12151c, 0 2px 0 #0e1116, 0 3px 0 #0a0c10, 0 4px 0 #06070a,
+      0 6px 12px rgba(0,0,0,0.65), inset 0 2px 3px rgba(255,255,255,0.18);
     transform: translateY(-4px);
   }
-  .unrevealed::after { content: '?'; color: rgba(255,255,255,0.12); font-size: 1.1rem; }
+  .unrevealed::after { content: '?'; color: rgba(255,255,255,0.1); font-size: 1.1rem; }
   .unrevealed:active { 
     transform: translateY(-1px);
-    box-shadow: 0 1px 0 #0a0b0e, 0 2px 5px rgba(0,0,0,0.5), inset 0 2px 3px rgba(255,255,255,0.1);
+    box-shadow: 0 1px 0 #0a0c10, 0 2px 5px rgba(0,0,0,0.5), inset 0 2px 3px rgba(255,255,255,0.1);
   }
 
-  /* 已翻開：球面象牙瓷磚 */
+  /* 已翻開：球面擬真象牙瓷磚 */
   .revealed { 
-    background: radial-gradient(circle at 30% 30%, #ffffff 0%, #f6f6f6 45%, #e0e0e0 85%, #d5d5d5 100%);
+    background: radial-gradient(circle at 30% 30%, #ffffff 0%, #f7f7f7 45%, #e2e2e2 85%, #d6d6d6 100%);
     transform: translateY(-4px);
   }
   
+  /* 紅方陣營：棋字改為高級「灰藍色」，外框保留紅色光暈以利識別 */
   .red { 
-    color: #d63031; border: 1px solid #ff7675;
+    color: #3a506b; /* 完美灰藍色 */
+    border: 2px solid #e74c3c;
     box-shadow: 
       0 1px 0 #c2c2c2, 0 2px 0 #b0b0b0, 0 3px 0 #9e9e9e, 0 4px 0 #8c8c8c,
-      0 7px 12px rgba(214, 48, 49, 0.25), inset 0 2px 4px rgba(255,255,255,1);
-    text-shadow: 1px 1px 1px rgba(255,255,255,0.9), -1px -1px 1px rgba(0,0,0,0.2);
+      0 7px 14px rgba(231, 76, 60, 0.35), inset 0 2px 4px rgba(255,255,255,1);
+    text-shadow: 1px 1px 1px rgba(255,255,255,0.8), -1px -1px 1px rgba(0,0,0,0.15);
   }
   
+  /* 黑方陣營：棋字改為高級「灰藍色」，搭配深邃鐵灰藍外框 */
   .black { 
-    color: #2d3436; border: 1px solid #b2bec3;
+    color: #3a506b; /* 完美灰藍色 */
+    border: 2px solid #57606f;
     box-shadow: 
       0 1px 0 #c2c2c2, 0 2px 0 #b0b0b0, 0 3px 0 #9e9e9e, 0 4px 0 #8c8c8c,
-      0 7px 12px rgba(0, 0, 0, 0.4), inset 0 2px 4px rgba(255,255,255,1);
-    text-shadow: 1px 1px 1px rgba(255,255,255,0.9), -1px -1px 1px rgba(0,0,0,0.3);
+      0 7px 14px rgba(0, 0, 0, 0.45), inset 0 2px 4px rgba(255,255,255,1);
+    text-shadow: 1px 1px 1px rgba(255,255,255,0.8), -1px -1px 1px rgba(0,0,0,0.2);
   }
   
   /* 選中拔高狀態 */
@@ -117,12 +117,12 @@
   .selected.red { 
     box-shadow: 
       0 1px 0 #cc6666, 0 3px 0 #b35959, 0 5px 0 #994d4d, 0 7px 0 #804040,
-      0 16px 25px rgba(214, 48, 49, 0.45), inset 0 2px 5px rgba(255,255,255,1);
+      0 16px 28px rgba(231, 76, 60, 0.5), inset 0 2px 5px rgba(255,255,255,1);
   }
   .selected.black { 
     box-shadow: 
       0 1px 0 #777, 0 3px 0 #555, 0 5px 0 #444, 0 7px 0 #333,
-      0 16px 25px rgba(0, 0, 0, 0.5), inset 0 2px 5px rgba(255,255,255,1);
+      0 16px 28px rgba(0, 0, 0, 0.55), inset 0 2px 5px rgba(255,255,255,1);
   }
 </style>
 </head>
@@ -192,8 +192,8 @@ function render() {
 
 function updateUI() {
   if (playerColor) {
-    const pStr = playerColor === 'red' ? '<span style="color:#ff7675">紅方</span>' : '<span style="color:#b2bec3">黑方</span>';
-    const aStr = aiColor === 'red' ? '<span style="color:#ff7675">紅方</span>' : '<span style="color:#b2bec3">黑方</span>';
+    const pStr = playerColor === 'red' ? '<span style="color:#ff7675">紅方</span>' : '<span style="color:#9aa0a6">灰藍</span>';
+    const aStr = aiColor === 'red' ? '<span style="color:#ff7675">紅方</span>' : '<span style="color:#9aa0a6">灰藍</span>';
     document.getElementById('status').innerHTML = `您:${pStr} ｜ AI:${aStr}`;
   }
   
@@ -296,7 +296,7 @@ function checkWin() {
   if (red === 0 || black === 0) {
     isGameActive = false;
     render();
-    setTimeout(() => alert(red === 0 ? "黑方獲勝！" : "紅方獲勝！"), 100);
+    setTimeout(() => alert(red === 0 ? "灰藍方獲勝！" : "紅方獲勝！"), 100);
   }
 }
 

@@ -3,102 +3,127 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>大師級暗棋 · 沉浸微光版</title>
+<title>大師級暗棋 · 毛玻璃擬物版</title>
 <style>
   :root {
-    --bg-gradient: radial-gradient(circle at 50% 30%, #1a1c23 0%, #0d0e12 100%);
-    --board-bg: #1e2026;
-    --cell-bg: #16171c;
-    --stone-unrevealed: linear-gradient(135deg, #424755 0%, #232731 100%);
-    --red-glow: 0 0 15px rgba(239, 68, 68, 0.6);
-    --black-glow: 0 0 15px rgba(59, 130, 246, 0.6);
+    --glass-bg: rgba(255, 255, 255, 0.15);
+    --glass-border: rgba(255, 255, 255, 0.3);
+    --glass-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.2);
   }
 
   body { 
     margin: 0; padding: 0; display: flex; flex-direction: column; align-items: center; justify-content: center;
-    min-height: 100vh; background: var(--bg-gradient); color: #e2e8f0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    min-height: 100vh; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
     touch-action: manipulation; overflow: hidden;
+    /* 動態流體漸層背景 (襯托毛玻璃的關鍵) */
+    background: linear-gradient(-45deg, #ff9a9e, #fecfef, #a18cd1, #fbc2eb);
+    background-size: 400% 400%;
+    animation: gradientBG 15s ease infinite;
   }
 
-  /* 高級高級感頂部 HUD */
+  @keyframes gradientBG {
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+  }
+
+  /* 頂部 HUD (毛玻璃膠囊) */
   #hud {
     width: 88vw; max-width: 380px; display: flex; justify-content: space-between; align-items: center;
-    margin-bottom: 20px; padding: 12px 16px; background: rgba(30, 32, 38, 0.8);
-    backdrop-filter: blur(12px); border: 1px solid rgba(255,255,255,0.05); border-radius: 16px;
-    box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+    margin-bottom: 20px; padding: 12px 18px; 
+    background: var(--glass-bg); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
+    border: 1px solid var(--glass-border); border-radius: 20px;
+    box-shadow: var(--glass-shadow); color: #333;
   }
-  .hud-box { display: flex; flex-direction: column; gap: 4px; }
-  .hud-label { font-size: 0.75rem; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.05em; }
-  .hud-val { font-size: 1rem; font-weight: 700; transition: all 0.3s; }
-  #turn-indicator { padding: 6px 14px; border-radius: 20px; font-size: 0.85rem; font-weight: 600; animation: pulse 2s infinite; }
+  .hud-box { display: flex; flex-direction: column; gap: 2px; }
+  .hud-label { font-size: 0.75rem; color: rgba(0,0,0,0.6); font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; }
+  .hud-val { font-size: 1.05rem; font-weight: 800; }
+  
+  #turn-indicator { 
+    padding: 6px 14px; border-radius: 16px; font-size: 0.9rem; font-weight: 700; 
+    background: rgba(255,255,255,0.4); border: 1px solid rgba(255,255,255,0.5);
+    box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+    transition: all 0.3s ease;
+  }
 
-  /* 豎屏 4x8 空間棋盤 */
+  /* 核心棋盤 (巨大毛玻璃底板) */
   #board {
     display: grid; grid-template-columns: repeat(4, 1fr); grid-template-rows: repeat(8, 1fr);
-    gap: 8px; background: var(--board-bg); padding: 12px; border-radius: 24px;
-    width: 88vw; max-width: 380px; aspect-ratio: 4 / 8;
-    box-shadow: 0 20px 50px rgba(0,0,0,0.6), inset 0 2px 4px rgba(255,255,255,0.05);
-    border: 1px solid rgba(255,255,255,0.03);
+    gap: 8px; padding: 12px; width: 88vw; max-width: 380px; aspect-ratio: 4 / 8;
+    background: rgba(255, 255, 255, 0.25);
+    backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.5);
+    border-radius: 24px; box-shadow: var(--glass-shadow);
   }
+  
   .cell {
-    background: var(--cell-bg); border-radius: 12px; display: flex; 
-    justify-content: center; align-items: center; position: relative;
-    box-shadow: inset 0 2px 5px rgba(0,0,0,0.5);
+    background: rgba(255, 255, 255, 0.1); border-radius: 14px; 
+    display: flex; justify-content: center; align-items: center; position: relative;
+    box-shadow: inset 0 2px 5px rgba(0,0,0,0.05);
   }
 
-  /* 棋子頂級微動效設計 */
+  /* 棋子頂級微動效設計 (彈簧曲線) */
   .piece {
     width: 86%; height: 86%; border-radius: 50%; display: flex; 
-    justify-content: center; align-items: center; font-size: 1.5rem; font-weight: 800; 
-    cursor: pointer; user-select: none; transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.3s, background 0.3s;
+    justify-content: center; align-items: center; font-size: 1.55rem; font-weight: 900; 
+    cursor: pointer; user-select: none; 
+    /* 核心精髓：Apple 級彈簧回彈動畫 */
+    transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.3s, background 0.3s;
   }
   
-  /* 未翻開：神祕暗紋石塊 */
+  /* 未翻開：高透光磨砂圓盤 */
   .unrevealed { 
-    background: var(--stone-unrevealed); 
-    border: 1px solid rgba(255,255,255,0.1);
-    box-shadow: 0 4px 8px rgba(0,0,0,0.4), inset 0 2px 3px rgba(255,255,255,0.1);
+    background: linear-gradient(135deg, rgba(255,255,255,0.5) 0%, rgba(255,255,255,0.1) 100%);
+    backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+    border: 1px solid rgba(255,255,255,0.8);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.08), inset 0 2px 2px rgba(255,255,255,0.4);
+    color: transparent;
   }
   .unrevealed::after {
-    content: ''; width: 30%; height: 30%; border-radius: 50%; background: rgba(255,255,255,0.03);
+    content: ''; width: 35%; height: 35%; border-radius: 50%; 
+    background: radial-gradient(circle, rgba(255,255,255,0.8) 0%, rgba(255,255,255,0) 70%);
+    opacity: 0.6;
   }
-  .unrevealed:active { transform: scale(0.92); }
+  .unrevealed:active { transform: scale(0.9); } /* 按壓凹陷感 */
 
-  /* 已翻開：立體玉石質感 */
+  /* 已翻開：純白立體擬物瓷磚 */
   .revealed { 
-    background: #1e222b;
-    border: 2px solid currentColor;
-    text-shadow: 0 0 6px currentColor;
+    background: rgba(255, 255, 255, 0.95);
+    border: 1px solid rgba(255, 255, 255, 1);
   }
-  .red { color: #f87171; box-shadow: 0 4px 10px rgba(239, 68, 68, 0.2), inset 0 2px 4px rgba(255,255,255,0.05); }
-  .black { color: #60a5fa; box-shadow: 0 4px 10px rgba(59, 130, 246, 0.2), inset 0 2px 4px rgba(255,255,255,0.05); }
+  .red { color: #ff4757; box-shadow: 0 6px 16px rgba(255, 71, 87, 0.2), inset 0 -3px 5px rgba(0,0,0,0.05); }
+  .black { color: #2f3542; box-shadow: 0 6px 16px rgba(47, 53, 66, 0.2), inset 0 -3px 5px rgba(0,0,0,0.05); }
   
-  /* 高階交互狀態 */
+  /* 高階交互狀態 (浮空與光暈) */
   .selected { 
-    transform: scale(1.12) translateY(-4px); 
+    transform: scale(1.18) translateY(-6px) !important; /* 強烈的浮現感 */
+    z-index: 10;
   }
-  .selected.red { box-shadow: var(--red-glow), 0 10px 20px rgba(239, 68, 68, 0.3); }
-  .selected.black { box-shadow: var(--black-glow), 0 10px 20px rgba(59, 130, 246, 0.3); }
+  .selected.red { 
+    box-shadow: 0 15px 25px rgba(255, 71, 87, 0.3), 0 0 0 3px rgba(255, 71, 87, 0.5); 
+    border-color: #ff4757;
+  }
+  .selected.black { 
+    box-shadow: 0 15px 25px rgba(47, 53, 66, 0.3), 0 0 0 3px rgba(47, 53, 66, 0.5); 
+    border-color: #2f3542;
+  }
 
-  @keyframes pulse {
-    0%, 100% { opacity: 1; transform: scale(1); }
-    50% { opacity: 0.85; transform: scale(0.98); }
-  }
 </style>
 </head>
 <body>
 
 <div id="hud">
   <div class="hud-box">
-    <span class="hud-label">陣營配置</span>
-    <span id="status" class="hud-val" style="color: #cbd5e1;">點擊棋子開局</span>
+    <span class="hud-label">陣營狀態</span>
+    <span id="status" class="hud-val">點擊棋子開局</span>
   </div>
-  <div id="turn-indicator" style="background: rgba(255,255,255,0.05); color: #94a3b8;">初始化中</div>
+  <div id="turn-indicator">初始化中</div>
 </div>
 
 <div id="board"></div>
 
 <script>
+// --- 資料結構 ---
 const PIECES = {
   R_K: { name: '帥', color: 'red', rank: 7 }, R_A: { name: '仕', color: 'red', rank: 6 },
   R_E: { name: '相', color: 'red', rank: 5 }, R_R: { name: '俥', color: 'red', rank: 4 },
@@ -121,6 +146,7 @@ let aiColor = null;
 let selectedIdx = -1;
 let isGameActive = true;
 
+// --- 初始化與渲染 ---
 function initGame() {
   deck.sort(() => Math.random() - 0.5);
   board = deck.map(id => ({ piece: PIECES[id], isRevealed: false, isEmpty: false }));
@@ -152,25 +178,28 @@ function render() {
 
 function updateUI() {
   if (playerColor) {
-    const pStr = playerColor === 'red' ? '<span style="color:#f87171">紅方</span>' : '<span style="color:#60a5fa">藍方</span>';
-    const aStr = aiColor === 'red' ? '<span style="color:#f87171">紅方</span>' : '<span style="color:#60a5fa">藍方</span>';
-    document.getElementById('status').innerHTML = `玩家:${pStr} ｜ AI:${aStr}`;
+    const pStr = playerColor === 'red' ? '<span style="color:#ff4757">紅方</span>' : '<span style="color:#2f3542">黑方</span>';
+    const aStr = aiColor === 'red' ? '<span style="color:#ff4757">紅方</span>' : '<span style="color:#2f3542">黑方</span>';
+    document.getElementById('status').innerHTML = `您:${pStr} ｜ AI:${aStr}`;
   }
   
   const ti = document.getElementById('turn-indicator');
   if (turn === 'player') {
     ti.innerText = playerColor ? '您的回合' : '首翻開局';
-    ti.style.background = 'rgba(74, 222, 128, 0.15)';
-    ti.style.color = '#4ade80';
+    ti.style.background = 'rgba(46, 204, 113, 0.2)';
+    ti.style.color = '#27ae60';
+    ti.style.borderColor = 'rgba(46, 204, 113, 0.4)';
   } else {
     ti.innerText = 'AI 思考中';
-    ti.style.background = 'rgba(251, 146, 60, 0.15)';
-    ti.style.color = '#fb923c';
+    ti.style.background = 'rgba(243, 156, 18, 0.2)';
+    ti.style.color = '#d35400';
+    ti.style.borderColor = 'rgba(243, 156, 18, 0.4)';
   }
 }
 
+// --- 核心邏輯 ---
 function isValidMove(from, to, currentBoard) {
-  if (from === to) return false; // 精準修復無窮迴圈問題
+  if (from === to) return false; 
 
   const dx = Math.abs((from % 4) - (to % 4));
   const dy = Math.abs(Math.floor(from / 4) - Math.floor(to / 4));
@@ -208,7 +237,7 @@ function handlePlayerAction(idx) {
     executeFlip(idx, true);
   } 
   else if (!cell.isEmpty && cell.isRevealed && cell.piece.color === playerColor) {
-    selectedIdx = idx;
+    selectedIdx = idx === selectedIdx ? -1 : idx; // 點擊同一個取消選取
     render();
   } 
   else if (selectedIdx !== -1) {
@@ -243,7 +272,7 @@ function endTurn() {
   turn = turn === 'player' ? 'ai' : 'player';
   render();
   updateUI();
-  if (turn === 'ai') setTimeout(aiPlay, 600);
+  if (turn === 'ai') setTimeout(aiPlay, 600); // 稍微延長延遲，讓使用者欣賞回彈動畫
 }
 
 function checkWin() {
@@ -254,7 +283,7 @@ function checkWin() {
   if (red === 0 || black === 0) {
     isGameActive = false;
     render();
-    setTimeout(() => alert(red === 0 ? "藍方獲勝！" : "紅方獲勝！"), 100);
+    setTimeout(() => alert(red === 0 ? "黑方獲勝！" : "紅方獲勝！"), 100);
   }
 }
 
@@ -268,6 +297,7 @@ function isThreatenedByEnemy(targetIdx, myColor) {
   return false;
 }
 
+// --- AI 邏輯 ---
 function aiPlay() {
   if (!isGameActive) return;
   let unrevealed = [];

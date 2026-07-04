@@ -3,51 +3,102 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>大師級暗棋 (4x8)</title>
+<title>大師級暗棋 · 沉浸微光版</title>
 <style>
-  :root { --board-bg: #dcb37b; --piece-bg: #ffebb5; }
+  :root {
+    --bg-gradient: radial-gradient(circle at 50% 30%, #1a1c23 0%, #0d0e12 100%);
+    --board-bg: #1e2026;
+    --cell-bg: #16171c;
+    --stone-unrevealed: linear-gradient(135deg, #424755 0%, #232731 100%);
+    --red-glow: 0 0 15px rgba(239, 68, 68, 0.6);
+    --black-glow: 0 0 15px rgba(59, 130, 246, 0.6);
+  }
+
   body { 
-    margin: 0; padding: 20px 0; display: flex; flex-direction: column; align-items: center; 
-    background: #222; color: white; font-family: sans-serif; touch-action: manipulation; 
+    margin: 0; padding: 0; display: flex; flex-direction: column; align-items: center; justify-content: center;
+    min-height: 100vh; background: var(--bg-gradient); color: #e2e8f0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    touch-action: manipulation; overflow: hidden;
   }
-  #header {
-    width: 90vw; max-width: 400px; display: flex; justify-content: space-between; 
-    margin-bottom: 10px; font-size: 1.1rem; font-weight: bold;
+
+  /* 高級高級感頂部 HUD */
+  #hud {
+    width: 88vw; max-width: 380px; display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: 20px; padding: 12px 16px; background: rgba(30, 32, 38, 0.8);
+    backdrop-filter: blur(12px); border: 1px solid rgba(255,255,255,0.05); border-radius: 16px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.4);
   }
-  /* 豎屏 4x8 棋盤設計 */
+  .hud-box { display: flex; flex-direction: column; gap: 4px; }
+  .hud-label { font-size: 0.75rem; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.05em; }
+  .hud-val { font-size: 1rem; font-weight: 700; transition: all 0.3s; }
+  #turn-indicator { padding: 6px 14px; border-radius: 20px; font-size: 0.85rem; font-weight: 600; animation: pulse 2s infinite; }
+
+  /* 豎屏 4x8 空間棋盤 */
   #board {
     display: grid; grid-template-columns: repeat(4, 1fr); grid-template-rows: repeat(8, 1fr);
-    gap: 3px; background: #6b4423; padding: 5px; border-radius: 6px;
-    width: 90vw; max-width: 400px; aspect-ratio: 4 / 8;
+    gap: 8px; background: var(--board-bg); padding: 12px; border-radius: 24px;
+    width: 88vw; max-width: 380px; aspect-ratio: 4 / 8;
+    box-shadow: 0 20px 50px rgba(0,0,0,0.6), inset 0 2px 4px rgba(255,255,255,0.05);
+    border: 1px solid rgba(255,255,255,0.03);
   }
   .cell {
-    background: var(--board-bg); border-radius: 4px; display: flex; 
+    background: var(--cell-bg); border-radius: 12px; display: flex; 
     justify-content: center; align-items: center; position: relative;
+    box-shadow: inset 0 2px 5px rgba(0,0,0,0.5);
   }
+
+  /* 棋子頂級微動效設計 */
   .piece {
-    width: 85%; height: 85%; border-radius: 50%; display: flex; 
-    justify-content: center; align-items: center; font-size: 1.6rem; font-weight: bold; 
-    cursor: pointer; box-shadow: 1px 3px 5px rgba(0,0,0,0.5); user-select: none;
-    transition: transform 0.1s ease;
+    width: 86%; height: 86%; border-radius: 50%; display: flex; 
+    justify-content: center; align-items: center; font-size: 1.5rem; font-weight: 800; 
+    cursor: pointer; user-select: none; transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.3s, background 0.3s;
   }
-  /* 棋子狀態 */
-  .unrevealed { background: #885a3a; border: 2px solid #5a3a22; }
-  .revealed { background: var(--piece-bg); border: 2px solid #b38b59; }
-  .red { color: #d32f2f; }
-  .black { color: #111; }
-  .selected { transform: scale(1.15); box-shadow: 0 0 12px #ffeb3b; border-color: #ffeb3b; }
+  
+  /* 未翻開：神祕暗紋石塊 */
+  .unrevealed { 
+    background: var(--stone-unrevealed); 
+    border: 1px solid rgba(255,255,255,0.1);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.4), inset 0 2px 3px rgba(255,255,255,0.1);
+  }
+  .unrevealed::after {
+    content: ''; width: 30%; height: 30%; border-radius: 50%; background: rgba(255,255,255,0.03);
+  }
+  .unrevealed:active { transform: scale(0.92); }
+
+  /* 已翻開：立體玉石質感 */
+  .revealed { 
+    background: #1e222b;
+    border: 2px solid currentColor;
+    text-shadow: 0 0 6px currentColor;
+  }
+  .red { color: #f87171; box-shadow: 0 4px 10px rgba(239, 68, 68, 0.2), inset 0 2px 4px rgba(255,255,255,0.05); }
+  .black { color: #60a5fa; box-shadow: 0 4px 10px rgba(59, 130, 246, 0.2), inset 0 2px 4px rgba(255,255,255,0.05); }
+  
+  /* 高階交互狀態 */
+  .selected { 
+    transform: scale(1.12) translateY(-4px); 
+  }
+  .selected.red { box-shadow: var(--red-glow), 0 10px 20px rgba(239, 68, 68, 0.3); }
+  .selected.black { box-shadow: var(--black-glow), 0 10px 20px rgba(59, 130, 246, 0.3); }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.85; transform: scale(0.98); }
+  }
 </style>
 </head>
 <body>
 
-<div id="header">
-  <span id="status">玩家: 未知 | AI: 未知</span>
-  <span id="turn-indicator">等待開局</span>
+<div id="hud">
+  <div class="hud-box">
+    <span class="hud-label">陣營配置</span>
+    <span id="status" class="hud-val" style="color: #cbd5e1;">點擊棋子開局</span>
+  </div>
+  <div id="turn-indicator" style="background: rgba(255,255,255,0.05); color: #94a3b8;">初始化中</div>
 </div>
+
 <div id="board"></div>
 
 <script>
-// --- 核心資料結構 (極簡化狀態) ---
 const PIECES = {
   R_K: { name: '帥', color: 'red', rank: 7 }, R_A: { name: '仕', color: 'red', rank: 6 },
   R_E: { name: '相', color: 'red', rank: 5 }, R_R: { name: '俥', color: 'red', rank: 4 },
@@ -70,7 +121,6 @@ let aiColor = null;
 let selectedIdx = -1;
 let isGameActive = true;
 
-// --- 初始化與渲染 (精準外科手術式 UI 更新) ---
 function initGame() {
   deck.sort(() => Math.random() - 0.5);
   board = deck.map(id => ({ piece: PIECES[id], isRevealed: false, isEmpty: false }));
@@ -102,80 +152,78 @@ function render() {
 
 function updateUI() {
   if (playerColor) {
-    document.getElementById('status').innerText = `玩家: ${playerColor==='red'?'紅':'黑'} | AI: ${aiColor==='red'?'紅':'黑'}`;
+    const pStr = playerColor === 'red' ? '<span style="color:#f87171">紅方</span>' : '<span style="color:#60a5fa">藍方</span>';
+    const aStr = aiColor === 'red' ? '<span style="color:#f87171">紅方</span>' : '<span style="color:#60a5fa">藍方</span>';
+    document.getElementById('status').innerHTML = `玩家:${pStr} ｜ AI:${aStr}`;
   }
-  const turnStr = turn === 'player' ? (playerColor ? '換您行動' : '請翻第一張牌') : 'AI 思考中...';
-  document.getElementById('turn-indicator').innerText = turnStr;
-  document.getElementById('turn-indicator').style.color = turn === 'player' ? '#4caf50' : '#ff9800';
+  
+  const ti = document.getElementById('turn-indicator');
+  if (turn === 'player') {
+    ti.innerText = playerColor ? '您的回合' : '首翻開局';
+    ti.style.background = 'rgba(74, 222, 128, 0.15)';
+    ti.style.color = '#4ade80';
+  } else {
+    ti.innerText = 'AI 思考中';
+    ti.style.background = 'rgba(251, 146, 60, 0.15)';
+    ti.style.color = '#fb923c';
+  }
 }
 
-// --- 遊戲規則邏輯 (純函數驗證) ---
-// --- 遊戲規則邏輯 (純函數驗證) ---
 function isValidMove(from, to, currentBoard) {
-  if (from === to) return false; // 【修復】：防止原地判定導致的砲/炮無窮迴圈
+  if (from === to) return false; // 精準修復無窮迴圈問題
 
   const dx = Math.abs((from % 4) - (to % 4));
   const dy = Math.abs(Math.floor(from / 4) - Math.floor(to / 4));
   const attacker = currentBoard[from].piece;
   const target = currentBoard[to];
 
-  if (attacker.rank === 2) { // 炮/砲的特殊邏輯
-    if (dx !== 0 && dy !== 0) return false; // 必須直走
+  if (attacker.rank === 2) { 
+    if (dx !== 0 && dy !== 0) return false; 
     let count = 0;
     let step = (dy === 0) ? (to > from ? 1 : -1) : (to > from ? 4 : -4);
     for (let i = from + step; i !== to; i += step) {
       if (!currentBoard[i].isEmpty) count++;
     }
-    // 不吃子：移動一格且目標為空
     if (count === 0 && target.isEmpty && (dx + dy === 1)) return true;
-    // 隔山打牛吃子：中間剛好隔一子，且目標是已翻開的敵軍
     if (count === 1 && !target.isEmpty && target.isRevealed && target.piece.color !== attacker.color) return true;
     return false;
   } else {
-    // 正常兵種邏輯
-    if (dx + dy !== 1) return false; // 必須相鄰
-    if (target.isEmpty) return true; // 可走空格
-    if (!target.isRevealed) return false; // 不能吃未翻開的牌
-    if (target.piece.color === attacker.color) return false; // 不能自相殘殺
+    if (dx + dy !== 1) return false; 
+    if (target.isEmpty) return true; 
+    if (!target.isRevealed) return false; 
+    if (target.piece.color === attacker.color) return false; 
     
-    // 大小判定 (帥將不可吃卒兵，卒兵可吃帥將)
     if (attacker.rank === 7 && target.piece.rank === 1) return false;
     if (attacker.rank === 1 && target.piece.rank === 7) return true;
     return attacker.rank >= target.piece.rank;
   }
 }
 
-// --- 玩家互動 ---
 function handlePlayerAction(idx) {
   if (turn !== 'player' || !isGameActive) return;
   const cell = board[idx];
 
-  // 1. 翻牌
   if (!cell.isEmpty && !cell.isRevealed) {
-    if (selectedIdx !== -1) { selectedIdx = -1; render(); return; } // 取消選取
+    if (selectedIdx !== -1) { selectedIdx = -1; render(); return; }
     executeFlip(idx, true);
   } 
-  // 2. 選取自己的棋子
   else if (!cell.isEmpty && cell.isRevealed && cell.piece.color === playerColor) {
     selectedIdx = idx;
     render();
   } 
-  // 3. 移動或吃子
   else if (selectedIdx !== -1) {
     if (isValidMove(selectedIdx, idx, board)) {
       executeMove(selectedIdx, idx);
     } else {
-      selectedIdx = -1; // 無效點擊則取消選取
+      selectedIdx = -1;
       render();
     }
   }
 }
 
-// --- 動作執行 ---
 function executeFlip(idx, isPlayer) {
   board[idx].isRevealed = true;
   if (!playerColor) {
-    // 第一步決定陣營
     playerColor = isPlayer ? board[idx].piece.color : (board[idx].piece.color === 'red' ? 'black' : 'red');
     aiColor = playerColor === 'red' ? 'black' : 'red';
   }
@@ -195,7 +243,7 @@ function endTurn() {
   turn = turn === 'player' ? 'ai' : 'player';
   render();
   updateUI();
-  if (turn === 'ai') setTimeout(aiPlay, 500); // 延遲讓玩家看清盤面
+  if (turn === 'ai') setTimeout(aiPlay, 600);
 }
 
 function checkWin() {
@@ -206,11 +254,10 @@ function checkWin() {
   if (red === 0 || black === 0) {
     isGameActive = false;
     render();
-    setTimeout(() => alert(red === 0 ? "黑方獲勝！" : "紅方獲勝！"), 100);
+    setTimeout(() => alert(red === 0 ? "藍方獲勝！" : "紅方獲勝！"), 100);
   }
 }
 
-// --- AI 大腦 (啟發式威脅評估) ---
 function isThreatenedByEnemy(targetIdx, myColor) {
   for (let i = 0; i < 32; i++) {
     const c = board[i];
@@ -235,57 +282,49 @@ function aiPlay() {
 
   let actions = [];
 
-  // 評估翻牌 (基礎分數)
   if (unrevealed.length > 0) {
     const rIdx = unrevealed[Math.floor(Math.random() * unrevealed.length)];
-    actions.push({ type: 'flip', idx: rIdx, score: 12 + Math.random() * 5 });
+    actions.push({ type: 'flip', idx: rIdx, score: 14 + Math.random() * 5 });
   }
 
-  // 評估移動
   if (aiColor) {
     for (let from of myPieces) {
       for (let to = 0; to < 32; to++) {
         if (isValidMove(from, to, board)) {
-          let score = 2; // 基礎移動分
+          let score = 2; 
           let target = board[to];
           
-          // 1. 吃子收益 (吃將帥極高分)
           if (!target.isEmpty) {
-            score += target.piece.rank * 10;
+            score += target.piece.rank * 12;
             if (target.piece.rank === 7) score += 500;
           }
           
-          // 2. 逃跑收益 (原位置若受威脅，跑開加分)
           if (isThreatenedByEnemy(from, aiColor)) {
-            score += board[from].piece.rank * 8;
+            score += board[from].piece.rank * 10;
           }
           
-          // 3. 陷阱懲罰 (模擬移動後，新位置是否會被吃)
           let tempFrom = board[from];
           let tempTo = board[to];
           board[from] = { isEmpty: true };
           board[to] = tempFrom;
           
           if (isThreatenedByEnemy(to, aiColor)) {
-            score -= tempFrom.piece.rank * 15; // 嚴厲懲罰送頭行為
+            score -= tempFrom.piece.rank * 18; 
           }
           
-          // 復原盤面
           board[from] = tempFrom;
           board[to] = tempTo;
           
-          actions.push({ type: 'move', from, to, score: score + Math.random() }); // 隨機性防卡死
+          actions.push({ type: 'move', from, to, score: score + Math.random() });
         }
       }
     }
   }
 
-  // 決策執行 (目標驅動)
   actions.sort((a, b) => b.score - a.score);
   let best = actions[0];
   
   if (!best || best.score < -100) { 
-    // 若所有動作都是送死且無牌可翻，視為 AI 被逼死
     alert("AI 判斷無路可走，玩家獲勝！"); 
     isGameActive = false; return; 
   }
@@ -294,7 +333,6 @@ function aiPlay() {
   else executeMove(best.from, best.to);
 }
 
-// 啟動遊戲
 initGame();
 </script>
 </body>

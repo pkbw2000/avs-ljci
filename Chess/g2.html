@@ -1,0 +1,911 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <title>大师暗棋 · 8x4</title>
+    <style>
+        /* ===== 全局重置 & 字体 ===== */
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            font-family: 'Segoe UI', 'PingFang SC', Roboto, system-ui, sans-serif;
+            background: linear-gradient(145deg, #2b1a0e 0%, #1f130a 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            touch-action: manipulation;
+        }
+
+        /* ===== 游戏容器 — 竖屏优先 ===== */
+        .game-container {
+            width: 100%;
+            max-width: 420px;
+            padding: 12px 10px 20px;
+            margin: 0 auto;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background: radial-gradient(ellipse at 50% 20%, #3d2819, #1f130a);
+            border-radius: 40px 40px 28px 28px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.8), inset 0 1px 2px rgba(255, 215, 150, 0.15);
+        }
+
+        /* ===== 标题 & 状态栏 ===== */
+        .header {
+            width: 100%;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 4px 6px 12px 6px;
+            color: #edd6b0;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.7);
+        }
+
+        .title {
+            font-size: 1.2rem;
+            font-weight: 700;
+            letter-spacing: 2px;
+            background: linear-gradient(to right, #f7e8c8, #dbbd94);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .turn-indicator {
+            font-size: 0.9rem;
+            font-weight: 600;
+            padding: 4px 14px;
+            border-radius: 40px;
+            background: rgba(0, 0, 0, 0.5);
+            border: 1px solid rgba(255, 215, 150, 0.25);
+            backdrop-filter: blur(4px);
+            -webkit-text-fill-color: #f0dbbc;
+        }
+
+        .turn-indicator .highlight {
+            color: #ffd78a;
+            font-weight: 700;
+        }
+
+        /* ===== 棋盘 — 8x4 网格 ===== */
+        .board {
+            width: 100%;
+            aspect-ratio: 8 / 4;
+            display: grid;
+            grid-template-columns: repeat(8, 1fr);
+            grid-template-rows: repeat(4, 1fr);
+            gap: 5px;
+            background: #8b6b4b;
+            padding: 6px;
+            border-radius: 18px;
+            box-shadow: inset 0 4px 12px rgba(0, 0, 0, 0.7), 0 8px 20px rgba(0, 0, 0, 0.6);
+            border: 2px solid #6b4f34;
+            touch-action: manipulation;
+        }
+
+        /* ===== 每个格子 ===== */
+        .cell {
+            background: #a88663;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2.2rem;
+            font-weight: 700;
+            color: #2d1c0e;
+            box-shadow: inset 0 -3px 0 #6b4f34, inset 0 3px 6px rgba(255, 215, 150, 0.2);
+            transition: all 0.12s ease;
+            cursor: pointer;
+            touch-action: manipulation;
+            aspect-ratio: 1 / 1;
+            position: relative;
+            text-shadow: 0 1px 2px rgba(255, 215, 150, 0.3);
+        }
+
+        /* 棋子颜色：红方 / 黑方 */
+        .cell[data-color="red"] {
+            color: #c02a1a;
+            text-shadow: 0 0 6px rgba(255, 60, 30, 0.4);
+        }
+        .cell[data-color="black"] {
+            color: #1a1a1a;
+            text-shadow: 0 0 6px rgba(0, 0, 0, 0.3);
+        }
+
+        /* 翻面状态 — 背面 */
+        .cell.face-down {
+            background: #5d4a34;
+            background-image: radial-gradient(circle at 30% 30%, #7a6248, #3f2f1e);
+            color: transparent;
+            text-shadow: none;
+            box-shadow: inset 0 -3px 0 #3f2f1e, inset 0 3px 8px rgba(0, 0, 0, 0.5);
+            cursor: pointer;
+        }
+        .cell.face-down::after {
+            content: "?";
+            color: rgba(255, 215, 150, 0.15);
+            font-size: 1.8rem;
+            font-weight: 300;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+            height: 100%;
+        }
+
+        /* 高亮可选的棋子 / 可移动位置 */
+        .cell.selectable {
+            box-shadow: inset 0 0 0 3px #ffd966, 0 0 16px rgba(255, 215, 0, 0.5);
+            transform: scale(1.02);
+            z-index: 2;
+            cursor: pointer;
+        }
+        .cell.target-highlight {
+            box-shadow: inset 0 0 0 3px #6fcf97, 0 0 16px rgba(46, 204, 113, 0.5);
+            transform: scale(1.02);
+            z-index: 2;
+            cursor: pointer;
+        }
+        .cell.enemy-highlight {
+            box-shadow: inset 0 0 0 3px #e74c3c, 0 0 16px rgba(231, 76, 60, 0.5);
+            transform: scale(1.02);
+            z-index: 2;
+            cursor: pointer;
+        }
+
+        /* 点击反馈 */
+        .cell:active {
+            transform: scale(0.92);
+        }
+
+        /* ===== 底部控制区 ===== */
+        .footer {
+            width: 100%;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 14px;
+            padding: 0 4px;
+            gap: 10px;
+        }
+
+        .btn {
+            background: rgba(60, 40, 28, 0.8);
+            border: 1px solid rgba(255, 215, 150, 0.2);
+            color: #edd6b0;
+            padding: 8px 18px;
+            border-radius: 40px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            backdrop-filter: blur(4px);
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.4);
+            cursor: pointer;
+            transition: all 0.15s ease;
+            touch-action: manipulation;
+            letter-spacing: 0.5px;
+        }
+
+        .btn:active {
+            transform: scale(0.94);
+            background: rgba(80, 55, 40, 0.9);
+        }
+
+        .btn-primary {
+            background: #a67c52;
+            border-color: #dbbd94;
+            color: #1f130a;
+            font-weight: 700;
+        }
+
+        .btn-primary:active {
+            background: #c49a6c;
+        }
+
+        .status-msg {
+            color: #c9b088;
+            font-size: 0.8rem;
+            padding: 4px 12px;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 40px;
+            flex: 1;
+            text-align: center;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        /* ===== 响应式微调 ===== */
+        @media (max-width: 400px) {
+            .game-container {
+                padding: 8px 6px 14px;
+            }
+            .cell {
+                font-size: 1.6rem;
+                border-radius: 8px;
+            }
+            .title {
+                font-size: 1rem;
+            }
+            .turn-indicator {
+                font-size: 0.75rem;
+                padding: 2px 10px;
+            }
+            .btn {
+                font-size: 0.7rem;
+                padding: 6px 12px;
+            }
+        }
+
+        @media (max-width: 360px) {
+            .cell {
+                font-size: 1.3rem;
+            }
+            .board {
+                gap: 3px;
+                padding: 4px;
+            }
+        }
+
+        /* 动画 — 翻牌效果 */
+        .cell.flipping {
+            animation: flipCard 0.2s ease;
+        }
+        @keyframes flipCard {
+            0% { transform: scale(0.9) rotateY(0deg); }
+            50% { transform: scale(1.05) rotateY(90deg); }
+            100% { transform: scale(1) rotateY(0deg); }
+        }
+
+        /* 棋子被吃掉时的消失效果 */
+        .cell.eaten {
+            animation: eatPulse 0.25s ease forwards;
+        }
+        @keyframes eatPulse {
+            0% { transform: scale(1.2); opacity: 1; }
+            100% { transform: scale(0); opacity: 0; }
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container" role="main" aria-label="暗棋游戏">
+        <!-- 头部 -->
+        <div class="header">
+            <span class="title">♟ 暗棋 · 大师</span>
+            <span class="turn-indicator" id="turnIndicator">⚔️ <span class="highlight" id="turnText">红方</span></span>
+        </div>
+
+        <!-- 棋盘 8x4 -->
+        <div class="board" id="board"></div>
+
+        <!-- 底部 -->
+        <div class="footer">
+            <button class="btn" id="btnRestart">🔄 重开</button>
+            <span class="status-msg" id="statusMsg">点击棋子翻牌</span>
+            <button class="btn btn-primary" id="btnAI">🤖 AI 走一步</button>
+        </div>
+    </div>
+
+    <script>
+        // ================================================================
+        //  大师暗棋 · 完整游戏逻辑 (8x4)
+        //  规则：红方（帅仕相俥傌炮兵）vs 黑方（将士象车马炮卒）
+        //  翻牌 / 移动 / 吃子 / 简单 AI
+        // ================================================================
+
+        // ---------- 棋子定义 ----------
+        const RANK = {
+            KING: 0,    // 帅/将
+            ADVISOR: 1, // 仕/士
+            ELEPHANT: 2,// 相/象
+            ROOK: 3,    // 俥/车
+            KNIGHT: 4,  // 傌/马
+            CANNON: 5,  // 炮/砲
+            PAWN: 6     // 兵/卒
+        };
+
+        // 显示字符 & 红黑对应
+        const PIECE_CHARS = {
+            red: {
+                [RANK.KING]: '帅',
+                [RANK.ADVISOR]: '仕',
+                [RANK.ELEPHANT]: '相',
+                [RANK.ROOK]: '俥',
+                [RANK.KNIGHT]: '傌',
+                [RANK.CANNON]: '炮',
+                [RANK.PAWN]: '兵'
+            },
+            black: {
+                [RANK.KING]: '将',
+                [RANK.ADVISOR]: '士',
+                [RANK.ELEPHANT]: '象',
+                [RANK.ROOK]: '车',
+                [RANK.KNIGHT]: '马',
+                [RANK.CANNON]: '砲',
+                [RANK.PAWN]: '卒'
+            }
+        };
+
+        // 棋子分值（用于 AI 评估）
+        const SCORE = {
+            [RANK.KING]: 1000,
+            [RANK.ADVISOR]: 200,
+            [RANK.ELEPHANT]: 200,
+            [RANK.ROOK]: 600,
+            [RANK.KNIGHT]: 400,
+            [RANK.CANNON]: 450,
+            [RANK.PAWN]: 100
+        };
+
+        // 所有棋子的 rank 列表（用于生成初始阵容）
+        const ALL_RANKS = [
+            RANK.KING, RANK.ADVISOR, RANK.ELEPHANT,
+            RANK.ROOK, RANK.KNIGHT, RANK.CANNON, RANK.PAWN,
+            RANK.PAWN, RANK.PAWN, RANK.PAWN, RANK.PAWN
+        ];
+
+        // ---------- 游戏状态 ----------
+        let board = [];          // 8x4 二维数组，每个格子: { rank, color } 或 null
+        let faceUp = [];        // 8x4 boolean
+        let currentTurn = 'red'; // 'red' 或 'black'
+        let gameOver = false;
+        let selectedPos = null; // { row, col } 或 null
+
+        // DOM 引用
+        const boardEl = document.getElementById('board');
+        const turnText = document.getElementById('turnText');
+        const statusMsg = document.getElementById('statusMsg');
+
+        // ---------- 初始化 / 重置 ----------
+        function initGame() {
+            // 生成 32 个棋子: 红方 16 + 黑方 16
+            const pieces = [];
+            // 红方
+            for (let i = 0; i < 2; i++) {
+                for (const r of ALL_RANKS) {
+                    pieces.push({ rank: r, color: 'red' });
+                }
+            }
+            // 黑方
+            for (let i = 0; i < 2; i++) {
+                for (const r of ALL_RANKS) {
+                    pieces.push({ rank: r, color: 'black' });
+                }
+            }
+            // 打乱 (Fisher-Yates)
+            for (let i = pieces.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [pieces[i], pieces[j]] = [pieces[j], pieces[i]];
+            }
+
+            // 填充到 8x4
+            board = [];
+            faceUp = [];
+            let idx = 0;
+            for (let r = 0; r < 4; r++) {
+                const row = [];
+                const fRow = [];
+                for (let c = 0; c < 8; c++) {
+                    row.push(pieces[idx++]);
+                    fRow.push(false); // 全部面朝下
+                }
+                board.push(row);
+                faceUp.push(fRow);
+            }
+
+            currentTurn = 'red';
+            gameOver = false;
+            selectedPos = null;
+            updateTurnDisplay();
+            setStatus('游戏开始！红方先行');
+            render();
+        }
+
+        // ---------- 渲染 ----------
+        function render() {
+            boardEl.innerHTML = '';
+            for (let r = 0; r < 4; r++) {
+                for (let c = 0; c < 8; c++) {
+                    const cell = document.createElement('div');
+                    cell.className = 'cell';
+                    cell.dataset.row = r;
+                    cell.dataset.col = c;
+
+                    const piece = board[r][c];
+                    const isUp = faceUp[r][c];
+
+                    if (!piece) {
+                        // 空格
+                        cell.style.background = '#7a6045';
+                        cell.style.boxShadow = 'inset 0 -2px 0 #5a4430';
+                        cell.textContent = '';
+                    } else if (isUp) {
+                        // 面朝上
+                        const charMap = piece.color === 'red' ? PIECE_CHARS.red : PIECE_CHARS.black;
+                        cell.textContent = charMap[piece.rank] || '?';
+                        cell.dataset.color = piece.color;
+                        // 如果是红方，加一点发光
+                        if (piece.color === 'red') {
+                            cell.style.textShadow = '0 0 8px rgba(255,60,30,0.3)';
+                        } else {
+                            cell.style.textShadow = '0 0 8px rgba(0,0,0,0.3)';
+                        }
+                        cell.classList.remove('face-down');
+                    } else {
+                        // 面朝下
+                        cell.classList.add('face-down');
+                        cell.dataset.color = '';
+                    }
+
+                    // 高亮：选中的棋子 / 可移动目标
+                    if (selectedPos && selectedPos.row === r && selectedPos.col === c) {
+                        cell.classList.add('selectable');
+                    }
+
+                    // 如果是面朝上的己方棋子且轮到该方，添加点击事件
+                    cell.addEventListener('click', () => onCellClick(r, c));
+                    // 触摸优化
+                    cell.addEventListener('touchstart', (e) => {
+                        // 防止双击缩放干扰
+                    }, { passive: true });
+
+                    boardEl.appendChild(cell);
+                }
+            }
+        }
+
+        // ---------- 辅助函数 ----------
+        function getPiece(row, col) {
+            if (row < 0 || row >= 4 || col < 0 || col >= 8) return null;
+            return board[row][col];
+        }
+
+        function isFaceUp(row, col) {
+            if (row < 0 || row >= 4 || col < 0 || col >= 8) return false;
+            return faceUp[row][col];
+        }
+
+        function isOnBoard(row, col) {
+            return row >= 0 && row < 4 && col >= 0 && col < 8;
+        }
+
+        function setStatus(msg) {
+            statusMsg.textContent = msg;
+        }
+
+        function updateTurnDisplay() {
+            if (gameOver) {
+                turnText.textContent = '🏁 结束';
+                return;
+            }
+            turnText.textContent = currentTurn === 'red' ? '红方' : '黑方';
+            turnText.style.color = currentTurn === 'red' ? '#ff6b4a' : '#cccccc';
+        }
+
+        // ---------- 核心逻辑：获取合法走法 ----------
+        function getLegalMoves(row, col) {
+            const piece = getPiece(row, col);
+            if (!piece || !faceUp[row][col]) return [];
+            if (piece.color !== currentTurn) return [];
+
+            const moves = [];
+            const rank = piece.rank;
+            const color = piece.color;
+            const enemy = color === 'red' ? 'black' : 'red';
+
+            // 方向：红方在上（row 0~1 为红方区域），黑方在下（row 2~3）
+            // 但暗棋中移动不限制区域，只按棋子类型
+            const dirs = {
+                [RANK.KING]: [[-1,0],[1,0],[0,-1],[0,1]],
+                [RANK.ADVISOR]: [[-1,-1],[-1,1],[1,-1],[1,1]],
+                [RANK.ELEPHANT]: [[-2,-2],[-2,2],[2,-2],[2,2]],
+                [RANK.ROOK]: [], // 特殊处理
+                [RANK.KNIGHT]: [[-2,-1],[-2,1],[-1,-2],[-1,2],[1,-2],[1,2],[2,-1],[2,1]],
+                [RANK.CANNON]: [], // 特殊处理
+                [RANK.PAWN]: [[-1,0],[1,0],[0,-1],[0,1]]
+            };
+
+            // ---- 帅/将 ----
+            if (rank === RANK.KING) {
+                for (const d of dirs[RANK.KING]) {
+                    const nr = row + d[0], nc = col + d[1];
+                    if (!isOnBoard(nr, nc)) continue;
+                    const target = getPiece(nr, nc);
+                    if (target && target.color === color) continue;
+                    moves.push({ row: nr, col: nc, eat: target || null });
+                }
+                return moves;
+            }
+
+            // ---- 仕/士 ----
+            if (rank === RANK.ADVISOR) {
+                for (const d of dirs[RANK.ADVISOR]) {
+                    const nr = row + d[0], nc = col + d[1];
+                    if (!isOnBoard(nr, nc)) continue;
+                    const target = getPiece(nr, nc);
+                    if (target && target.color === color) continue;
+                    moves.push({ row: nr, col: nc, eat: target || null });
+                }
+                return moves;
+            }
+
+            // ---- 相/象 ----
+            if (rank === RANK.ELEPHANT) {
+                for (const d of dirs[RANK.ELEPHANT]) {
+                    const nr = row + d[0], nc = col + d[1];
+                    if (!isOnBoard(nr, nc)) continue;
+                    // 象眼（田字中心）不能有棋子
+                    const eyeR = row + d[0]/2, eyeC = col + d[1]/2;
+                    if (getPiece(eyeR, eyeC)) continue;
+                    const target = getPiece(nr, nc);
+                    if (target && target.color === color) continue;
+                    moves.push({ row: nr, col: nc, eat: target || null });
+                }
+                return moves;
+            }
+
+            // ---- 俥/车 ----
+            if (rank === RANK.ROOK) {
+                const directions = [[-1,0],[1,0],[0,-1],[0,1]];
+                for (const d of directions) {
+                    let r = row + d[0], c = col + d[1];
+                    while (isOnBoard(r, c)) {
+                        const target = getPiece(r, c);
+                        if (target) {
+                            if (target.color !== color) {
+                                moves.push({ row: r, col: c, eat: target });
+                            }
+                            break;
+                        }
+                        moves.push({ row: r, col: c, eat: null });
+                        r += d[0];
+                        c += d[1];
+                    }
+                }
+                return moves;
+            }
+
+            // ---- 傌/马 ----
+            if (rank === RANK.KNIGHT) {
+                for (const d of dirs[RANK.KNIGHT]) {
+                    const nr = row + d[0], nc = col + d[1];
+                    if (!isOnBoard(nr, nc)) continue;
+                    // 蹩马腿：检查横/竖方向一步
+                    const legR = row + (Math.abs(d[0]) === 2 ? d[0]/2 : 0);
+                    const legC = col + (Math.abs(d[1]) === 2 ? d[1]/2 : 0);
+                    if (getPiece(legR, legC)) continue;
+                    const target = getPiece(nr, nc);
+                    if (target && target.color === color) continue;
+                    moves.push({ row: nr, col: nc, eat: target || null });
+                }
+                return moves;
+            }
+
+            // ---- 炮/砲 ----
+            if (rank === RANK.CANNON) {
+                const directions = [[-1,0],[1,0],[0,-1],[0,1]];
+                for (const d of directions) {
+                    let r = row + d[0], c = col + d[1];
+                    let jumped = false;
+                    while (isOnBoard(r, c)) {
+                        const target = getPiece(r, c);
+                        if (!jumped) {
+                            if (target) {
+                                // 炮架
+                                jumped = true;
+                            } else {
+                                moves.push({ row: r, col: c, eat: null });
+                            }
+                        } else {
+                            if (target) {
+                                if (target.color !== color) {
+                                    moves.push({ row: r, col: c, eat: target });
+                                }
+                                break;
+                            }
+                            // 跳过炮架后不能走空位
+                        }
+                        r += d[0];
+                        c += d[1];
+                    }
+                }
+                return moves;
+            }
+
+            // ---- 兵/卒 ----
+            if (rank === RANK.PAWN) {
+                // 兵：红方在上，初始只能向下（+1），过河后可左右
+                // 简化：暗棋中兵可以上下左右走一步
+                for (const d of dirs[RANK.PAWN]) {
+                    const nr = row + d[0], nc = col + d[1];
+                    if (!isOnBoard(nr, nc)) continue;
+                    const target = getPiece(nr, nc);
+                    if (target && target.color === color) continue;
+                    moves.push({ row: nr, col: nc, eat: target || null });
+                }
+                return moves;
+            }
+
+            return moves;
+        }
+
+        // ---------- 执行走法 ----------
+        function makeMove(fromRow, fromCol, toRow, toCol) {
+            const piece = board[fromRow][fromCol];
+            const target = board[toRow][toCol];
+            // 执行
+            board[toRow][toCol] = piece;
+            board[fromRow][fromCol] = null;
+            faceUp[toRow][toCol] = true; // 翻开的棋子保持翻开
+            // 如果目标有棋子且被吃，从棋盘移除 (已覆盖)
+
+            // 检查胜利条件：吃掉将/帅
+            if (target && target.rank === RANK.KING) {
+                gameOver = true;
+                const winner = currentTurn === 'red' ? '红方' : '黑方';
+                setStatus(`🏆 ${winner} 获胜！吃掉了将/帅！`);
+                updateTurnDisplay();
+                render();
+                return true;
+            }
+
+            // 切换玩家
+            currentTurn = (currentTurn === 'red' ? 'black' : 'red');
+            selectedPos = null;
+            updateTurnDisplay();
+            setStatus(`${currentTurn === 'red' ? '红方' : '黑方'} 走棋`);
+            render();
+
+            // 检查是否游戏结束（无子可走？简单检测：如果一方没有棋子了）
+            let hasPiece = false;
+            for (let r = 0; r < 4; r++) {
+                for (let c = 0; c < 8; c++) {
+                    if (board[r][c] && board[r][c].color === currentTurn && faceUp[r][c]) {
+                        hasPiece = true;
+                        break;
+                    }
+                }
+                if (hasPiece) break;
+            }
+            if (!hasPiece) {
+                gameOver = true;
+                const winner = currentTurn === 'red' ? '黑方' : '红方';
+                setStatus(`🏆 ${winner} 获胜！对方无子可走！`);
+                updateTurnDisplay();
+                render();
+                return true;
+            }
+
+            // 如果当前轮到 AI（黑方），自动触发 AI
+            if (!gameOver && currentTurn === 'black') {
+                setTimeout(() => aiMove(), 300);
+            }
+            return false;
+        }
+
+        // ---------- 点击处理 ----------
+        function onCellClick(row, col) {
+            if (gameOver) {
+                setStatus('游戏已结束，点击「重开」再来一局');
+                return;
+            }
+
+            // 如果当前是 AI 回合（黑方），禁止操作
+            if (currentTurn === 'black') {
+                setStatus('🤖 AI 思考中，请稍候...');
+                return;
+            }
+
+            const piece = getPiece(row, col);
+            const isUp = faceUp[row][col];
+
+            // 1. 如果格子为空 -> 取消选中
+            if (!piece) {
+                if (selectedPos) {
+                    selectedPos = null;
+                    render();
+                    setStatus('已取消选择');
+                }
+                return;
+            }
+
+            // 2. 如果面朝下 -> 翻牌（必须是当前玩家的棋子）
+            if (!isUp) {
+                if (piece.color !== currentTurn) {
+                    setStatus(`⛔ 不能翻对方的棋子`);
+                    return;
+                }
+                // 翻牌
+                faceUp[row][col] = true;
+                // 翻牌后检查是否触发胜利？（翻到将帅不算，但翻到后如果对方无子可走？）
+                // 暗棋规则：翻牌后如果翻到己方棋子，可以继续走；但这里简化：翻牌后切换回合
+                // 更符合暗棋：翻牌后如果翻到己方棋子，可以继续翻或走；但为了简单，翻牌后切换回合。
+                // 但很多暗棋规则是翻牌后可以继续翻，直到翻到对方棋子或选择移动。
+                // 我们采用更标准规则：翻牌后，如果翻到的是己方棋子，玩家可以继续操作（翻或移动）。
+                // 但这里为了交互清晰，翻牌后保持当前玩家回合，并允许继续。
+                // 然而在移动逻辑中，只有面朝上的己方棋子才能被选中移动。
+                // 所以我们保持 currentTurn 不变，但取消选中状态。
+                selectedPos = null;
+                render();
+                setStatus(`翻开了 ${piece.color === 'red' ? '红' : '黑'}方棋子`);
+                // 检查是否无子可走
+                checkNoMoves();
+                return;
+            }
+
+            // 3. 面朝上
+            // 如果点击的是己方棋子 -> 选中 / 取消选中
+            if (piece.color === currentTurn) {
+                if (selectedPos && selectedPos.row === row && selectedPos.col === col) {
+                    // 取消选中
+                    selectedPos = null;
+                    render();
+                    setStatus('已取消选择');
+                    return;
+                }
+                // 检查该棋子是否有合法走法
+                const moves = getLegalMoves(row, col);
+                if (moves.length === 0) {
+                    setStatus('⛔ 该棋子无路可走');
+                    return;
+                }
+                selectedPos = { row, col };
+                render();
+                setStatus(`选中 ${piece.color === 'red' ? '红' : '黑'}方${PIECE_CHARS[piece.color][piece.rank]}，点击目标位置`);
+                return;
+            }
+
+            // 4. 点击的是对方棋子（面朝上） -> 如果有选中的己方棋子，尝试吃子
+            if (selectedPos) {
+                const from = selectedPos;
+                const fromPiece = getPiece(from.row, from.col);
+                if (!fromPiece) {
+                    selectedPos = null;
+                    render();
+                    return;
+                }
+                // 检查走法
+                const moves = getLegalMoves(from.row, from.col);
+                const found = moves.find(m => m.row === row && m.col === col);
+                if (found) {
+                    // 执行走法
+                    makeMove(from.row, from.col, row, col);
+                } else {
+                    setStatus('⛔ 无法走到该位置');
+                    // 取消选中
+                    selectedPos = null;
+                    render();
+                }
+                return;
+            }
+
+            // 5. 点击对方棋子但没有选中 -> 忽略
+            setStatus(`这是 ${piece.color === 'red' ? '红' : '黑'}方棋子`);
+        }
+
+        // ---------- 检查是否无子可走 (仅当前玩家) ----------
+        function checkNoMoves() {
+            if (gameOver) return;
+            let hasMove = false;
+            for (let r = 0; r < 4; r++) {
+                for (let c = 0; c < 8; c++) {
+                    if (board[r][c] && board[r][c].color === currentTurn && faceUp[r][c]) {
+                        const moves = getLegalMoves(r, c);
+                        if (moves.length > 0) {
+                            hasMove = true;
+                            break;
+                        }
+                    }
+                }
+                if (hasMove) break;
+            }
+            if (!hasMove) {
+                gameOver = true;
+                const winner = currentTurn === 'red' ? '黑方' : '红方';
+                setStatus(`🏆 ${winner} 获胜！对方无子可走！`);
+                updateTurnDisplay();
+                render();
+            }
+        }
+
+        // ---------- AI 走法 (简单评分) ----------
+        function aiMove() {
+            if (gameOver) return;
+            if (currentTurn !== 'black') return;
+
+            // 收集所有黑方面朝上的棋子及其走法
+            let allMoves = [];
+            for (let r = 0; r < 4; r++) {
+                for (let c = 0; c < 8; c++) {
+                    const p = getPiece(r, c);
+                    if (p && p.color === 'black' && faceUp[r][c]) {
+                        const moves = getLegalMoves(r, c);
+                        for (const m of moves) {
+                            allMoves.push({
+                                fromRow: r,
+                                fromCol: c,
+                                toRow: m.row,
+                                toCol: m.col,
+                                eat: m.eat,
+                                score: 0
+                            });
+                        }
+                    }
+                }
+            }
+
+            if (allMoves.length === 0) {
+                // 无子可走，判负（但会在 checkNoMoves 中处理）
+                checkNoMoves();
+                return;
+            }
+
+            // 评分：优先吃子，吃分值高的子
+            for (const mv of allMoves) {
+                if (mv.eat) {
+                    mv.score = SCORE[mv.eat.rank] || 0;
+                    // 如果吃的是将/帅，额外加分
+                    if (mv.eat.rank === RANK.KING) mv.score += 10000;
+                } else {
+                    // 随机小权重，倾向于翻牌（但这里只移动已翻开的棋子）
+                    mv.score = Math.random() * 0.1;
+                }
+                // 轻微随机打破平局
+                mv.score += Math.random() * 0.5;
+            }
+
+            // 按分数降序排列
+            allMoves.sort((a, b) => b.score - a.score);
+            const best = allMoves[0];
+
+            // 执行最佳走法
+            const gameEnded = makeMove(best.fromRow, best.fromCol, best.toRow, best.toCol);
+            if (!gameEnded && currentTurn === 'black') {
+                // 如果 AI 还是黑方（比如翻牌后还是黑方？但我们的 makeMove 切换了回合）
+                // 但 makeMove 会切换回合，所以不会出现这种情况
+            }
+        }
+
+        // ---------- 重新开始 ----------
+        function restart() {
+            initGame();
+            // 如果初始是黑方先手？不，红方先手
+            // 如果 AI 先手？这里红方先手，玩家执红
+            // 如果希望玩家执黑，可调整，但这里默认玩家红方
+            setStatus('新游戏！红方先行');
+            selectedPos = null;
+            render();
+        }
+
+        // ---------- 手动触发 AI (调试/辅助) ----------
+        function triggerAI() {
+            if (gameOver) {
+                setStatus('游戏已结束');
+                return;
+            }
+            if (currentTurn !== 'black') {
+                setStatus('⏳ 当前不是 AI 回合');
+                return;
+            }
+            aiMove();
+        }
+
+        // ---------- 启动 ----------
+        document.addEventListener('DOMContentLoaded', () => {
+            initGame();
+            document.getElementById('btnRestart').addEventListener('click', restart);
+            document.getElementById('btnAI').addEventListener('click', triggerAI);
+        });
+
+        // ---------- 额外：在移动端防止双击缩放 ----------
+        document.addEventListener('dblclick', (e) => e.preventDefault());
+    </script>
+</body>
+</html>

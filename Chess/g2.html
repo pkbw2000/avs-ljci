@@ -1,109 +1,653 @@
 <!DOCTYPE html>
-<html lang="zh-TW">
+<html lang="zh-CN">
 <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-    <title>大師暗棋 - 4x8</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>暗棋 - 大师级</title>
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { 
-            display: flex; 
-            justify-content: center; 
-            align-items: center; 
-            background: #1a1a2e; 
-            height: 100vh; 
-            overflow: hidden;
-            touch-action: none;
-            font-family: Arial, sans-serif;
+        /* ===== 简洁优先：只包含必要样式 ===== */
+        * { margin: 0; padding: 0; box-sizing: border-box; user-select: none; }
+        body {
+            background: #2d1f0e;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            font-family: 'PingFang SC', 'Microsoft YaHei', sans-serif;
+            touch-action: manipulation;
         }
-        #game-container {
-            width: 100vw;
-            height: 100vh;
-            max-width: 500px;
-            max-height: 900px;
-            position: relative;
-            background: #1a1a2e;
+        .game-container {
+            background: #5a3d2b;
+            padding: 12px 10px 16px;
+            border-radius: 20px;
+            box-shadow: 0 12px 40px rgba(0,0,0,0.7);
+            max-width: 420px;
+            width: 100%;
+            margin: 10px;
         }
-        #loading {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            color: #ffffff;
-            font-size: 28px;
-            z-index: 1000;
-            background: rgba(0,0,0,0.8);
-            padding: 30px 50px;
-            border-radius: 16px;
-            text-align: center;
-            border: 2px solid #F1C40F;
-            pointer-events: none;
-        }
-        #loading .spinner {
-            display: inline-block;
-            width: 40px;
-            height: 40px;
-            border: 4px solid rgba(255,255,255,0.1);
-            border-top: 4px solid #F1C40F;
-            border-radius: 50%;
-            animation: spin 0.8s linear infinite;
-            margin-bottom: 12px;
-        }
-        @keyframes spin {
-            to { transform: rotate(360deg); }
-        }
-        #loading .text {
-            display: block;
-            margin-top: 8px;
-            font-size: 20px;
-            color: #ddd;
-        }
-        canvas {
-            display: block;
-            width: 100% !important;
-            height: 100% !important;
-        }
-        #error-msg {
-            display: none;
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            color: #ff6b6b;
-            background: rgba(0,0,0,0.9);
-            padding: 20px 30px;
-            border-radius: 12px;
-            z-index: 2000;
-            text-align: center;
-            border: 2px solid #ff6b6b;
-            max-width: 90%;
-        }
-        #error-msg .retry-btn {
-            margin-top: 16px;
-            padding: 10px 30px;
-            background: #F1C40F;
-            border: none;
-            border-radius: 8px;
-            font-size: 18px;
-            color: #1a1a2e;
-            cursor: pointer;
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 4px 10px 4px;
+            color: #f0d5b0;
+            font-size: 14px;
             font-weight: bold;
         }
+        .header .turn-indicator {
+            background: #3d2b1a;
+            padding: 4px 14px;
+            border-radius: 12px;
+            font-size: 15px;
+        }
+        .header .turn-indicator .highlight { color: #ffd700; }
+        .btn-reset {
+            background: #7a5238;
+            border: none;
+            color: #f0d5b0;
+            padding: 6px 18px;
+            border-radius: 12px;
+            font-size: 14px;
+            font-weight: bold;
+            cursor: pointer;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+            transition: background 0.15s;
+        }
+        .btn-reset:active { background: #5a3d2b; }
+
+        /* ===== 棋盘：4行 × 8列，竖屏优化 ===== */
+        .board {
+            display: grid;
+            grid-template-columns: repeat(8, 1fr);
+            gap: 3px;
+            background: #8b6b4a;
+            padding: 6px;
+            border-radius: 10px;
+            aspect-ratio: 8 / 4;
+        }
+        .cell {
+            background: #c49a6c;
+            border-radius: 4px;
+            aspect-ratio: 1 / 1;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: clamp(18px, 5vw, 34px);
+            font-weight: bold;
+            color: #2d1f0e;
+            cursor: pointer;
+            transition: background 0.1s, transform 0.1s;
+            box-shadow: inset 0 -2px 0 rgba(0,0,0,0.15);
+            position: relative;
+            text-shadow: 0 1px 1px rgba(255,255,255,0.2);
+        }
+        .cell:active { transform: scale(0.92); background: #b8895a; }
+
+        /* 棋子颜色 */
+        .cell.red { color: #cc2233; text-shadow: 0 1px 2px rgba(200,0,0,0.3); }
+        .cell.black { color: #1a1a2e; text-shadow: 0 1px 2px rgba(0,0,0,0.3); }
+
+        /* 暗棋（背面） */
+        .cell.face-down {
+            background: #4a7a5a;
+            color: transparent;
+            box-shadow: inset 0 -2px 0 #2d5a3d;
+        }
+        .cell.face-down::after {
+            content: "◆";
+            color: #2d5a3d;
+            font-size: clamp(12px, 3vw, 20px);
+            text-shadow: none;
+            opacity: 0.5;
+        }
+
+        /* 选中高亮 */
+        .cell.selected {
+            outline: 3px solid #ffd700;
+            outline-offset: -1px;
+            transform: scale(0.95);
+        }
+        /* 可移动目标高亮 */
+        .cell.valid-target {
+            background: #7ab87a;
+            box-shadow: inset 0 0 0 3px #4caf50;
+        }
+
+        /* ===== 状态信息 ===== */
+        .status {
+            text-align: center;
+            padding: 10px 4px 2px;
+            color: #d4b896;
+            font-size: 14px;
+            min-height: 32px;
+            line-height: 1.6;
+        }
+        .status .win-msg {
+            color: #ffd700;
+            font-size: 18px;
+            font-weight: bold;
+            animation: pulse 0.8s ease-in-out infinite alternate;
+        }
+        @keyframes pulse {
+            0% { opacity: 0.7; transform: scale(0.98); }
+            100% { opacity: 1; transform: scale(1.02); }
+        }
+
+        /* 棋子计数 */
+        .piece-count {
+            display: flex;
+            justify-content: space-between;
+            padding: 6px 6px 0;
+            font-size: 13px;
+            color: #d4b896;
+        }
+        .piece-count .red-count { color: #cc2233; }
+        .piece-count .black-count { color: #aaa; }
+
+        @media (max-width: 400px) {
+            .game-container { padding: 8px 6px 12px; }
+            .board { gap: 2px; padding: 4px; }
+            .header { font-size: 12px; }
+        }
     </style>
-    <script src="https://cdn.jsdelivr.net/npm/phaser@3.87.0/dist/phaser.min.js"></script>
 </head>
 <body>
-    <div id="game-container">
-        <!-- 載入提示 -->
-        <div id="loading">
-            <div class="spinner"></div>
-            <span class="text">🎮 載入遊戲中...</span>
-        </div>
-        <!-- 錯誤訊息 -->
-        <div id="error-msg">
-            <div style="font-size: 48px; margin-bottom: 10px;">⚠️</div>
-            <div id="error-text">載入失敗，請重試</div>
-            <button class="retry-btn" onclick="location.reload()">🔄 重新載入</button>
+
+<div class="game-container">
+    <!-- 顶栏 -->
+    <div class="header">
+        <span class="turn-indicator" id="turnIndicator">🔴 红方走</span>
+        <button class="btn-reset" id="btnReset">🔄 新局</button>
+    </div>
+
+    <!-- 棋盘 4x8 -->
+    <div class="board" id="board"></div>
+
+    <!-- 棋子计数 -->
+    <div class="piece-count">
+        <span class="red-count" id="redCount">🔴 16</span>
+        <span class="black-count" id="blackCount">⚫ 16</span>
+    </div>
+
+    <!-- 状态信息 -->
+    <div class="status" id="status">翻棋决定阵营</div>
+</div>
+
+<script>
+(function() {
+    "use strict";
+
+    // ================================================================
+    //  1. 常量定义（简洁优先：只定义必要的）
+    // ================================================================
+    const ROWS = 4;
+    const COLS = 8;
+    const TOTAL_CELLS = ROWS * COLS;
+
+    // 棋子类型（等级越高越强）
+    const TYPES = {
+        BING: 1,   // 兵/卒
+        PAO: 2,    // 炮
+        MA: 3,     // 马
+        CHE: 4,    // 车
+        XIANG: 5,  // 相/象
+        SHI: 6,    // 仕/士
+        SHUAI: 7   // 帅/将
+    };
+    const TYPE_NAMES = {
+        1: '兵', 2: '炮', 3: '马', 4: '车', 5: '相', 6: '仕', 7: '帅'
+    };
+    // 红方用字
+    const TYPE_NAMES_RED = {
+        1: '兵', 2: '炮', 3: '马', 4: '车', 5: '相', 6: '仕', 7: '帅'
+    };
+    // 黑方用字
+    const TYPE_NAMES_BLACK = {
+        1: '卒', 2: '砲', 3: '马', 4: '车', 5: '象', 6: '士', 7: '将'
+    };
+
+    // 每方的棋子配置：[type, count]
+    const PIECE_CONFIG = [
+        [TYPES.SHUAI, 1],
+        [TYPES.SHI, 2],
+        [TYPES.XIANG, 2],
+        [TYPES.CHE, 2],
+        [TYPES.MA, 2],
+        [TYPES.PAO, 2],
+        [TYPES.BING, 5]
+    ];
+
+    // ================================================================
+    //  2. 游戏状态
+    // ================================================================
+    let board = [];           // 32个格子，每个为 null 或 { type, color: 'red'|'black', faceUp }
+    let currentPlayer = 'red'; // 'red' 或 'black'
+    let gameOver = false;
+    let winner = null;        // 'red' 或 'black' 或 null
+    let selectedIdx = -1;     // 当前选中的格子索引
+    let redCount = 16;
+    let blackCount = 16;
+    let moveHistory = [];
+
+    // AI 相关
+    let isAIThinking = false;
+    let aiColor = 'black';    // AI 执黑（玩家执红）
+    let isAITurn = false;
+
+    // DOM 引用
+    const boardEl = document.getElementById('board');
+    const turnIndicator = document.getElementById('turnIndicator');
+    const statusEl = document.getElementById('status');
+    const redCountEl = document.getElementById('redCount');
+    const blackCountEl = document.getElementById('blackCount');
+    const btnReset = document.getElementById('btnReset');
+
+    // ================================================================
+    //  3. 核心游戏逻辑
+    // ================================================================
+
+    /** 初始化棋盘（随机放置32枚棋子，背面朝上） */
+    function initBoard() {
+        // 生成棋子列表：红黑各16枚
+        let pieces = [];
+        // 红方
+        PIECE_CONFIG.forEach(([type, count]) => {
+            for (let i = 0; i < count; i++) {
+                pieces.push({ type, color: 'red', faceUp: false });
+            }
+        });
+        // 黑方
+        PIECE_CONFIG.forEach(([type, count]) => {
+            for (let i = 0; i < count; i++) {
+                pieces.push({ type, color: 'black', faceUp: false });
+            }
+        });
+
+        // 洗牌（Fisher-Yates）
+        for (let i = pieces.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [pieces[i], pieces[j]] = [pieces[j], pieces[i]];
+        }
+
+        // 填入棋盘
+        board = [];
+        for (let i = 0; i < TOTAL_CELLS; i++) {
+            board.push(pieces[i] || null);
+        }
+    }
+
+    /** 重置游戏 */
+    function resetGame() {
+        initBoard();
+        currentPlayer = 'red';
+        gameOver = false;
+        winner = null;
+        selectedIdx = -1;
+        redCount = countPieces('red');
+        blackCount = countPieces('black');
+        moveHistory = [];
+        isAIThinking = false;
+        isAITurn = false;
+        render();
+        statusEl.textContent = '翻棋决定阵营';
+        statusEl.className = 'status';
+        // 如果 AI 执黑，且轮到黑方，触发 AI
+        if (aiColor === 'black' && currentPlayer === 'black' && !gameOver) {
+            scheduleAI();
+        }
+    }
+
+    /** 计算某颜色棋子数量（明棋+暗棋） */
+    function countPieces(color) {
+        let count = 0;
+        for (let i = 0; i < board.length; i++) {
+            if (board[i] && board[i].color === color) count++;
+        }
+        return count;
+    }
+
+    /** 获取某颜色的明棋数量 */
+    function countFaceUp(color) {
+        let count = 0;
+        for (let i = 0; i < board.length; i++) {
+            if (board[i] && board[i].color === color && board[i].faceUp) count++;
+        }
+        return count;
+    }
+
+    /** 检查某位置是否有棋子 */
+    function hasPiece(idx) { return board[idx] !== null; }
+
+    /** 检查某位置是否有己方明棋 */
+    function hasOwnFaceUp(idx, color) {
+        const p = board[idx];
+        return p !== null && p.color === color && p.faceUp;
+    }
+
+    /** 检查某位置是否有对方明棋 */
+    function hasEnemyFaceUp(idx, color) {
+        const p = board[idx];
+        return p !== null && p.color !== color && p.faceUp;
+    }
+
+    /** 检查某位置是否有暗棋（不分颜色） */
+    function hasFaceDown(idx) {
+        return board[idx] !== null && !board[idx].faceUp;
+    }
+
+    /** 获取某颜色的所有明棋位置 */
+    function getFaceUpPositions(color) {
+        const result = [];
+        for (let i = 0; i < board.length; i++) {
+            if (board[i] && board[i].color === color && board[i].faceUp) {
+                result.push(i);
+            }
+        }
+        return result;
+    }
+
+    /** 获取某位置相邻格子索引（上下左右） */
+    function getNeighbors(idx) {
+        const row = Math.floor(idx / COLS);
+        const col = idx % COLS;
+        const result = [];
+        if (row > 0) result.push(idx - COLS);
+        if (row < ROWS - 1) result.push(idx + COLS);
+        if (col > 0) result.push(idx - 1);
+        if (col < COLS - 1) result.push(idx + 1);
+        return result;
+    }
+
+    /** 判断棋子A能否吃掉棋子B（不考虑炮的特殊规则） */
+    function canCapture(a, b) {
+        // 兵（等级1）可以吃将（等级7）
+        if (a.type === TYPES.BING && b.type === TYPES.SHUAI) return true;
+        // 将（等级7）不能吃兵（等级1）
+        if (a.type === TYPES.SHUAI && b.type === TYPES.BING) return false;
+        // 炮可以吃任何棋子（但需要隔子，在调用处单独处理）
+        if (a.type === TYPES.PAO) return true;
+        // 一般规则：等级大于等于对方
+        return a.type >= b.type;
+    }
+
+    /** 检查从 fromIdx 到 toIdx 的移动是否合法（只考虑走棋，不吃子） */
+    function isValidMove(fromIdx, toIdx, color) {
+        if (fromIdx === toIdx) return false;
+        if (!board[fromIdx] || !board[fromIdx].faceUp) return false;
+        if (board[fromIdx].color !== color) return false;
+        if (board[toIdx] !== null) return false; // 目标格必须为空
+        const neighbors = getNeighbors(fromIdx);
+        return neighbors.includes(toIdx);
+    }
+
+    /** 检查从 fromIdx 到 toIdx 的吃子是否合法 */
+    function isValidCapture(fromIdx, toIdx, color) {
+        if (fromIdx === toIdx) return false;
+        const attacker = board[fromIdx];
+        const defender = board[toIdx];
+        if (!attacker || !attacker.faceUp) return false;
+        if (attacker.color !== color) return false;
+        if (!defender || !defender.faceUp) return false;
+        if (defender.color === color) return false; // 不能吃己方
+
+        // 检查是否相邻（炮除外）
+        const neighbors = getNeighbors(fromIdx);
+        const isAdjacent = neighbors.includes(toIdx);
+
+        // 炮的特殊规则：必须隔一个棋子（炮架），且目标可以是任意明棋
+        if (attacker.type === TYPES.PAO) {
+            // 检查 fromIdx 到 toIdx 是否在同一行或同一列，且中间恰好一个棋子
+            const fromRow = Math.floor(fromIdx / COLS);
+            const fromCol = fromIdx % COLS;
+            const toRow = Math.floor(toIdx / COLS);
+            const toCol = toIdx % COLS;
+
+            if (fromRow !== toRow && fromCol !== toCol) return false; // 必须同行或同列
+
+            const rowStep = fromRow === toRow ? 0 : (toRow > fromRow ? 1 : -1);
+            const colStep = fromCol === toCol ? 0 : (toCol > fromCol ? 1 : -1);
+
+            let betweenCount = 0;
+            let r = fromRow + rowStep;
+            let c = fromCol + colStep;
+            while (r !== toRow || c !== toCol) {
+                const idx = r * COLS + c;
+                if (board[idx] !== null) betweenCount++;
+                r += rowStep;
+                c += colStep;
+            }
+            // 炮必须隔一个棋子（且只能隔一个）
+            if (betweenCount !== 1) return false;
+            // 炮可以吃任何棋子（已由 canCapture 保证）
+            return true;
+        }
+
+        // 非炮：必须相邻
+        if (!isAdjacent) return false;
+
+        // 检查等级规则
+        return canCapture(attacker, defender);
+    }
+
+    /** 执行翻棋 */
+    function doFlip(idx) {
+        if (gameOver) return false;
+        if (isAIThinking) return false;
+        if (!board[idx] || board[idx].faceUp) return false;
+
+        // 翻棋
+        board[idx].faceUp = true;
+
+        // 如果是第一步翻棋，决定阵营
+        const firstMove = (redCount === 16 && blackCount === 16);
+        if (firstMove) {
+            // 翻出的颜色即为当前玩家的颜色
+            const color = board[idx].color;
+            currentPlayer = color;
+            // 如果 AI 执黑且玩家执红，正常；如果 AI 执红，调整
+            if (aiColor === color) {
+                // AI 翻出了自己的颜色，交换
+                // 但更合理：玩家先翻，翻出什么颜色玩家就用什么颜色
+                // 这里保持：翻出的颜色归当前玩家（人类）
+                // 如果 AI 想要那个颜色，需要交换
+                if (aiColor === color) {
+                    // 人类翻出了 AI 的颜色，交换 AI 颜色
+                    aiColor = (color === 'red' ? 'black' : 'red');
+                }
+            }
+            statusEl.textContent = `你执 ${color === 'red' ? '红' : '黑'}方`;
+        }
+
+        // 切换玩家
+        switchPlayer();
+        render();
+        return true;
+    }
+
+    /** 执行走棋 */
+    function doMove(fromIdx, toIdx) {
+        if (gameOver) return false;
+        if (isAIThinking) return false;
+        if (!board[fromIdx] || !board[fromIdx].faceUp) return false;
+        if (board[fromIdx].color !== currentPlayer) return false;
+        if (board[toIdx] !== null) return false;
+
+        const neighbors = getNeighbors(fromIdx);
+        if (!neighbors.includes(toIdx)) return false;
+
+        // 执行移动
+        board[toIdx] = board[fromIdx];
+        board[fromIdx] = null;
+        moveHistory.push({ action: 'move', from: fromIdx, to: toIdx });
+
+        switchPlayer();
+        render();
+        return true;
+    }
+
+    /** 执行吃子 */
+    function doCapture(fromIdx, toIdx) {
+        if (gameOver) return false;
+        if (isAIThinking) return false;
+        if (!isValidCapture(fromIdx, toIdx, currentPlayer)) return false;
+
+        const captured = board[toIdx];
+        // 执行吃子
+        board[toIdx] = board[fromIdx];
+        board[fromIdx] = null;
+        moveHistory.push({ action: 'capture', from: fromIdx, to: toIdx, captured: captured });
+
+        // 更新计数
+        if (captured.color === 'red') redCount--;
+        else blackCount--;
+
+        // 检查胜负
+        if (redCount === 0) {
+            gameOver = true;
+            winner = 'black';
+            statusEl.textContent = '🏆 黑方获胜！';
+            statusEl.className = 'status win-msg';
+            render();
+            return true;
+        }
+        if (blackCount === 0) {
+            gameOver = true;
+            winner = 'red';
+            statusEl.textContent = '🏆 红方获胜！';
+            statusEl.className = 'status win-msg';
+            render();
+            return true;
+        }
+
+        switchPlayer();
+        render();
+        return true;
+    }
+
+    /** 切换玩家 */
+    function switchPlayer() {
+        if (gameOver) return;
+        currentPlayer = (currentPlayer === 'red' ? 'black' : 'red');
+        selectedIdx = -1;
+        // 更新状态显示
+        const name = currentPlayer === 'red' ? '红' : '黑';
+        const emoji = currentPlayer === 'red' ? '🔴' : '⚫';
+        turnIndicator.innerHTML = `${emoji} ${name}方走`;
+        statusEl.textContent = currentPlayer === 'red' ? '红方走棋' : '黑方走棋';
+        statusEl.className = 'status';
+
+        // 如果是 AI 回合，触发 AI
+        if (!gameOver && currentPlayer === aiColor) {
+            scheduleAI();
+        }
+    }
+
+    /** 调度 AI（延迟执行，避免阻塞渲染） */
+    function scheduleAI() {
+        if (isAIThinking) return;
+        if (gameOver) return;
+        if (currentPlayer !== aiColor) return;
+        isAIThinking = true;
+        statusEl.textContent = '🤔 AI 思考中...';
+        setTimeout(() => {
+            doAIMove();
+        }, 150);
+    }
+
+    // ================================================================
+    //  4. AI 实现（简单评估 + 贪心 + 随机翻棋）
+    // ================================================================
+
+    /** 获取当前玩家所有合法的翻棋、走棋、吃子动作 */
+    function getLegalActions(color) {
+        const actions = [];
+
+        // 1. 翻棋：所有暗棋
+        for (let i = 0; i < board.length; i++) {
+            if (board[i] && !board[i].faceUp) {
+                actions.push({ type: 'flip', idx: i });
+            }
+        }
+
+        // 2. 走棋 & 吃子：所有己方明棋
+        for (let i = 0; i < board.length; i++) {
+            if (!board[i] || !board[i].faceUp || board[i].color !== color) continue;
+            const neighbors = getNeighbors(i);
+            for (const j of neighbors) {
+                if (board[j] === null) {
+                    actions.push({ type: 'move', from: i, to: j });
+                } else if (board[j].faceUp && board[j].color !== color) {
+                    // 检查是否能吃
+                    if (isValidCapture(i, j, color)) {
+                        actions.push({ type: 'capture', from: i, to: j });
+                    }
+                }
+            }
+        }
+
+        return actions;
+    }
+
+    /** 评估函数：棋子价值 */
+    function getPieceValue(piece) {
+        if (!piece) return 0;
+        const base = piece.type;
+        // 兵价值特殊：虽然等级低但能吃将
+        if (piece.type === TYPES.BING) return 2;
+        return base * 2;
+    }
+
+    /** 评估局面（从 color 视角） */
+    function evaluateBoard(color) {
+        let score = 0;
+        for (let i = 0; i < board.length; i++) {
+            const p = board[i];
+            if (!p || !p.faceUp) continue;
+            const val = getPieceValue(p);
+            if (p.color === color) score += val;
+            else score -= val;
+        }
+        return score;
+    }
+
+    /** AI 走棋 */
+    function doAIMove() {
+        isAIThinking = false;
+        if (gameOver) return;
+        if (currentPlayer !== aiColor) return;
+
+        const color = aiColor;
+        const actions = getLegalActions(color);
+
+        if (actions.length === 0) {
+            // 无棋可走，判负
+            gameOver = true;
+            winner = (color === 'red' ? 'black' : 'red');
+            statusEl.textContent = `🏆 ${winner === 'red' ? '红' : '黑'}方获胜（对方无棋可走）！`;
+            statusEl.className = 'status win-msg';
+            render();
+            return;
+        }
+
+        // 评估每个动作
+        let bestAction = null;
+        let bestScore = -Infinity;
+
+        for (const action of actions) {
+            // 模拟执行
+            const snapshot = board.map(cell => cell ? { ...cell } : null);
+            let score = 0;
+            let captured = null;
+
+            if (action.type === 'flip') {
+                // 翻棋：模拟翻开，假设翻出的是己方棋子（乐观估计）
+                // 实际无法预知，随机估计
+                const p = board[action.idx];
+                // 粗略估计：翻出己方棋子的概率 = 剩余己方暗棋 / 总暗棋
+                let ownCount = 0, totalCount = 0;
+                for (let i = 0; i < board.length; i++) {
+                    if (board[i] && !board[i].faceUp) {
+                        totalCoun            <button class="retry-btn" onclick="location.reload()">🔄 重新載入</button>
         </div>
     </div>
 

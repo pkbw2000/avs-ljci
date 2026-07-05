@@ -86,7 +86,7 @@
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
-            max-width: 120px;
+            max-width: 140px;
         }
 
         #turn-indicator {
@@ -132,7 +132,7 @@
             transform: rotate(45deg);
         }
 
-        /* ===== 棋盤 · 深色名貴木材風格 ===== */
+        /* ===== 棋盤 ===== */
         #board-container {
             position: relative;
             padding: 10px;
@@ -303,7 +303,7 @@
             border-right: 15px solid var(--crimson);
             text-align: center;
             color: #333;
-            max-width: 80%;
+            max-width: 85%;
             width: 320px;
             box-shadow: 0 20px 60px rgba(0,0,0,1);
             position: relative;
@@ -324,22 +324,24 @@
             font-weight: 700;
             color: var(--crimson);
             letter-spacing: 2px;
+            line-height: 1.2;
         }
         #message-buttons {
             display: flex;
-            justify-content: center;
-            gap: 15px;
+            flex-direction: column;
+            gap: 12px;
         }
         #message-buttons button {
             background: var(--crimson);
             border: 2px solid var(--gold);
             color: var(--gold);
-            padding: 10px 25px;
+            padding: 12px 20px;
             border-radius: 4px;
             font-size: 1rem;
             font-weight: 600;
             cursor: pointer;
             transition: 0.2s;
+            width: 100%;
         }
         #message-buttons button:active { transform: scale(0.95); }
     </style>
@@ -357,7 +359,7 @@
 <div id="hud">
 <div class="hud-box">
 <span class="hud-label">對弈局勢</span>
-<span class="hud-val" id="status">開卷有益 · 點擊啟局</span>
+<span class="hud-val" id="status">開卷有益 · 請選模式</span>
 </div>
 <div style="display: flex; align-items: center; gap: 8px; flex-shrink: 0;">
 <div id="turn-indicator">墨香初現</div>
@@ -374,19 +376,19 @@
 <script>
         const PIECES = {
             R_K: { name: '帥', color: 'red', rank: 7, value: 5000 },
-            R_A: { name: '仕', color: 'red', rank: 6, value: 900 },
-            R_E: { name: '相', color: 'red', rank: 5, value: 800 },
-            R_R: { name: '俥', color: 'red', rank: 4, value: 700 },
-            R_H: { name: '傌', color: 'red', rank: 3, value: 600 },
-            R_C: { name: '炮', color: 'red', rank: 2, value: 1200 },
-            R_P: { name: '兵', color: 'red', rank: 1, value: 300 },
+            R_A: { name: '仕', color: 'red', rank: 6, value: 1200 },
+            R_E: { name: '相', color: 'red', rank: 5, value: 1000 },
+            R_R: { name: '俥', color: 'red', rank: 4, value: 900 },
+            R_H: { name: '傌', color: 'red', rank: 3, value: 800 },
+            R_C: { name: '炮', color: 'red', rank: 2, value: 1500 },
+            R_P: { name: '兵', color: 'red', rank: 1, value: 400 },
             B_K: { name: '將', color: 'black', rank: 7, value: 5000 },
-            B_A: { name: '士', color: 'black', rank: 6, value: 900 },
-            B_E: { name: '象', color: 'black', rank: 5, value: 800 },
-            B_R: { name: '車', color: 'black', rank: 4, value: 700 },
-            B_H: { name: '馬', color: 'black', rank: 3, value: 600 },
-            B_C: { name: '砲', color: 'black', rank: 2, value: 1200 },
-            B_P: { name: '卒', color: 'black', rank: 1, value: 300 }
+            B_A: { name: '士', color: 'black', rank: 6, value: 1200 },
+            B_E: { name: '象', color: 'black', rank: 5, value: 1000 },
+            B_R: { name: '車', color: 'black', rank: 4, value: 900 },
+            B_H: { name: '馬', color: 'black', rank: 3, value: 800 },
+            B_C: { name: '砲', color: 'black', rank: 2, value: 1500 },
+            B_P: { name: '卒', color: 'black', rank: 1, value: 400 }
         };
 
         const INITIAL_DECK = [
@@ -401,11 +403,12 @@
             audioCtx: null,
             bgmPlaying: false,
             board: [],
-            turn: 'player',
+            gameMode: 'pve', // 'pve' or 'pvp'
+            turn: 'player', // 'player' or 'ai' (or 'player2' logic-wise)
             playerColor: null,
             aiColor: null,
             selectedIdx: -1,
-            isGameActive: true,
+            isGameActive: false,
             highlightCells: [],
             lastMoveTarget: -1,
             lastFlipTarget: -1,
@@ -495,8 +498,9 @@
             } catch(e) {}
         }
 
-        // --- Logic Functions ---
-
+        /** 
+         * Enhanced Evaluation Function
+         */
         function evaluateBoard(boardState, color) {
             let score = 0;
             const oppColor = color === 'red' ? 'black' : 'red';
@@ -505,20 +509,26 @@
                 if (cell.isEmpty) return;
                 
                 if (cell.isRevealed) {
-                    const val = cell.piece.value;
-                    if (cell.piece.color === color) {
-                        score += val;
-                        const x = idx % 4;
-                        const y = Math.floor(idx / 4);
-                        score += (1.5 - Math.abs(1.5 - x)) * 10;
-                        score += (3.5 - Math.abs(3.5 - y)) * 10;
-                        if (isThreatened(idx, boardState, oppColor)) score -= val * 0.85;
-                    } else {
-                        score -= val;
-                        if (isThreatened(idx, boardState, color)) score += val * 0.7;
+                    const isOwn = cell.piece.color === color;
+                    let pieceValue = cell.piece.value;
+                    
+                    // Positioning: Incentivize center and spread
+                    const x = idx % 4;
+                    const y = Math.floor(idx / 4);
+                    const posBonus = (1.5 - Math.abs(1.5 - x)) * 25 + (3.5 - Math.abs(3.5 - y)) * 15;
+                    pieceValue += posBonus;
+
+                    // Defensive and Offensive checks
+                    const threatened = isThreatened(idx, boardState, isOwn ? oppColor : color);
+                    if (threatened) {
+                        // High penalty for losing high-rank pieces
+                        pieceValue -= cell.piece.value * (isOwn ? 1.2 : -0.8);
                     }
+
+                    score += isOwn ? pieceValue : -pieceValue;
                 } else {
-                    score += 5;
+                    // Slight basic incentive to keep unknown pieces
+                    score += color === 'red' ? 5 : -5; 
                 }
             });
             return score;
@@ -526,7 +536,8 @@
 
         function isThreatened(idx, boardState, attackerColor) {
             for (let i = 0; i < 32; i++) {
-                if (!boardState[i].isEmpty && boardState[i].isRevealed && boardState[i].piece.color === attackerColor) {
+                const attacker = boardState[i];
+                if (!attacker.isEmpty && attacker.isRevealed && attacker.piece.color === attackerColor) {
                     if (isValidMove(i, idx, boardState)) return true;
                 }
             }
@@ -534,21 +545,23 @@
         }
 
         function getAllActions(boardState, color) {
-            const actions = [];
+            const moves = [];
+            const flips = [];
+            
             boardState.forEach((c, from) => {
                 if (!c.isEmpty) {
                     if (!c.isRevealed) {
-                        actions.push({ type: 'flip', idx: from });
+                        flips.push({ type: 'flip', idx: from });
                     } else if (c.piece.color === color) {
                         for (let to = 0; to < 32; to++) {
                             if (isValidMove(from, to, boardState)) {
-                                actions.push({ type: 'move', from, to });
+                                moves.push({ type: 'move', from, to });
                             }
                         }
                     }
                 }
             });
-            return actions;
+            return { moves, flips };
         }
 
         function simulateAction(boardState, action) {
@@ -562,44 +575,102 @@
             return newBoard;
         }
 
-        function aiPlay() {
-            if (!state.isGameActive || state.turn !== 'ai') return;
+        /**
+         * Minimax with Alpha-Beta Pruning
+         */
+        function minimax(board, depth, alpha, beta, isMaximizing, aiColor) {
+            if (depth === 0) {
+                return evaluateBoard(board, aiColor);
+            }
+
+            const activeColor = isMaximizing ? aiColor : (aiColor === 'red' ? 'black' : 'red');
+            const { moves } = getAllActions(board, activeColor);
             
-            document.getElementById('status').innerText = "謀士推演中...";
+            if (moves.length === 0) {
+                return evaluateBoard(board, aiColor);
+            }
+
+            if (isMaximizing) {
+                let maxEval = -Infinity;
+                for (const move of moves) {
+                    const evalVal = minimax(simulateAction(board, move), depth - 1, alpha, beta, false, aiColor);
+                    maxEval = Math.max(maxEval, evalVal);
+                    alpha = Math.max(alpha, evalVal);
+                    if (beta <= alpha) break;
+                }
+                return maxEval;
+            } else {
+                let minEval = Infinity;
+                for (const move of moves) {
+                    const evalVal = minimax(simulateAction(board, move), depth - 1, alpha, beta, true, aiColor);
+                    minEval = Math.min(minEval, evalVal);
+                    beta = Math.min(beta, evalVal);
+                    if (beta <= alpha) break;
+                }
+                return minEval;
+            }
+        }
+
+        function aiPlay() {
+            if (!state.isGameActive || state.turn !== 'ai' || state.gameMode !== 'pve') return;
+            
+            document.getElementById('status').innerText = "大師推演中...";
 
             setTimeout(() => {
-                const actions = getAllActions(state.board, state.aiColor);
-                if (actions.length === 0) {
+                const { moves, flips } = getAllActions(state.board, state.aiColor);
+                
+                if (moves.length === 0 && flips.length === 0) {
                     state.isGameActive = false;
-                    showMessage({ text: "AI 無路可走，玩家勝！", buttons:[{text:'再開一局', callback:restartGame}]});
+                    showMessage({ text: "棋局終焉，大師認負！", buttons:[{text:'再開一局', callback:restartGame}]});
                     return;
                 }
 
                 let bestAction = null;
                 let bestScore = -Infinity;
 
-                for (let action of actions) {
-                    let actionScore = 0;
+                // Priority 1: High-value captures
+                moves.sort((a, b) => {
+                    const targetA = state.board[a.to];
+                    const targetB = state.board[b.to];
+                    const valA = (!targetA.isEmpty && targetA.isRevealed) ? targetA.piece.value : 0;
+                    const valB = (!targetB.isEmpty && targetB.isRevealed) ? targetB.piece.value : 0;
+                    return valB - valA;
+                });
+
+                // Analyze moves
+                for (const move of moves) {
+                    const target = state.board[move.to];
+                    const attacker = state.board[move.from].piece;
                     
-                    if (action.type === 'flip') {
-                        actionScore = 150 + Math.random() * 50;
-                    } else {
-                        const target = state.board[action.to];
-                        const attacker = state.board[action.from].piece;
-                        const nextBoard = simulateAction(state.board, action);
-                        
-                        actionScore = evaluateBoard(nextBoard, state.aiColor);
-                        if (!target.isEmpty && target.isRevealed) actionScore += target.piece.value * 1.5;
-                        if (isThreatened(action.to, nextBoard, state.playerColor)) actionScore -= attacker.value * 1.2;
-                        if (isThreatened(action.from, state.board, state.playerColor) && !isThreatened(action.to, nextBoard, state.playerColor)) {
-                            actionScore += attacker.value * 0.9;
+                    const nextState = simulateAction(state.board, move);
+                    let score = minimax(nextState, 3, -Infinity, Infinity, false, state.aiColor);
+                    
+                    // Direct capture heavy weight
+                    if (!target.isEmpty && target.isRevealed) {
+                        score += target.piece.value * 2.5;
+                        // Avoid trading high rank for low rank unless necessary
+                        if (target.piece.rank < attacker.rank && isThreatened(move.to, nextState, state.playerColor)) {
+                            score -= attacker.value * 0.5;
                         }
-                        if (attacker.rank === 2 && !target.isEmpty) actionScore += 500;
                     }
 
-                    if (actionScore > bestScore) {
-                        bestScore = actionScore;
-                        bestAction = action;
+                    if (score > bestScore) {
+                        bestScore = score;
+                        bestAction = move;
+                    }
+                }
+
+                // Consider flips only if no good moves or we need to expand options
+                const bestCaptureVal = moves.length > 0 ? (state.board[moves[0].to].isEmpty ? 0 : state.board[moves[0].to].piece.value) : 0;
+
+                // Threshold to flip: if best move is mediocre and we have unrevealed pieces
+                if (flips.length > 0 && (bestScore < 300 || bestCaptureVal < 400 || Math.random() < 0.1)) {
+                    // Only flip if it's not a disaster
+                    flips.sort((a, b) => getMinDistToEnemy(a.idx) - getMinDistToEnemy(b.idx));
+                    
+                    // If no clear high value capture, a flip might be better than a neutral move
+                    if (bestScore < 100 || Math.random() < 0.2) {
+                        bestAction = flips[0];
                     }
                 }
 
@@ -607,15 +678,52 @@
                     if (bestAction.type === 'flip') executeFlip(bestAction.idx, false);
                     else executeMove(bestAction.from, bestAction.to);
                 }
-            }, 600);
+            }, 800);
+        }
+
+        function getMinDistToEnemy(idx) {
+            let minDist = 100;
+            const x = idx % 4;
+            const y = Math.floor(idx / 4);
+            state.board.forEach((c, i) => {
+                if (!c.isEmpty && c.isRevealed && c.piece.color === state.playerColor) {
+                    const ex = i % 4, ey = Math.floor(i / 4);
+                    const d = Math.abs(x - ex) + Math.abs(y - ey);
+                    if (d < minDist) minDist = d;
+                }
+            });
+            return minDist;
         }
 
         function initGame() {
             const deck = [...INITIAL_DECK];
             deck.sort(() => Math.random() - 0.5);
             state.board = deck.map(id => ({ piece: PIECES[id], isRevealed: false, isEmpty: false }));
+            state.isGameActive = false;
             render();
-            updateUI();
+            
+            // Show Mode Selection
+            showMessage({
+                text: "宮廷對弈 · 請選模式",
+                buttons: [
+                    { 
+                        text: '單人對弈 (人機)', 
+                        callback: () => { 
+                            state.gameMode = 'pve'; 
+                            state.isGameActive = true;
+                            updateUI();
+                        } 
+                    },
+                    { 
+                        text: '雙人對弈 (分屏)', 
+                        callback: () => { 
+                            state.gameMode = 'pvp'; 
+                            state.isGameActive = true;
+                            updateUI();
+                        } 
+                    }
+                ]
+            });
         }
 
         function restartGame() {
@@ -628,7 +736,6 @@
             state.lastMoveTarget = -1; 
             state.lastFlipTarget = -1; 
             state.turn = 'player';
-            
             initGame();
         }
 
@@ -681,25 +788,45 @@
 
         function updateUI() {
             const statusEl = document.getElementById('status');
-            if (state.playerColor) {
-                const pName = state.playerColor === 'red' ? '紅方' : '黑方';
-                const aName = state.aiColor === 'red' ? '紅方' : '黑方';
-                const pColor = state.playerColor === 'red' ? '#ff7675' : '#ccc';
-                const aColor = state.aiColor === 'red' ? '#ff7675' : '#ccc';
-                statusEl.innerHTML = `<span style="color:${pColor}">玩家(${pName})</span> ｜ <span style="color:${aColor}">對手</span>`;
-            } else {
-                statusEl.innerText = "開卷有益 · 點擊啟局";
-            }
-            
             const ti = document.getElementById('turn-indicator');
-            if (state.turn === 'player') {
-                ti.innerText = '君子落子';
-                ti.style.color = '#d4af37';
-                ti.style.borderColor = 'rgba(212, 175, 55, 0.6)';
+            
+            if (state.gameMode === 'pve') {
+                if (state.playerColor) {
+                    const pName = state.playerColor === 'red' ? '紅方' : '黑方';
+                    const aName = state.aiColor === 'red' ? '紅方' : '黑方';
+                    const pColor = state.playerColor === 'red' ? '#ff7675' : '#ccc';
+                    const aColor = state.aiColor === 'red' ? '#ff7675' : '#ccc';
+                    statusEl.innerHTML = `<span style="color:${pColor}">君子(${pName})</span> ｜ <span style="color:${aColor}">大師推演</span>`;
+                } else {
+                    statusEl.innerText = "開卷有益 · 點擊啟局";
+                }
+                
+                if (state.turn === 'player') {
+                    ti.innerText = '君子落子';
+                    ti.style.color = '#d4af37';
+                    ti.style.borderColor = 'rgba(212, 175, 55, 0.6)';
+                } else {
+                    ti.innerText = '大師推演';
+                    ti.style.color = '#aaa';
+                    ti.style.borderColor = 'rgba(255, 255, 255, 0.2)';
+                }
             } else {
-                ti.innerText = '謀士推演';
-                ti.style.color = '#aaa';
-                ti.style.borderColor = 'rgba(255, 255, 255, 0.2)';
+                // PvP mode
+                if (state.playerColor) {
+                    const p1Color = state.playerColor === 'red' ? '#ff7675' : '#ccc';
+                    const p2Color = state.aiColor === 'red' ? '#ff7675' : '#ccc';
+                    statusEl.innerHTML = `<span style="color:${p1Color}">玩家1</span> ｜ <span style="color:${p2Color}">玩家2</span>`;
+                } else {
+                    statusEl.innerText = "雙龍戲珠 · 點擊啟局";
+                }
+
+                if (state.turn === 'player') {
+                    ti.innerText = '玩家1 落子';
+                    ti.style.color = '#d4af37';
+                } else {
+                    ti.innerText = '玩家2 落子';
+                    ti.style.color = '#d4af37';
+                }
             }
         }
 
@@ -715,7 +842,7 @@
             const attacker = attackerCell.piece;
             const target = currentBoard[to];
 
-            if (attacker.rank === 2) {
+            if (attacker.rank === 2) { // Cannon
                 if (fromX !== toX && fromY !== toY) return false;
                 let count = 0;
                 if (fromY === toY) { 
@@ -750,7 +877,10 @@
         }
 
         function handlePlayerAction(idx) {
-            if (state.turn !== 'player' || !state.isGameActive) return;
+            if (!state.isGameActive) return;
+            // In PvP both "turns" are player turns. In PvE only 'player' turn is human.
+            if (state.gameMode === 'pve' && state.turn !== 'player') return;
+
             initAudio();
             tryResumeAudio();
 
@@ -762,23 +892,25 @@
                 return;
             }
 
+            const currentColor = (state.turn === 'player') ? state.playerColor : state.aiColor;
+
             if (state.selectedIdx !== -1) {
                 if (isValidMove(state.selectedIdx, idx, state.board)) {
                     executeMove(state.selectedIdx, idx);
-                } else if (!cell.isEmpty && cell.isRevealed && cell.piece.color === state.playerColor) {
+                } else if (!cell.isEmpty && cell.isRevealed && cell.piece.color === currentColor) {
                     state.selectedIdx = (state.selectedIdx === idx) ? -1 : idx;
                     render();
                 } else {
                     state.selectedIdx = -1;
                     render();
                 }
-            } else if (!cell.isEmpty && cell.isRevealed && cell.piece.color === state.playerColor) {
+            } else if (!cell.isEmpty && cell.isRevealed && cell.piece.color === currentColor) {
                 state.selectedIdx = idx;
                 render();
             }
         }
 
-        function executeFlip(idx, isPlayer) {
+        function executeFlip(idx, isHumanInitiated) {
             clearTimeout(state.timers.highlight);
             clearTimeout(state.timers.animationClear);
             
@@ -790,8 +922,15 @@
             playSound('flip');
             
             if (!state.playerColor) {
-                state.playerColor = isPlayer ? state.board[idx].piece.color : (state.board[idx].piece.color === 'red' ? 'black' : 'red');
-                state.aiColor = state.playerColor === 'red' ? 'black' : 'red';
+                // First flip defines colors
+                if (state.gameMode === 'pve') {
+                    state.playerColor = isHumanInitiated ? state.board[idx].piece.color : (state.board[idx].piece.color === 'red' ? 'black' : 'red');
+                    state.aiColor = state.playerColor === 'red' ? 'black' : 'red';
+                } else {
+                    // PvP
+                    state.playerColor = state.board[idx].piece.color;
+                    state.aiColor = state.playerColor === 'red' ? 'black' : 'red';
+                }
                 if (state.bgmPlaying) bgmAudio.play().catch(e=>{});
             }
 
@@ -830,7 +969,7 @@
                 state.turn = state.turn === 'player' ? 'ai' : 'player';
                 render();
                 updateUI();
-                if (state.turn === 'ai') aiPlay();
+                if (state.gameMode === 'pve' && state.turn === 'ai') aiPlay();
             });
         }
 
@@ -842,9 +981,16 @@
                 render();
                 updateUI();
                 const winner = red === 0 ? "黑方" : "紅方";
+                let winText = "";
+                if (state.gameMode === 'pve') {
+                    winText = (state.playerColor === (red === 0 ? 'black' : 'red')) ? "君子棋高一著，凱旋而歸！" : "大師技高一籌，遺憾落敗。";
+                } else {
+                    const p1Won = (state.playerColor === (red === 0 ? 'black' : 'red'));
+                    winText = p1Won ? "玩家1 旗開得勝！" : "玩家2 技冠全場！";
+                }
                 playSound('win');
                 await showMessage({
-                    text: `${winner} 棋高一著，凱旋而歸！`,
+                    text: winText,
                     buttons: [{ text: '再對一局', callback: restartGame }]
                 });
                 return true;
@@ -867,7 +1013,8 @@
                     button.innerText = btn.text;
                     button.onclick = () => {
                         overlay.classList.remove('active');
-                        btn.callback();
+                        if(btn.callback) btn.callback();
+                        resolve();
                     };
                     btnContainer.appendChild(button);
                 });

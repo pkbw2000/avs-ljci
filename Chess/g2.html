@@ -1,381 +1,879 @@
 <!DOCTYPE html>
-<html lang="zh-TW">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-<title>大師級暗棋 · 典雅土金版</title>
+
+<html lang="zh-TW"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" name="viewport"/>
+<title>宮廷書齋 · 大師級暗棋</title>
 <style>
-  :root {
-    --glass-bg: rgba(255, 255, 255, 0.05);
-    --glass-border: rgba(255, 255, 255, 0.08);
-    /* 配合土金色棋盤，調整陰影使其與深色背景完美融合 */
-    --board-shadow: 0 22px 55px rgba(0, 0, 0, 0.65), inset 0 2px 4px rgba(255,255,255,0.15);
-  }
-
-  body { 
-    margin: 0; padding: 0; display: flex; flex-direction: column; align-items: center; justify-content: center;
-    min-height: 100dvh; /* 完美適配 iOS Safari 動態高度 */
-    background: linear-gradient(135deg, #191d24 0%, #090b0e 100%);
-    color: #fff; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-    touch-action: manipulation; overflow: hidden;
-    box-sizing: border-box;
-    padding-bottom: env(safe-area-inset-bottom); /* 預留 iPhone 底部安全區 */
-  }
-
-  /* 頂部 HUD */
-  #hud {
-    width: min(86vw, 340px, 40dvh);
-    display: flex; justify-content: space-between; align-items: center;
-    margin-bottom: 14px; padding: 10px 14px; 
-    background: var(--glass-bg); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
-    border: 1px solid var(--glass-border); border-radius: 16px;
-    box-shadow: 0 10px 30px rgba(0,0,0,0.3);
-  }
-  .hud-box { display: flex; flex-direction: column; gap: 2px; }
-  .hud-label { font-size: 0.7rem; color: rgba(255,255,255,0.4); font-weight: 600; letter-spacing: 0.05em; }
-  .hud-val { font-size: 0.95rem; font-weight: 800; text-shadow: 0 2px 4px rgba(0,0,0,0.3); }
-  
-  #turn-indicator { 
-    padding: 5px 12px; border-radius: 12px; font-size: 0.8rem; font-weight: 700; 
-    border: 1px solid rgba(255,255,255,0.12);
-    box-shadow: 0 4px 10px rgba(0,0,0,0.2);
-    transition: all 0.3s ease;
-  }
-
-  /* 核心棋盤：完美改回質感土金色 (帶有細緻的向心漸層) */
-  #board {
-    display: grid; grid-template-columns: repeat(4, 1fr); grid-template-rows: repeat(8, 1fr);
-    gap: 8px; padding: 12px; 
-    background: radial-gradient(circle at center, #c29d53 0%, #9c7a36 100%);
-    border: 2px solid #806226;
-    border-radius: 24px; box-shadow: var(--board-shadow);
-    width: min(86vw, 340px, 40dvh); 
-    aspect-ratio: 4 / 8; /* 嚴格鎖定 1:2 棋盤比例，絕不溢出螢幕 */
-  }
-  
-  /* 下沉式棋格：配合土金棋盤，內凹孔洞改為深沉的暗焦金色調 */
-  .cell {
-    background: #4a3814; border-radius: 50%; 
-    display: flex; justify-content: center; align-items: center; position: relative;
-    box-shadow: inset 0 4px 8px rgba(0,0,0,0.65), inset 0 -1px 2px rgba(255,255,255,0.08);
-    border: 1px solid #36280b;
-  }
-
-  /* 棋子 3D 實體質感 */
-  .piece {
-    width: 92%; height: 92%; border-radius: 50%; display: flex; 
-    justify-content: center; align-items: center; 
-    font-size: 1.4rem; font-weight: 900; 
-    cursor: pointer; user-select: none; position: relative;
-    transform-style: preserve-3d;
-    transition: transform 0.22s cubic-bezier(0.175, 0.885, 0.32, 1.275), box-shadow 0.22s;
-  }
-  
-  /* 未翻開：復古暗金屬徽章 */
-  .unrevealed { 
-    background: radial-gradient(circle at 30% 30%, #424957 0%, #292e38 60%, #161a22 100%);
-    border: 1px solid rgba(255,255,255,0.1);
-    box-shadow: 
-      0 1px 0 #12151c, 0 2px 0 #0e1116, 0 3px 0 #0a0c10, 0 4px 0 #06070a,
-      0 6px 12px rgba(0,0,0,0.65), inset 0 2px 3px rgba(255,255,255,0.18);
-    transform: translateY(-4px);
-  }
-  .unrevealed::after { content: '?'; color: rgba(255,255,255,0.1); font-size: 1.1rem; }
-  .unrevealed:active { 
-    transform: translateY(-1px);
-    box-shadow: 0 1px 0 #0a0c10, 0 2px 5px rgba(0,0,0,0.5), inset 0 2px 3px rgba(255,255,255,0.1);
-  }
-
-  /* 已翻開：球面擬真象牙瓷磚 */
-  .revealed { 
-    background: radial-gradient(circle at 30% 30%, #ffffff 0%, #f7f7f7 45%, #e2e2e2 85%, #d6d6d6 100%);
-    transform: translateY(-4px);
-  }
-  
-  /* 紅方陣營：棋字改為高級「灰藍色」，外框保留紅色光暈以利識別 */
-  .red { 
-    color: #3a506b; /* 完美灰藍色 */
-    border: 2px solid #e74c3c;
-    box-shadow: 
-      0 1px 0 #c2c2c2, 0 2px 0 #b0b0b0, 0 3px 0 #9e9e9e, 0 4px 0 #8c8c8c,
-      0 7px 14px rgba(231, 76, 60, 0.35), inset 0 2px 4px rgba(255,255,255,1);
-    text-shadow: 1px 1px 1px rgba(255,255,255,0.8), -1px -1px 1px rgba(0,0,0,0.15);
-  }
-  
-  /* 黑方陣營：棋字改為高級「灰藍色」，搭配深邃鐵灰藍外框 */
-  .black { 
-    color: #3a506b; /* 完美灰藍色 */
-    border: 2px solid #57606f;
-    box-shadow: 
-      0 1px 0 #c2c2c2, 0 2px 0 #b0b0b0, 0 3px 0 #9e9e9e, 0 4px 0 #8c8c8c,
-      0 7px 14px rgba(0, 0, 0, 0.45), inset 0 2px 4px rgba(255,255,255,1);
-    text-shadow: 1px 1px 1px rgba(255,255,255,0.8), -1px -1px 1px rgba(0,0,0,0.2);
-  }
-  
-  /* 選中拔高狀態 */
-  .selected { transform: scale(1.03) translateY(-12px) !important; z-index: 50; }
-  .selected.red { 
-    box-shadow: 
-      0 1px 0 #cc6666, 0 3px 0 #b35959, 0 5px 0 #994d4d, 0 7px 0 #804040,
-      0 16px 28px rgba(231, 76, 60, 0.5), inset 0 2px 5px rgba(255,255,255,1);
-  }
-  .selected.black { 
-    box-shadow: 
-      0 1px 0 #777, 0 3px 0 #555, 0 5px 0 #444, 0 7px 0 #333,
-      0 16px 28px rgba(0, 0, 0, 0.55), inset 0 2px 5px rgba(255,255,255,1);
-  }
-</style>
-</head>
-<body>
-
-<div id="hud">
-  <div class="hud-box">
-    <span class="hud-label">對弈陣營</span>
-    <span id="status" class="hud-val">點擊棋子開局</span>
-  </div>
-  <div id="turn-indicator">初始化中</div>
-</div>
-
-<div id="board"></div>
-
-<script>
-const PIECES = {
-  R_K: { name: '帥', color: 'red', rank: 7 }, R_A: { name: '仕', color: 'red', rank: 6 },
-  R_E: { name: '相', color: 'red', rank: 5 }, R_R: { name: '俥', color: 'red', rank: 4 },
-  R_H: { name: '傌', color: 'red', rank: 3 }, R_C: { name: '炮', color: 'red', rank: 2 },
-  R_P: { name: '兵', color: 'red', rank: 1 }, B_K: { name: '將', color: 'black', rank: 7 },
-  B_A: { name: '士', color: 'black', rank: 6 }, B_E: { name: '象', color: 'black', rank: 5 },
-  B_R: { name: '車', color: 'black', rank: 4 }, B_H: { name: '馬', color: 'black', rank: 3 },
-  B_C: { name: '砲', color: 'black', rank: 2 }, B_P: { name: '卒', color: 'black', rank: 1 }
-};
-
-let deck = [
-  'R_K','R_A','R_A','R_E','R_E','R_R','R_R','R_H','R_H','R_C','R_C','R_P','R_P','R_P','R_P','R_P',
-  'B_K','B_A','B_A','B_E','B_E','B_R','B_R','B_H','B_H','B_C','B_C','B_P','B_P','B_P','B_P','B_P'
-];
-
-let board = [];
-let turn = 'player';
-let playerColor = null;
-let aiColor = null;
-let selectedIdx = -1;
-let isGameActive = true;
-
-function initGame() {
-  deck.sort(() => Math.random() - 0.5);
-  board = deck.map(id => ({ piece: PIECES[id], isRevealed: false, isEmpty: false }));
-  render();
-  updateUI();
-}
-
-function render() {
-  const boardEl = document.getElementById('board');
-  boardEl.innerHTML = '';
-  board.forEach((cell, idx) => {
-    const div = document.createElement('div');
-    div.className = 'cell';
-    div.onclick = () => handlePlayerAction(idx);
-    
-    if (!cell.isEmpty) {
-      const pieceDiv = document.createElement('div');
-      if (cell.isRevealed) {
-        pieceDiv.className = `piece revealed ${cell.piece.color} ${idx === selectedIdx ? 'selected' : ''}`;
-        pieceDiv.innerText = cell.piece.name;
-      } else {
-        pieceDiv.className = 'piece unrevealed';
-      }
-      div.appendChild(pieceDiv);
-    }
-    boardEl.appendChild(div);
-  });
-}
-
-function updateUI() {
-  if (playerColor) {
-    const pStr = playerColor === 'red' ? '<span style="color:#ff7675">紅方</span>' : '<span style="color:#9aa0a6">灰藍</span>';
-    const aStr = aiColor === 'red' ? '<span style="color:#ff7675">紅方</span>' : '<span style="color:#9aa0a6">灰藍</span>';
-    document.getElementById('status').innerHTML = `您:${pStr} ｜ AI:${aStr}`;
-  }
-  
-  const ti = document.getElementById('turn-indicator');
-  if (turn === 'player') {
-    ti.innerText = playerColor ? '您的回合' : '首翻開局';
-    ti.style.background = 'rgba(46, 204, 113, 0.15)';
-    ti.style.color = '#2ecc71';
-    ti.style.borderColor = 'rgba(46, 204, 113, 0.3)';
-  } else {
-    ti.innerText = 'AI 思考中';
-    ti.style.background = 'rgba(230, 126, 34, 0.15)';
-    ti.style.color = '#e67e22';
-    ti.style.borderColor = 'rgba(230, 126, 34, 0.3)';
-  }
-}
-
-function isValidMove(from, to, currentBoard) {
-  if (from === to) return false; 
-
-  const dx = Math.abs((from % 4) - (to % 4));
-  const dy = Math.abs(Math.floor(from / 4) - Math.floor(to / 4));
-  const attacker = currentBoard[from].piece;
-  const target = currentBoard[to];
-
-  if (attacker.rank === 2) { 
-    if (dx !== 0 && dy !== 0) return false; 
-    let count = 0;
-    let step = (dy === 0) ? (to > from ? 1 : -1) : (to > from ? 4 : -4);
-    for (let i = from + step; i !== to; i += step) {
-      if (!currentBoard[i].isEmpty) count++;
-    }
-    if (count === 0 && target.isEmpty && (dx + dy === 1)) return true;
-    if (count === 1 && !target.isEmpty && target.isRevealed && target.piece.color !== attacker.color) return true;
-    return false;
-  } else {
-    if (dx + dy !== 1) return false; 
-    if (target.isEmpty) return true; 
-    if (!target.isRevealed) return false; 
-    if (target.piece.color === attacker.color) return false; 
-    
-    if (attacker.rank === 7 && target.piece.rank === 1) return false;
-    if (attacker.rank === 1 && target.piece.rank === 7) return true;
-    return attacker.rank >= target.piece.rank;
-  }
-}
-
-function handlePlayerAction(idx) {
-  if (turn !== 'player' || !isGameActive) return;
-  const cell = board[idx];
-
-  if (!cell.isEmpty && !cell.isRevealed) {
-    if (selectedIdx !== -1) { selectedIdx = -1; render(); return; }
-    executeFlip(idx, true);
-  } 
-  else if (!cell.isEmpty && cell.isRevealed && cell.piece.color === playerColor) {
-    selectedIdx = idx === selectedIdx ? -1 : idx; 
-    render();
-  } 
-  else if (selectedIdx !== -1) {
-    if (isValidMove(selectedIdx, idx, board)) {
-      executeMove(selectedIdx, idx);
-    } else {
-      selectedIdx = -1;
-      render();
-    }
-  }
-}
-
-function executeFlip(idx, isPlayer) {
-  board[idx].isRevealed = true;
-  if (!playerColor) {
-    playerColor = isPlayer ? board[idx].piece.color : (board[idx].piece.color === 'red' ? 'black' : 'red');
-    aiColor = playerColor === 'red' ? 'black' : 'red';
-  }
-  endTurn();
-}
-
-function executeMove(from, to) {
-  board[to] = board[from];
-  board[from] = { isEmpty: true };
-  endTurn();
-}
-
-function endTurn() {
-  selectedIdx = -1;
-  checkWin();
-  if (!isGameActive) return;
-  turn = turn === 'player' ? 'ai' : 'player';
-  render();
-  updateUI();
-  if (turn === 'ai') setTimeout(aiPlay, 500); 
-}
-
-function checkWin() {
-  let red = 0, black = 0;
-  board.forEach(c => {
-    if (!c.isEmpty) c.piece.color === 'red' ? red++ : black++;
-  });
-  if (red === 0 || black === 0) {
-    isGameActive = false;
-    render();
-    setTimeout(() => alert(red === 0 ? "灰藍方獲勝！" : "紅方獲勝！"), 100);
-  }
-}
-
-function isThreatenedByEnemy(targetIdx, myColor) {
-  for (let i = 0; i < 32; i++) {
-    const c = board[i];
-    if (!c.isEmpty && c.isRevealed && c.piece.color !== myColor) {
-      if (isValidMove(i, targetIdx, board)) return true;
-    }
-  }
-  return false;
-}
-
-function aiPlay() {
-  if (!isGameActive) return;
-  let unrevealed = [];
-  let myPieces = [];
-  
-  board.forEach((c, i) => {
-    if (!c.isEmpty) {
-      if (!c.isRevealed) unrevealed.push(i);
-      else if (aiColor && c.piece.color === aiColor) myPieces.push(i);
-    }
-  });
-
-  let actions = [];
-
-  if (unrevealed.length > 0) {
-    const rIdx = unrevealed[Math.floor(Math.random() * unrevealed.length)];
-    actions.push({ type: 'flip', idx: rIdx, score: 14 + Math.random() * 5 });
-  }
-
-  if (aiColor) {
-    for (let from of myPieces) {
-      for (let to = 0; to < 32; to++) {
-        if (isValidMove(from, to, board)) {
-          let score = 2; 
-          let target = board[to];
-          
-          if (!target.isEmpty) {
-            score += target.piece.rank * 12;
-            if (target.piece.rank === 7) score += 500;
-          }
-          
-          if (isThreatenedByEnemy(from, aiColor)) {
-            score += board[from].piece.rank * 10;
-          }
-          
-          let tempFrom = board[from];
-          let tempTo = board[to];
-          board[from] = { isEmpty: true };
-          board[to] = tempFrom;
-          
-          if (isThreatenedByEnemy(to, aiColor)) {
-            score -= tempFrom.piece.rank * 18; 
-          }
-          
-          board[from] = tempFrom;
-          board[to] = tempTo;
-          
-          actions.push({ type: 'move', from, to, score: score + Math.random() });
+        :root {
+            --crimson: #8b0000;
+            --gold: #d4af37;
+            --gold-bright: #f1d592;
+            --ebony: #1a1410;
+            --jade: #2d5a27;
+            --ivory: #fdf5e6;
+            --wood-dark: #3d2517;
+            --wood-light: #5d3a24;
+            --target-green: rgba(45, 90, 39, 0.7);
         }
-      }
-    }
-  }
 
-  actions.sort((a, b) => b.score - a.score);
-  let best = actions[0];
-  
-  if (!best || best.score < -100) { 
-    alert("AI 判斷無路可走，玩家獲勝！"); 
-    isGameActive = false; return; 
-  }
+        body {
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100dvh;
+            background-color: var(--ebony);
+            background-image: 
+                radial-gradient(circle at center, transparent 0%, rgba(0,0,0,0.4) 100%),
+                repeating-linear-gradient(0deg, rgba(255,255,255,0.03) 0px, rgba(255,255,255,0.03) 1px, transparent 1px, transparent 2px),
+                linear-gradient(to bottom, #2c1a12, #1a0f0a);
+            color: #fdf5e6;
+            font-family: "PingFang TC", "Hiragino Sans GB", "Microsoft JhengHei", "STKaiti", serif;
+            touch-action: manipulation;
+            overflow: hidden;
+            box-sizing: border-box;
+            padding-bottom: env(safe-area-inset-bottom);
+        }
 
-  if (best.type === 'flip') executeFlip(best.idx, false);
-  else executeMove(best.from, best.to);
-}
+        /* HUD - 漆器風格 */
+        #hud {
+            width: min(92vw, 380px);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding: 10px 24px;
+            background: linear-gradient(135deg, #2c0e0e 0%, #1a0505 100%);
+            border: 2px solid var(--gold);
+            border-radius: 40px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.6), inset 0 0 15px rgba(212, 175, 55, 0.2);
+            position: relative;
+            gap: 8px;
+        }
+        
+        #hud::before, #hud::after {
+            content: '✥';
+            color: var(--gold);
+            font-size: 1.1rem;
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+        }
+        #hud::before { left: 8px; }
+        #hud::after { right: 8px; }
 
-initGame();
-</script>
-</body>
-</html>
+        .hud-box {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            flex-shrink: 1;
+            min-width: 0;
+        }
+        .hud-label {
+            font-size: 0.65rem;
+            color: var(--gold-bright);
+            letter-spacing: 0.1em;
+            margin-bottom: 1px;
+            white-space: nowrap;
+        }
+        .hud-val {
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: #fff;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 120px;
+        }
+
+        #turn-indicator {
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 700;
+            border: 1px solid rgba(212, 175, 55, 0.4);
+            background: rgba(0,0,0,0.4);
+            transition: all 0.3s ease;
+            white-space: nowrap;
+        }
+
+        /* BGM Toggle Button */
+        #bgm-toggle {
+            background: transparent;
+            border: 1px solid var(--gold);
+            color: var(--gold);
+            border-radius: 50%;
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            cursor: pointer;
+            flex-shrink: 0;
+            transition: all 0.2s ease;
+            padding: 0;
+            position: relative;
+        }
+        #bgm-toggle.muted {
+            opacity: 0.4;
+            color: #888;
+            border-color: #555;
+        }
+        #bgm-toggle.muted::after {
+            content: '';
+            position: absolute;
+            width: 20px;
+            height: 2px;
+            background: #888;
+            transform: rotate(45deg);
+        }
+
+        /* ===== 棋盤 · 深色名貴木材風格 ===== */
+        #board-container {
+            position: relative;
+            padding: 10px;
+            background: var(--wood-dark);
+            border: 6px solid #2a1810;
+            border-radius: 12px;
+            box-shadow: 0 25px 60px rgba(0,0,0,0.8);
+        }
+
+        #board {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            grid-template-rows: repeat(8, 1fr);
+            gap: 4px;
+            background: #1a0f0a;
+            padding: 8px;
+            width: min(85vw, 320px, 42dvh);
+            aspect-ratio: 4 / 8;
+            position: relative;
+            z-index: 1;
+        }
+
+        .corner {
+            position: absolute;
+            width: 30px;
+            height: 30px;
+            border: 2px solid var(--gold);
+            pointer-events: none;
+            z-index: 10;
+        }
+        .tl { top: -5px; left: -5px; border-right: none; border-bottom: none; }
+        .tr { top: -5px; right: -5px; border-left: none; border-bottom: none; }
+        .bl { bottom: -5px; left: -5px; border-right: none; border-top: none; }
+        .br { bottom: -5px; right: -5px; border-left: none; border-top: none; }
+
+        .cell {
+            background: linear-gradient(145deg, #4d2f1d, #331e13);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+            box-shadow: inset 0 4px 8px rgba(0,0,0,0.5);
+            width: 100%;
+            height: 100%;
+            box-sizing: border-box;
+            overflow: visible;
+        }
+
+        .cell.valid-move::after, .cell.valid-capture::after {
+            content: '';
+            width: 88%;
+            height: 88%;
+            border: 3px solid var(--gold);
+            border-radius: 50%;
+            animation: pulse 1.2s infinite ease-in-out;
+            pointer-events: none;
+            position: absolute;
+            z-index: 20; 
+            box-shadow: 0 0 15px var(--gold);
+        }
+        
+        .cell.valid-capture::after {
+            border-color: #ff4757;
+            box-shadow: 0 0 20px #ff4757;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(0.9); opacity: 0.5; }
+            50% { transform: scale(1.05); opacity: 1; }
+            100% { transform: scale(0.9); opacity: 0.5; }
+        }
+
+        .cell-highlight {
+            background: linear-gradient(145deg, #5d422a, #3d2a1a) !important;
+        }
+        .cell-highlight::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            border: 2px solid var(--gold);
+            opacity: 0.6;
+            z-index: 1;
+        }
+
+        .piece {
+            width: 88%;
+            height: 88%;
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 1.6rem;
+            font-weight: 700;
+            font-family: 'STKaiti', 'KaiTi', serif;
+            cursor: pointer;
+            user-select: none;
+            position: absolute;
+            transition: box-shadow 0.25s, transform 0.2s;
+            z-index: 5;
+        }
+
+        .unrevealed {
+            background: radial-gradient(circle at 35% 35%, #3d7e36 0%, #1e421a 100%);
+            border: 1px solid #142b11;
+            box-shadow: 
+                0 4px 8px rgba(0,0,0,0.6),
+                inset 0 2px 4px rgba(255,255,255,0.2);
+        }
+
+        .revealed {
+            background: linear-gradient(145deg, #fffcf5, #e8dfcc);
+            box-shadow: 0 4px 10px rgba(0,0,0,0.4);
+            border: 1px solid #d4cbb4;
+        }
+
+        .red {
+            color: #b01a1a;
+            border: 2px solid #b01a1a;
+        }
+
+        .black {
+            color: #1a1a1a;
+            border: 2px solid #1a1a1a;
+        }
+
+        .selected {
+            transform: scale(1.1) translateY(-10px) !important;
+            box-shadow: 
+                0 15px 30px rgba(0,0,0,0.6),
+                0 0 15px var(--gold-bright) !important;
+            z-index: 50 !important;
+            animation: none !important;
+        }
+
+        @keyframes flipReveal {
+            0% { transform: rotateY(180deg) scale(0.8); opacity: 0.5; }
+            100% { transform: rotateY(0deg) scale(1); opacity: 1; }
+        }
+        .animate-flip {
+            animation: flipReveal 0.45s ease-out forwards;
+        }
+
+        @keyframes popIn {
+            0% { transform: scale(0.5); opacity: 0; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+        .animate-pop {
+            animation: popIn 0.3s ease-out forwards;
+        }
+
+        /* ===== 自定義訊息遮罩 - 聖旨風格 ===== */
+        #message-overlay {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0, 0, 0, 0.85);
+            backdrop-filter: blur(5px);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+        #message-overlay.active { display: flex; }
+
+        .message-card {
+            background: #fdf5e6;
+            padding: 40px 30px;
+            border-left: 15px solid var(--crimson);
+            border-right: 15px solid var(--crimson);
+            text-align: center;
+            color: #333;
+            max-width: 80%;
+            width: 320px;
+            box-shadow: 0 20px 60px rgba(0,0,0,1);
+            position: relative;
+        }
+        .message-card::before, .message-card::after {
+            content: '🏮';
+            position: absolute;
+            top: -15px;
+            font-size: 1.5rem;
+        }
+        .message-card::before { left: 10px; }
+        .message-card::after { right: 10px; }
+
+        .message-card p {
+            font-family: 'STKaiti', serif;
+            font-size: 1.8rem;
+            margin: 0 0 30px;
+            font-weight: 700;
+            color: var(--crimson);
+            letter-spacing: 2px;
+        }
+        #message-buttons {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+        }
+        #message-buttons button {
+            background: var(--crimson);
+            border: 2px solid var(--gold);
+            color: var(--gold);
+            padding: 10px 25px;
+            border-radius: 4px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+        #message-buttons button:active { transform: scale(0.95); }
+    </style>
+</head>
+<body onclick="tryResumeAudio()">
+<audio id="main-bgm" loop="" preload="auto">
+<source src="https://assets.mixkit.co/music/preview/mixkit-serene-view-of-nature-instrumental-1134.mp3" type="audio/mpeg"/>
+</audio>
+<div id="message-overlay">
+<div class="message-card">
+<p id="message-text">訊息</p>
+<div id="message-buttons"></div>
+</div>
+</div>
+<div id="hud">
+<div class="hud-box">
+<span class="hud-label">對弈局勢</span>
+<span class="hud-val" id="status">開卷有益 · 點擊啟局</span>
+</div>
+<div style="display: flex; align-items: center; gap: 8px; flex-shrink: 0;">
+<div id="turn-indicator">墨香初現</div>
+<button class="muted" id="bgm-toggle" title="音樂開關">♫</button>
+</div>
+</div>
+<div id="board-container">
+<div class="corner tl"></div>
+<div class="corner tr"></div>
+<div class="corner bl"></div>
+<div class="corner br"></div>
+<div id="board"></div>
+</div>
+<script>
+        const PIECES = {
+            R_K: { name: '帥', color: 'red', rank: 7, value: 5000 },
+            R_A: { name: '仕', color: 'red', rank: 6, value: 900 },
+            R_E: { name: '相', color: 'red', rank: 5, value: 800 },
+            R_R: { name: '俥', color: 'red', rank: 4, value: 700 },
+            R_H: { name: '傌', color: 'red', rank: 3, value: 600 },
+            R_C: { name: '炮', color: 'red', rank: 2, value: 1200 },
+            R_P: { name: '兵', color: 'red', rank: 1, value: 300 },
+            B_K: { name: '將', color: 'black', rank: 7, value: 5000 },
+            B_A: { name: '士', color: 'black', rank: 6, value: 900 },
+            B_E: { name: '象', color: 'black', rank: 5, value: 800 },
+            B_R: { name: '車', color: 'black', rank: 4, value: 700 },
+            B_H: { name: '馬', color: 'black', rank: 3, value: 600 },
+            B_C: { name: '砲', color: 'black', rank: 2, value: 1200 },
+            B_P: { name: '卒', color: 'black', rank: 1, value: 300 }
+        };
+
+        const INITIAL_DECK = [
+            'R_K', 'R_A', 'R_A', 'R_E', 'R_E', 'R_R', 'R_R', 'R_H', 'R_H', 'R_C', 'R_C',
+            'R_P', 'R_P', 'R_P', 'R_P', 'R_P',
+            'B_K', 'B_A', 'B_A', 'B_E', 'B_E', 'B_R', 'B_R', 'B_H', 'B_H', 'B_C', 'B_C',
+            'B_P', 'B_P', 'B_P', 'B_P', 'B_P'
+        ];
+
+        // Game State
+        const state = {
+            audioCtx: null,
+            bgmPlaying: false,
+            board: [],
+            turn: 'player',
+            playerColor: null,
+            aiColor: null,
+            selectedIdx: -1,
+            isGameActive: true,
+            highlightCells: [],
+            lastMoveTarget: -1,
+            lastFlipTarget: -1,
+            timers: {
+                highlight: null,
+                animationClear: null
+            }
+        };
+
+        const bgmAudio = document.getElementById('main-bgm');
+
+        function initAudio() {
+            if (!state.audioCtx) {
+                state.audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            }
+            if (state.audioCtx.state === 'suspended') {
+                state.audioCtx.resume();
+            }
+        }
+
+        function tryResumeAudio() {
+            if (state.bgmPlaying && bgmAudio.paused) {
+                bgmAudio.play().catch(e => {});
+            }
+        }
+
+        document.getElementById('bgm-toggle').onclick = (e) => {
+            e.stopPropagation();
+            initAudio();
+            state.bgmPlaying = !state.bgmPlaying;
+            
+            const btn = document.getElementById('bgm-toggle');
+            if (state.bgmPlaying) {
+                btn.classList.remove('muted');
+                bgmAudio.volume = 0.4;
+                bgmAudio.play().catch(err => {});
+            } else {
+                btn.classList.add('muted');
+                bgmAudio.pause();
+            }
+        };
+
+        function playSound(type) {
+            try {
+                initAudio();
+                const osc = state.audioCtx.createOscillator();
+                const gain = state.audioCtx.createGain();
+                osc.connect(gain);
+                gain.connect(state.audioCtx.destination);
+                gain.gain.value = 0.1;
+
+                if (type === 'flip') {
+                    osc.frequency.value = 880;
+                    gain.gain.exponentialRampToValueAtTime(0.01, state.audioCtx.currentTime + 0.12);
+                    osc.start(state.audioCtx.currentTime);
+                    osc.stop(state.audioCtx.currentTime + 0.12);
+                } else if (type === 'move') {
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(600, state.audioCtx.currentTime);
+                    osc.frequency.exponentialRampToValueAtTime(400, state.audioCtx.currentTime + 0.1);
+                    gain.gain.setValueAtTime(0.1, state.audioCtx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.01, state.audioCtx.currentTime + 0.1);
+                    osc.start(state.audioCtx.currentTime);
+                    osc.stop(state.audioCtx.currentTime + 0.1);
+                } else if (type === 'capture') {
+                    osc.type = 'square';
+                    osc.frequency.setValueAtTime(400, state.audioCtx.currentTime);
+                    osc.frequency.exponentialRampToValueAtTime(150, state.audioCtx.currentTime + 0.15);
+                    gain.gain.setValueAtTime(0.15, state.audioCtx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.001, state.audioCtx.currentTime + 0.15);
+                    osc.start(state.audioCtx.currentTime);
+                    osc.stop(state.audioCtx.currentTime + 0.15);
+                } else if (type === 'win') {
+                    const notes = [523, 659, 784, 1047];
+                    notes.forEach((freq, i) => {
+                        const o = state.audioCtx.createOscillator();
+                        const g = state.audioCtx.createGain();
+                        o.connect(g);
+                        g.connect(state.audioCtx.destination);
+                        g.gain.value = 0.08;
+                        o.frequency.value = freq;
+                        g.gain.exponentialRampToValueAtTime(0.01, state.audioCtx.currentTime + 0.25 + i * 0.18);
+                        o.start(state.audioCtx.currentTime + i * 0.18);
+                        o.stop(state.audioCtx.currentTime + 0.25 + i * 0.18);
+                    });
+                }
+            } catch(e) {}
+        }
+
+        // --- Logic Functions ---
+
+        function evaluateBoard(boardState, color) {
+            let score = 0;
+            const oppColor = color === 'red' ? 'black' : 'red';
+            
+            boardState.forEach((cell, idx) => {
+                if (cell.isEmpty) return;
+                
+                if (cell.isRevealed) {
+                    const val = cell.piece.value;
+                    if (cell.piece.color === color) {
+                        score += val;
+                        const x = idx % 4;
+                        const y = Math.floor(idx / 4);
+                        score += (1.5 - Math.abs(1.5 - x)) * 10;
+                        score += (3.5 - Math.abs(3.5 - y)) * 10;
+                        if (isThreatened(idx, boardState, oppColor)) score -= val * 0.85;
+                    } else {
+                        score -= val;
+                        if (isThreatened(idx, boardState, color)) score += val * 0.7;
+                    }
+                } else {
+                    score += 5;
+                }
+            });
+            return score;
+        }
+
+        function isThreatened(idx, boardState, attackerColor) {
+            for (let i = 0; i < 32; i++) {
+                if (!boardState[i].isEmpty && boardState[i].isRevealed && boardState[i].piece.color === attackerColor) {
+                    if (isValidMove(i, idx, boardState)) return true;
+                }
+            }
+            return false;
+        }
+
+        function getAllActions(boardState, color) {
+            const actions = [];
+            boardState.forEach((c, from) => {
+                if (!c.isEmpty) {
+                    if (!c.isRevealed) {
+                        actions.push({ type: 'flip', idx: from });
+                    } else if (c.piece.color === color) {
+                        for (let to = 0; to < 32; to++) {
+                            if (isValidMove(from, to, boardState)) {
+                                actions.push({ type: 'move', from, to });
+                            }
+                        }
+                    }
+                }
+            });
+            return actions;
+        }
+
+        function simulateAction(boardState, action) {
+            const newBoard = boardState.map(c => ({ ...c }));
+            if (action.type === 'flip') {
+                newBoard[action.idx].isRevealed = true;
+            } else if (action.type === 'move') {
+                newBoard[action.to] = { ...newBoard[action.from] };
+                newBoard[action.from] = { isEmpty: true };
+            }
+            return newBoard;
+        }
+
+        function aiPlay() {
+            if (!state.isGameActive || state.turn !== 'ai') return;
+            
+            document.getElementById('status').innerText = "謀士推演中...";
+
+            setTimeout(() => {
+                const actions = getAllActions(state.board, state.aiColor);
+                if (actions.length === 0) {
+                    state.isGameActive = false;
+                    showMessage({ text: "AI 無路可走，玩家勝！", buttons:[{text:'再開一局', callback:restartGame}]});
+                    return;
+                }
+
+                let bestAction = null;
+                let bestScore = -Infinity;
+
+                for (let action of actions) {
+                    let actionScore = 0;
+                    
+                    if (action.type === 'flip') {
+                        actionScore = 150 + Math.random() * 50;
+                    } else {
+                        const target = state.board[action.to];
+                        const attacker = state.board[action.from].piece;
+                        const nextBoard = simulateAction(state.board, action);
+                        
+                        actionScore = evaluateBoard(nextBoard, state.aiColor);
+                        if (!target.isEmpty && target.isRevealed) actionScore += target.piece.value * 1.5;
+                        if (isThreatened(action.to, nextBoard, state.playerColor)) actionScore -= attacker.value * 1.2;
+                        if (isThreatened(action.from, state.board, state.playerColor) && !isThreatened(action.to, nextBoard, state.playerColor)) {
+                            actionScore += attacker.value * 0.9;
+                        }
+                        if (attacker.rank === 2 && !target.isEmpty) actionScore += 500;
+                    }
+
+                    if (actionScore > bestScore) {
+                        bestScore = actionScore;
+                        bestAction = action;
+                    }
+                }
+
+                if (bestAction) {
+                    if (bestAction.type === 'flip') executeFlip(bestAction.idx, false);
+                    else executeMove(bestAction.from, bestAction.to);
+                }
+            }, 600);
+        }
+
+        function initGame() {
+            const deck = [...INITIAL_DECK];
+            deck.sort(() => Math.random() - 0.5);
+            state.board = deck.map(id => ({ piece: PIECES[id], isRevealed: false, isEmpty: false }));
+            render();
+            updateUI();
+        }
+
+        function restartGame() {
+            Object.values(state.timers).forEach(t => t && clearTimeout(t));
+            state.playerColor = null; 
+            state.aiColor = null; 
+            state.selectedIdx = -1;
+            state.isGameActive = true; 
+            state.highlightCells = [];
+            state.lastMoveTarget = -1; 
+            state.lastFlipTarget = -1; 
+            state.turn = 'player';
+            
+            initGame();
+        }
+
+        function clearAnimationFlags() {
+            state.lastMoveTarget = -1;
+            state.lastFlipTarget = -1;
+            render();
+        }
+
+        function render() {
+            const boardEl = document.getElementById('board');
+            boardEl.innerHTML = '';
+
+            let validMoves = [];
+            if (state.selectedIdx !== -1 && !state.board[state.selectedIdx].isEmpty && state.board[state.selectedIdx].isRevealed) {
+                validMoves = getValidMoves(state.selectedIdx);
+            }
+
+            state.board.forEach((cell, idx) => {
+                const div = document.createElement('div');
+                div.className = 'cell';
+                
+                if (validMoves.includes(idx)) {
+                    const targetCell = state.board[idx];
+                    const isCapture = !targetCell.isEmpty && targetCell.isRevealed;
+                    div.classList.add(isCapture ? 'valid-capture' : 'valid-move');
+                }
+                
+                if (state.highlightCells.includes(idx)) div.classList.add('cell-highlight');
+                div.onclick = () => handlePlayerAction(idx);
+
+                if (!cell.isEmpty) {
+                    const pieceDiv = document.createElement('div');
+                    let pieceClass = `piece ${cell.isRevealed ? 'revealed' : 'unrevealed'}`;
+                    
+                    if (cell.isRevealed) {
+                        pieceClass += ` ${cell.piece.color}`;
+                        if (idx === state.selectedIdx) pieceClass += ' selected';
+                        if (idx === state.lastMoveTarget) pieceClass += ' animate-pop';
+                        if (idx === state.lastFlipTarget) pieceClass += ' animate-flip';
+                        pieceDiv.innerText = cell.piece.name;
+                    }
+
+                    pieceDiv.className = pieceClass;
+                    div.appendChild(pieceDiv);
+                }
+                boardEl.appendChild(div);
+            });
+        }
+
+        function updateUI() {
+            const statusEl = document.getElementById('status');
+            if (state.playerColor) {
+                const pName = state.playerColor === 'red' ? '紅方' : '黑方';
+                const aName = state.aiColor === 'red' ? '紅方' : '黑方';
+                const pColor = state.playerColor === 'red' ? '#ff7675' : '#ccc';
+                const aColor = state.aiColor === 'red' ? '#ff7675' : '#ccc';
+                statusEl.innerHTML = `<span style="color:${pColor}">玩家(${pName})</span> ｜ <span style="color:${aColor}">對手</span>`;
+            } else {
+                statusEl.innerText = "開卷有益 · 點擊啟局";
+            }
+            
+            const ti = document.getElementById('turn-indicator');
+            if (state.turn === 'player') {
+                ti.innerText = '君子落子';
+                ti.style.color = '#d4af37';
+                ti.style.borderColor = 'rgba(212, 175, 55, 0.6)';
+            } else {
+                ti.innerText = '謀士推演';
+                ti.style.color = '#aaa';
+                ti.style.borderColor = 'rgba(255, 255, 255, 0.2)';
+            }
+        }
+
+        function isValidMove(from, to, currentBoard) {
+            if (from === to) return false;
+            const fromX = from % 4, fromY = Math.floor(from / 4);
+            const toX = to % 4, toY = Math.floor(to / 4);
+            const dx = Math.abs(fromX - toX), dy = Math.abs(fromY - toY);
+            
+            const attackerCell = currentBoard[from];
+            if (!attackerCell || attackerCell.isEmpty || !attackerCell.isRevealed) return false;
+            
+            const attacker = attackerCell.piece;
+            const target = currentBoard[to];
+
+            if (attacker.rank === 2) {
+                if (fromX !== toX && fromY !== toY) return false;
+                let count = 0;
+                if (fromY === toY) { 
+                    for (let x = Math.min(fromX, toX) + 1; x < Math.max(fromX, toX); x++) {
+                        if (!currentBoard[fromY * 4 + x].isEmpty) count++;
+                    }
+                } else { 
+                    for (let y = Math.min(fromY, toY) + 1; y < Math.max(fromY, toY); y++) {
+                        if (!currentBoard[y * 4 + fromX].isEmpty) count++;
+                    }
+                }
+                
+                if (count === 0 && target.isEmpty && (dx + dy === 1)) return true;
+                if (count === 1 && !target.isEmpty && target.isRevealed && target.piece.color !== attacker.color) return true;
+                return false;
+            } else {
+                if (dx + dy !== 1) return false;
+                if (target.isEmpty) return true;
+                if (!target.isRevealed || target.piece.color === attacker.color) return false;
+                if (attacker.rank === 7 && target.piece.rank === 1) return false;
+                if (attacker.rank === 1 && target.piece.rank === 7) return true;
+                return attacker.rank >= target.piece.rank;
+            }
+        }
+
+        function getValidMoves(from) {
+            const moves = [];
+            for (let to = 0; to < 32; to++) {
+                if (isValidMove(from, to, state.board)) moves.push(to);
+            }
+            return moves;
+        }
+
+        function handlePlayerAction(idx) {
+            if (state.turn !== 'player' || !state.isGameActive) return;
+            initAudio();
+            tryResumeAudio();
+
+            const cell = state.board[idx];
+
+            if (!cell.isEmpty && !cell.isRevealed) {
+                if (state.selectedIdx !== -1) { state.selectedIdx = -1; render(); return; }
+                executeFlip(idx, true);
+                return;
+            }
+
+            if (state.selectedIdx !== -1) {
+                if (isValidMove(state.selectedIdx, idx, state.board)) {
+                    executeMove(state.selectedIdx, idx);
+                } else if (!cell.isEmpty && cell.isRevealed && cell.piece.color === state.playerColor) {
+                    state.selectedIdx = (state.selectedIdx === idx) ? -1 : idx;
+                    render();
+                } else {
+                    state.selectedIdx = -1;
+                    render();
+                }
+            } else if (!cell.isEmpty && cell.isRevealed && cell.piece.color === state.playerColor) {
+                state.selectedIdx = idx;
+                render();
+            }
+        }
+
+        function executeFlip(idx, isPlayer) {
+            clearTimeout(state.timers.highlight);
+            clearTimeout(state.timers.animationClear);
+            
+            state.highlightCells = [];
+            state.board[idx].isRevealed = true;
+            state.lastFlipTarget = idx;
+            state.lastMoveTarget = -1; 
+            
+            playSound('flip');
+            
+            if (!state.playerColor) {
+                state.playerColor = isPlayer ? state.board[idx].piece.color : (state.board[idx].piece.color === 'red' ? 'black' : 'red');
+                state.aiColor = state.playerColor === 'red' ? 'black' : 'red';
+                if (state.bgmPlaying) bgmAudio.play().catch(e=>{});
+            }
+
+            state.timers.animationClear = setTimeout(clearAnimationFlags, 500);
+            endTurn();
+        }
+
+        function executeMove(from, to) {
+            clearTimeout(state.timers.highlight);
+            clearTimeout(state.timers.animationClear);
+            
+            const target = state.board[to];
+            const isCapture = !target.isEmpty && target.isRevealed;
+            
+            state.board[to] = { ...state.board[from] }; 
+            state.board[from] = { isEmpty: true };
+            state.lastMoveTarget = to;
+            state.lastFlipTarget = -1; 
+            state.highlightCells = [from, to];
+            
+            playSound(isCapture ? 'capture' : 'move');
+            
+            state.timers.highlight = setTimeout(() => {
+                state.highlightCells = [];
+                render();
+            }, 600);
+
+            state.timers.animationClear = setTimeout(clearAnimationFlags, 400);
+            endTurn();
+        }
+
+        function endTurn() {
+            state.selectedIdx = -1;
+            checkWin().then(over => {
+                if (over) return;
+                state.turn = state.turn === 'player' ? 'ai' : 'player';
+                render();
+                updateUI();
+                if (state.turn === 'ai') aiPlay();
+            });
+        }
+
+        async function checkWin() {
+            let red = 0, black = 0;
+            state.board.forEach(c => { if (!c.isEmpty) c.piece.color === 'red' ? red++ : black++; });
+            if (red === 0 || black === 0) {
+                state.isGameActive = false;
+                render();
+                updateUI();
+                const winner = red === 0 ? "黑方" : "紅方";
+                playSound('win');
+                await showMessage({
+                    text: `${winner} 棋高一著，凱旋而歸！`,
+                    buttons: [{ text: '再對一局', callback: restartGame }]
+                });
+                return true;
+            }
+            return false;
+        }
+
+        function showMessage(config) {
+            return new Promise((resolve) => {
+                const overlay = document.getElementById('message-overlay');
+                const msgText = document.getElementById('message-text');
+                const btnContainer = document.getElementById('message-buttons');
+                btnContainer.innerHTML = '';
+                msgText.innerText = config.text;
+                overlay.classList.add('active');
+
+                const buttons = config.buttons || [{ text: '知曉', callback: resolve }];
+                buttons.forEach(btn => {
+                    const button = document.createElement('button');
+                    button.innerText = btn.text;
+                    button.onclick = () => {
+                        overlay.classList.remove('active');
+                        btn.callback();
+                    };
+                    btnContainer.appendChild(button);
+                });
+            });
+        }
+
+        initGame();
+    </script>
+</body></html>

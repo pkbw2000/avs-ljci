@@ -1,972 +1,427 @@
 <!DOCTYPE html>
-
-<html lang="zh-TW"><head>
-<meta charset="utf-8"/>
-<meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" name="viewport"/>
-<title>宮廷書齋 · 大師級暗棋</title>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover"/>
+<meta name="mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+<meta name="theme-color" content="#0d0a07"/>
+<title>暗棋 Pro · 墨玉</title>
+<link rel="manifest" href='data:application/manifest+json,{"name":"暗棋 Pro","short_name":"暗棋","start_url":"."}'/>
+<script src="https://cdn.tailwindcss.com"></script>
+<script>tailwind.config={theme:{extend:{colors:{wood:{50:'#f7efe6',100:'#ede0d0',200:'#dcc4aa',300:'#c9a884',400:'#b88f66',500:'#a57850',600:'#8a6240',700:'#6f4d30',800:'#543a22',900:'#3a2818',950:'#241810'}},fontFamily:{sans:['Noto Serif TC','Inter','system-ui','sans-serif']}}}}</script>
 <style>
-        :root {
-            --crimson: #8b0000;
-            --gold: #d4af37;
-            --gold-bright: #f1d592;
-            --ebony: #1a1410;
-            --jade: #2d5a27;
-            --ivory: #fdf5e6;
-            --wood-dark: #3d2517;
-            --wood-light: #5d3a24;
-            --target-green: rgba(45, 90, 39, 0.7);
-        }
-
-        body {
-            margin: 0;
-            padding: 0;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            min-height: 100dvh;
-            background-color: var(--ebony);
-            background-image: 
-                radial-gradient(circle at center, transparent 0%, rgba(0,0,0,0.4) 100%),
-                repeating-linear-gradient(0deg, rgba(255,255,255,0.03) 0px, rgba(255,255,255,0.03) 1px, transparent 1px, transparent 2px),
-                linear-gradient(to bottom, #2c1a12, #1a0f0a);
-            color: #fdf5e6;
-            font-family: "PingFang TC", "Hiragino Sans GB", "Microsoft JhengHei", "STKaiti", serif;
-            touch-action: manipulation;
-            overflow: hidden;
-            box-sizing: border-box;
-            padding-bottom: env(safe-area-inset-bottom);
-        }
-
-        /* HUD - 漆器風格 */
-        #hud {
-            width: min(92vw, 380px);
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 20px;
-            padding: 10px 24px;
-            background: linear-gradient(135deg, #2c0e0e 0%, #1a0505 100%);
-            border: 2px solid var(--gold);
-            border-radius: 40px;
-            box-shadow: 0 10px 25px rgba(0,0,0,0.6), inset 0 0 15px rgba(212, 175, 55, 0.2);
-            position: relative;
-            gap: 8px;
-        }
-        
-        #hud::before, #hud::after {
-            content: '✥';
-            color: var(--gold);
-            font-size: 1.1rem;
-            position: absolute;
-            top: 50%;
-            transform: translateY(-50%);
-        }
-        #hud::before { left: 8px; }
-        #hud::after { right: 8px; }
-
-        .hud-box {
-            display: flex;
-            flex-direction: column;
-            align-items: flex-start;
-            flex-shrink: 1;
-            min-width: 0;
-        }
-        .hud-label {
-            font-size: 0.65rem;
-            color: var(--gold-bright);
-            letter-spacing: 0.1em;
-            margin-bottom: 1px;
-            white-space: nowrap;
-        }
-        .hud-val {
-            font-size: 0.85rem;
-            font-weight: 600;
-            color: #fff;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            max-width: 120px;
-        }
-
-        #turn-indicator {
-            padding: 4px 10px;
-            border-radius: 20px;
-            font-size: 0.75rem;
-            font-weight: 700;
-            border: 1px solid rgba(212, 175, 55, 0.4);
-            background: rgba(0,0,0,0.4);
-            transition: all 0.3s ease;
-            white-space: nowrap;
-        }
-
-        /* BGM Toggle Button */
-        #bgm-toggle {
-            background: transparent;
-            border: 1px solid var(--gold);
-            color: var(--gold);
-            border-radius: 50%;
-            width: 32px;
-            height: 32px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 18px;
-            cursor: pointer;
-            flex-shrink: 0;
-            transition: all 0.2s ease;
-            padding: 0;
-            position: relative;
-        }
-        #bgm-toggle.muted {
-            opacity: 0.4;
-            color: #888;
-            border-color: #555;
-        }
-        #bgm-toggle.muted::after {
-            content: '';
-            position: absolute;
-            width: 20px;
-            height: 2px;
-            background: #888;
-            transform: rotate(45deg);
-        }
-
-        /* ===== 棋盤 · 深色名貴木材風格 ===== */
-        #board-container {
-            position: relative;
-            padding: 10px;
-            background: var(--wood-dark);
-            border: 6px solid #2a1810;
-            border-radius: 12px;
-            box-shadow: 0 25px 60px rgba(0,0,0,0.8);
-        }
-
-        #board {
-            display: grid;
-            grid-template-columns: repeat(4, 1fr);
-            grid-template-rows: repeat(8, 1fr);
-            gap: 4px;
-            background: #1a0f0a;
-            padding: 8px;
-            width: min(85vw, 320px, 42dvh);
-            aspect-ratio: 4 / 8;
-            position: relative;
-            z-index: 1;
-        }
-
-        .corner {
-            position: absolute;
-            width: 30px;
-            height: 30px;
-            border: 2px solid var(--gold);
-            pointer-events: none;
-            z-index: 10;
-        }
-        .tl { top: -5px; left: -5px; border-right: none; border-bottom: none; }
-        .tr { top: -5px; right: -5px; border-left: none; border-bottom: none; }
-        .bl { bottom: -5px; left: -5px; border-right: none; border-top: none; }
-        .br { bottom: -5px; right: -5px; border-left: none; border-top: none; }
-
-        .cell {
-            background: linear-gradient(145deg, #4d2f1d, #331e13);
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            position: relative;
-            box-shadow: inset 0 4px 8px rgba(0,0,0,0.5);
-            width: 100%;
-            height: 100%;
-            box-sizing: border-box;
-            overflow: visible;
-        }
-
-        .cell.valid-move::after, .cell.valid-capture::after {
-            content: '';
-            width: 88%;
-            height: 88%;
-            border: 3px solid var(--gold);
-            border-radius: 50%;
-            animation: pulse 1.2s infinite ease-in-out;
-            pointer-events: none;
-            position: absolute;
-            z-index: 20; 
-            box-shadow: 0 0 15px var(--gold);
-        }
-        
-        .cell.valid-capture::after {
-            border-color: #ff4757;
-            box-shadow: 0 0 20px #ff4757;
-        }
-
-        @keyframes pulse {
-            0% { transform: scale(0.9); opacity: 0.5; }
-            50% { transform: scale(1.05); opacity: 1; }
-            100% { transform: scale(0.9); opacity: 0.5; }
-        }
-
-        .cell-highlight {
-            background: linear-gradient(145deg, #5d422a, #3d2a1a) !important;
-        }
-        .cell-highlight::before {
-            content: '';
-            position: absolute;
-            top: 0; left: 0; right: 0; bottom: 0;
-            border: 2px solid var(--gold);
-            opacity: 0.6;
-            z-index: 1;
-        }
-
-        .piece {
-            width: 88%;
-            height: 88%;
-            border-radius: 50%;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            font-size: 1.6rem;
-            font-weight: 700;
-            font-family: 'STKaiti', 'KaiTi', serif;
-            cursor: pointer;
-            user-select: none;
-            position: absolute;
-            transition: box-shadow 0.25s, transform 0.2s;
-            z-index: 5;
-        }
-
-        .unrevealed {
-            background: radial-gradient(circle at 35% 35%, #3d7e36 0%, #1e421a 100%);
-            border: 1px solid #142b11;
-            box-shadow: 
-                0 4px 8px rgba(0,0,0,0.6),
-                inset 0 2px 4px rgba(255,255,255,0.2);
-        }
-
-        .revealed {
-            background: linear-gradient(145deg, #fffcf5, #e8dfcc);
-            box-shadow: 0 4px 10px rgba(0,0,0,0.4);
-            border: 1px solid #d4cbb4;
-        }
-
-        .red {
-            color: #b01a1a;
-            border: 2px solid #b01a1a;
-        }
-
-        .black {
-            color: #1a1a1a;
-            border: 2px solid #1a1a1a;
-        }
-
-        .selected {
-            transform: scale(1.1) translateY(-10px) !important;
-            box-shadow: 
-                0 15px 30px rgba(0,0,0,0.6),
-                0 0 15px var(--gold-bright) !important;
-            z-index: 50 !important;
-            animation: none !important;
-        }
-
-        @keyframes flipReveal {
-            0% { transform: rotateY(180deg) scale(0.8); opacity: 0.5; }
-            100% { transform: rotateY(0deg) scale(1); opacity: 1; }
-        }
-        .animate-flip {
-            animation: flipReveal 0.45s ease-out forwards;
-        }
-
-        @keyframes popIn {
-            0% { transform: scale(0.5); opacity: 0; }
-            100% { transform: scale(1); opacity: 1; }
-        }
-        .animate-pop {
-            animation: popIn 0.3s ease-out forwards;
-        }
-
-        /* ===== 自定義訊息遮罩 - 聖旨風格 ===== */
-        #message-overlay {
-            display: none;
-            position: fixed;
-            top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0, 0, 0, 0.85);
-            backdrop-filter: blur(5px);
-            z-index: 1000;
-            justify-content: center;
-            align-items: center;
-        }
-        #message-overlay.active { display: flex; }
-
-        .message-card {
-            background: #fdf5e6;
-            padding: 40px 30px;
-            border-left: 15px solid var(--crimson);
-            border-right: 15px solid var(--crimson);
-            text-align: center;
-            color: #333;
-            max-width: 80%;
-            width: 320px;
-            box-shadow: 0 20px 60px rgba(0,0,0,1);
-            position: relative;
-        }
-        .message-card::before, .message-card::after {
-            content: '🏮';
-            position: absolute;
-            top: -15px;
-            font-size: 1.5rem;
-        }
-        .message-card::before { left: 10px; }
-        .message-card::after { right: 10px; }
-
-        .message-card p {
-            font-family: 'STKaiti', serif;
-            font-size: 1.8rem;
-            margin: 0 0 30px;
-            font-weight: 700;
-            color: var(--crimson);
-            letter-spacing: 2px;
-        }
-        #message-buttons {
-            display: flex;
-            justify-content: center;
-            gap: 15px;
-        }
-        #message-buttons button {
-            background: var(--crimson);
-            border: 2px solid var(--gold);
-            color: var(--gold);
-            padding: 10px 25px;
-            border-radius: 4px;
-            font-size: 1rem;
-            font-weight: 600;
-            cursor: pointer;
-            transition: 0.2s;
-        }
-        #message-buttons button:active { transform: scale(0.95); }
-    </style>
+:root{--red-glow:#ff6b4a;--black-glow:#a0a8b8;--gold:#d4a853;--jade:#5a8a6a;--bg-deep:#0d0a07;--board-wood:#3a2818;--cell-light:rgba(180,150,110,.15);--cell-dark:rgba(100,78,52,.06);}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent;outline:none}
+html,body{margin:0;padding:0;height:100%;overflow:hidden;font-family:'Inter',system-ui,sans-serif;background:var(--bg-deep);touch-action:manipulation;-webkit-user-select:none;user-select:none}
+#root{height:100%;display:flex;align-items:center;justify-content:center;background:radial-gradient(ellipse at 50% 20%,#221911 0%,#0d0a07 50%,#050302 100%);padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left)}
+.app-container{width:100%;max-width:520px;height:100vh;max-height:100%;display:flex;padding:6px 10px 8px;gap:6px;overflow:hidden;flex-direction:row}
+/* Left panel */
+.main-area{flex:1;min-width:0;display:flex;flex-direction:column;gap:6px}
+/* Right panel */
+.side-panel{width:140px;flex-shrink:0;display:flex;flex-direction:column;gap:6px;overflow:hidden}
+@media(max-width:440px){.app-container{flex-direction:column;padding:4px 6px 6px}.side-panel{width:100%;height:auto;max-height:120px;flex-direction:row;gap:4px;overflow-x:auto}}
+.top-bar{flex-shrink:0;display:flex;align-items:center;justify-content:space-between;padding:4px 10px;background:rgba(24,18,10,.7);backdrop-filter:blur(8px);border-radius:16px;border:1px solid rgba(180,150,110,.1);gap:4px;min-height:38px}
+.turn-indicator{display:flex;align-items:center;gap:6px;padding:2px 8px;border-radius:20px;background:rgba(0,0,0,.3);border:1px solid rgba(180,150,110,.08)}
+.turn-dot{width:10px;height:10px;border-radius:50%;transition:all .3s}
+.turn-dot.red{background:radial-gradient(circle,#ff6b4a,#c0392b);box-shadow:0 0 8px rgba(255,107,74,.5)}
+.turn-dot.black{background:radial-gradient(circle,#c0c8d4,#555);box-shadow:0 0 8px rgba(160,168,184,.5)}
+.turn-dot.idle{background:radial-gradient(circle,#8a6e4b,#543a22)}
+.counter-badge{display:flex;align-items:center;gap:3px;padding:1px 6px;border-radius:8px;background:rgba(0,0,0,.25);font-size:.7rem;color:#b8a080;font-weight:700}
+.counter-badge .dot{width:6px;height:6px;border-radius:50%;flex-shrink:0}
+.counter-badge .dot.r{background:linear-gradient(135deg,#e86050,#c0392b)}
+.counter-badge .dot.b{background:linear-gradient(135deg,#888,#444)}
+.timer-display{font-variant-numeric:tabular-nums;font-size:.75rem;color:#b8a080;font-weight:700;min-width:42px;text-align:center}
+.timer-display.urgent{color:#ff6b4a;animation:pulse .6s ease-in-out infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.5}}
+.board-area{flex:1;min-height:0;display:flex;align-items:center;justify-content:center;width:100%}
+.board-wrapper{width:100%;max-height:100%;aspect-ratio:4/8;background:linear-gradient(145deg,rgba(70,50,30,.5),rgba(30,20,12,.7));backdrop-filter:blur(4px);border-radius:16px;padding:6px;border:1px solid rgba(180,150,110,.12);box-shadow:0 8px 32px rgba(0,0,0,.6),inset 0 1px 0 rgba(200,170,130,.06)}
+.board-inner{width:100%;height:100%;background:linear-gradient(180deg,rgba(139,109,74,.08),rgba(100,78,52,.04));border-radius:10px;padding:3px;position:relative}
+.board-grid{display:grid;grid-template-columns:repeat(4,1fr);grid-template-rows:repeat(8,1fr);gap:2px;width:100%;height:100%}
+.cell{background:radial-gradient(circle at 30% 30%,var(--cell-light),var(--cell-dark));border-radius:6px;border:1px solid rgba(160,130,90,.1);display:flex;align-items:center;justify-content:center;position:relative;transition:box-shadow .15s}
+.cell-hl-move{box-shadow:inset 0 0 0 2px rgba(90,190,90,.55),0 0 12px rgba(90,190,90,.1)}
+.cell-hl-move::after{content:"";position:absolute;width:10px;height:10px;border-radius:50%;background:rgba(90,190,90,.35);border:2px solid rgba(90,190,90,.6)}
+.cell-hl-capture{box-shadow:inset 0 0 0 2px rgba(220,100,100,.6),0 0 12px rgba(220,100,100,.1)}
+.cell-hl-capture::after{content:"✕";position:absolute;font-size:16px;color:rgba(220,100,100,.55);font-weight:900;pointer-events:none}
+.cell-drag-over{box-shadow:inset 0 0 0 3px rgba(212,168,83,.7),0 0 16px rgba(212,168,83,.2)}
+.piece{width:86%;height:86%;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:clamp(1.2rem,4.5vw,2.2rem);line-height:1;cursor:pointer;touch-action:none;position:relative;transition:transform .12s ease,box-shadow .12s ease;will-change:transform;text-shadow:0 1px 4px rgba(0,0,0,.4)}
+.piece:active{transform:scale(.94)}
+.piece-red{background:radial-gradient(circle at 35% 28%,#f8a090,#d95a48,#9a2a1a);border:1.5px solid rgba(255,210,180,.35);box-shadow:0 3px 0 rgba(0,0,0,.2),0 6px 14px rgba(0,0,0,.3),0 0 10px rgba(255,107,74,.15);color:#fff6f0}
+.piece-black{background:radial-gradient(circle at 35% 28%,#c8ccd6,#5a5e6a,#1e2128);border:1.5px solid rgba(200,210,220,.2);box-shadow:0 3px 0 rgba(0,0,0,.25),0 6px 14px rgba(0,0,0,.35),0 0 8px rgba(160,168,184,.1);color:#f0f1f4}
+.piece-back{background:radial-gradient(circle at 35% 28%,#b8966a,#6f4d30,#2d1f12);border:1px solid rgba(190,150,110,.25);box-shadow:0 3px 0 rgba(0,0,0,.25),0 6px 14px rgba(0,0,0,.3)}
+.piece-back::after{content:"?";position:absolute;font-size:clamp(.9rem,3.5vw,1.4rem);color:rgba(220,200,170,.18);font-weight:900;pointer-events:none}
+.piece-sel{box-shadow:0 0 0 3px var(--gold),0 0 0 5px rgba(212,168,83,.3),0 4px 0 rgba(0,0,0,.25),0 8px 20px rgba(0,0,0,.35)!important;transform:scale(1.05)}
+.anim-flip{animation:flipIn .35s cubic-bezier(.34,1.56,.64,1)}
+.anim-capture{animation:captureOut .3s ease forwards}
+.anim-place{animation:placeIn .25s cubic-bezier(.34,1.56,.64,1)}
+.anim-cell{animation:cellPop .25s ease-out forwards}
+@keyframes flipIn{0%{transform:rotateY(90deg) scale(.85);opacity:.5}100%{transform:rotateY(0) scale(1);opacity:1}}
+@keyframes captureOut{0%{transform:scale(1);opacity:1}60%{transform:scale(1.25);opacity:.6}100%{transform:scale(0);opacity:0}}
+@keyframes placeIn{0%{transform:scale(.8);opacity:.4}100%{transform:scale(1);opacity:1}}
+@keyframes cellPop{0%{transform:scale(.92);opacity:0}100%{transform:scale(1);opacity:1}}
+.victory-overlay{position:absolute;inset:0;background:rgba(0,0,0,.9);backdrop-filter:blur(16px);border-radius:inherit;display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:20;gap:8px;animation:vOverlayIn .5s ease .1s forwards;opacity:0}
+@keyframes vOverlayIn{to{opacity:1}}
+.victory-title{font-size:clamp(1.8rem,7vw,3.5rem);font-weight:900;text-shadow:0 4px 24px rgba(0,0,0,.8);letter-spacing:6px;animation:vTitle .7s ease .25s forwards;opacity:0;transform:translateY(-16px)}
+@keyframes vTitle{to{opacity:1;transform:translateY(0)}}
+.v-red{color:#ff6b4a}.v-black{color:#d0d4de}
+.victory-sub{font-size:clamp(.8rem,3vw,1rem);font-weight:700;color:#d0c0a8;background:rgba(255,255,255,.06);padding:3px 14px;border-radius:10px;animation:vFade .5s ease .4s forwards;opacity:0}
+.victory-stats{display:flex;gap:16px;animation:vFade .5s ease .5s forwards;opacity:0;color:#b8a080;font-size:.8rem;font-weight:700}
+.victory-btn{padding:10px 28px;background:linear-gradient(135deg,#c9a884,#8a6240);border:1px solid rgba(255,255,255,.15);border-radius:30px;font-weight:900;color:#0d0a07;font-size:1rem;box-shadow:0 4px 20px rgba(0,0,0,.5);cursor:pointer;animation:vFade .5s ease .6s forwards;opacity:0;transition:transform .1s}
+.victory-btn:active{transform:scale(.95)}
+@keyframes vFade{to{opacity:1;transform:scale(1)}from{opacity:0;transform:scale(.92)}}
+.particles-container{position:absolute;inset:0;pointer-events:none;overflow:hidden;z-index:21}
+.particle{position:absolute;border-radius:50%;animation:particleFly 1s ease-out forwards;pointer-events:none}
+@keyframes particleFly{0%{transform:translate(0,0) scale(1);opacity:1}100%{transform:translate(var(--dx),var(--dy)) scale(0);opacity:0}}
+.side-panel section{background:rgba(24,18,10,.7);backdrop-filter:blur(8px);border-radius:12px;border:1px solid rgba(180,150,110,.08);padding:6px 8px;overflow:hidden;display:flex;flex-direction:column}
+.side-panel section h3{font-size:.65rem;color:#8a7a60;font-weight:800;text-transform:uppercase;letter-spacing:2px;margin:0 0 4px;flex-shrink:0}
+.history-list{flex:1;overflow-y:auto;min-height:0;font-size:.65rem;color:#a09078;line-height:1.6}
+.history-list .entry{padding:1px 4px;border-radius:3px;display:flex;gap:4px;border-bottom:1px solid rgba(180,150,110,.04)}
+.history-list .entry.red-move{color:#e88070}
+.history-list .entry.black-move{color:#b0b8c0}
+.history-list .entry .move-num{color:#5a4a3a;min-width:16px;font-weight:700}
+.settings-row{display:flex;align-items:center;justify-content:space-between;padding:3px 0;gap:4px;font-size:.65rem;color:#a09078}
+.settings-row label{font-weight:700;flex-shrink:0}
+.settings-row select,.settings-row input[type=range]{background:rgba(0,0,0,.3);border:1px solid rgba(180,150,110,.15);border-radius:6px;color:#c0b090;font-size:.6rem;padding:2px 4px;max-width:70px}
+.toggle-sw{position:relative;width:32px;height:18px;flex-shrink:0}
+.toggle-sw input{opacity:0;width:0;height:0}
+.toggle-sw .slider{position:absolute;inset:0;background:rgba(0,0,0,.4);border-radius:18px;border:1px solid rgba(180,150,110,.12);transition:.25s;cursor:pointer}
+.toggle-sw .slider::before{content:"";position:absolute;left:2px;top:2px;width:14px;height:14px;border-radius:50%;background:linear-gradient(135deg,#c9a884,#8a6240);transition:.25s}
+.toggle-sw input:checked+.slider{background:rgba(200,150,100,.2)}
+.toggle-sw input:checked+.slider::before{transform:translateX(14px)}
+.bottom-bar{flex-shrink:0;display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:6px;height:38px}
+.bottom-bar button{border:none;border-radius:12px;font-weight:800;font-size:.7rem;background:rgba(50,36,24,.5);border:1px solid rgba(180,150,110,.1);color:#c0b090;cursor:pointer;touch-action:manipulation;transition:transform .1s,background .1s}
+.bottom-bar button:active{transform:scale(.96)}
+.bottom-bar .btn-primary{background:linear-gradient(135deg,#8a6240,#6f4d30);color:#f0e6d8;border-color:rgba(200,170,130,.25)}
+@media(max-width:440px){.bottom-bar{height:34px;grid-template-columns:1fr 1fr;gap:4px}.bottom-bar button{font-size:.65rem;border-radius:8px}}
+.difficulty-tag{display:inline-block;padding:1px 6px;border-radius:6px;font-size:.6rem;font-weight:800;letter-spacing:1px}
+.difficulty-tag.easy{background:rgba(90,180,90,.15);color:#6ab86a}
+.difficulty-tag.medium{background:rgba(212,168,83,.15);color:var(--gold)}
+.difficulty-tag.hard{background:rgba(220,100,100,.15);color:#dc6464}
+</style>
 </head>
-<body onclick="tryResumeAudio()">
-<audio id="main-bgm" loop="" preload="auto">
-<source src="https://assets.mixkit.co/music/preview/mixkit-serene-view-of-nature-instrumental-1134.mp3" type="audio/mpeg"/>
-</audio>
-<div id="message-overlay">
-<div class="message-card">
-<p id="message-text">訊息</p>
-<div id="message-buttons"></div>
-</div>
-</div>
-<div id="hud">
-<div class="hud-box">
-<span class="hud-label">對弈局勢</span>
-<span class="hud-val" id="status">開卷有益 · 點擊啟局</span>
-</div>
-<div style="display: flex; align-items: center; gap: 8px; flex-shrink: 0;">
-<div id="turn-indicator">墨香初現</div>
-<button class="muted" id="bgm-toggle" title="音樂開關">♫</button>
-</div>
-</div>
-<div id="board-container">
-<div class="corner tl"></div>
-<div class="corner tr"></div>
-<div class="corner bl"></div>
-<div class="corner br"></div>
-<div id="board"></div>
-</div>
-<script>
-        const PIECES = {
-            R_K: { name: '帥', color: 'red', rank: 7, value: 8000 },
-            R_A: { name: '仕', color: 'red', rank: 6, value: 2000 },
-            R_E: { name: '相', color: 'red', rank: 5, value: 1500 },
-            R_R: { name: '俥', color: 'red', rank: 4, value: 1200 },
-            R_H: { name: '傌', color: 'red', rank: 3, value: 1000 },
-            R_C: { name: '炮', color: 'red', rank: 2, value: 2500 },
-            R_P: { name: '兵', color: 'red', rank: 1, value: 600 },
-            B_K: { name: '將', color: 'black', rank: 7, value: 8000 },
-            B_A: { name: '士', color: 'black', rank: 6, value: 2000 },
-            B_E: { name: '象', color: 'black', rank: 5, value: 1500 },
-            B_R: { name: '車', color: 'black', rank: 4, value: 1200 },
-            B_H: { name: '馬', color: 'black', rank: 3, value: 1000 },
-            B_C: { name: '砲', color: 'black', rank: 2, value: 2500 },
-            B_P: { name: '卒', color: 'black', rank: 1, value: 600 }
-        };
+<body><div id="root"></div>
+<script type="module">
+import React,{useState,useEffect,useCallback,useRef,memo,useMemo}from'https://esm.sh/react@18.3.1';
+import ReactDOM from'https://esm.sh/react-dom@18.3.1/client';
+import htm from'https://esm.sh/htm@3.1.1';
+const html=htm.bind(React.createElement);
 
-        const INITIAL_DECK = [
-            'R_K', 'R_A', 'R_A', 'R_E', 'R_E', 'R_R', 'R_R', 'R_H', 'R_H', 'R_C', 'R_C',
-            'R_P', 'R_P', 'R_P', 'R_P', 'R_P',
-            'B_K', 'B_A', 'B_A', 'B_E', 'B_E', 'B_R', 'B_R', 'B_H', 'B_H', 'B_C', 'B_C',
-            'B_P', 'B_P', 'B_P', 'B_P', 'B_P'
-        ];
+// ==================== Audio Manager ====================
+let _ctx=null;
+function ctx(){try{const A=window.AudioContext||window.webkitAudioContext;if(!A)return null;if(!_ctx||_ctx.state==='closed')_ctx=new A();if(_ctx.state==='suspended')_ctx.resume();return _ctx}catch(_){return null}}
 
-        // Game State
-        const state = {
-            audioCtx: null,
-            bgmPlaying: false,
-            board: [],
-            turn: 'player',
-            playerColor: null,
-            aiColor: null,
-            selectedIdx: -1,
-            isGameActive: true,
-            highlightCells: [],
-            lastMoveTarget: -1,
-            lastFlipTarget: -1,
-            timers: {
-                highlight: null,
-                animationClear: null
-            }
-        };
+const SFX={
+  flip(){const c=ctx();if(!c)return;const o=c.createOscillator(),g=c.createGain();o.type='triangle';o.frequency.setValueAtTime(500,c.currentTime);o.frequency.exponentialRampToValueAtTime(120,c.currentTime+.06);g.gain.setValueAtTime(.3,c.currentTime);g.gain.exponentialRampToValueAtTime(.01,c.currentTime+.07);o.connect(g);g.connect(c.destination);o.start();o.stop(c.currentTime+.07)},
+  move(){const c=ctx();if(!c)return;const o=c.createOscillator(),g=c.createGain();o.type='sine';o.frequency.setValueAtTime(320,c.currentTime);o.frequency.exponentialRampToValueAtTime(140,c.currentTime+.06);g.gain.setValueAtTime(.25,c.currentTime);g.gain.exponentialRampToValueAtTime(.01,c.currentTime+.06);o.connect(g);g.connect(c.destination);o.start();o.stop(c.currentTime+.06)},
+  capture(){const c=ctx();if(!c)return;const o=c.createOscillator(),g=c.createGain();o.type='square';o.frequency.setValueAtTime(180,c.currentTime);o.frequency.exponentialRampToValueAtTime(40,c.currentTime+.1);g.gain.setValueAtTime(.25,c.currentTime);g.gain.exponentialRampToValueAtTime(.01,c.currentTime+.12);o.connect(g);g.connect(c.destination);o.start();o.stop(c.currentTime+.12);const bs=c.sampleRate*.04;const b=c.createBuffer(1,bs,c.sampleRate);const d=b.getChannelData(0);for(let i=0;i<bs;i++)d[i]=(Math.random()*2-1)*Math.exp(-i/bs*5);const n=c.createBufferSource();n.buffer=b;const ng=c.createGain();ng.gain.setValueAtTime(.25,c.currentTime);ng.gain.exponentialRampToValueAtTime(.01,c.currentTime+.04);n.connect(ng);ng.connect(c.destination);n.start();n.stop(c.currentTime+.04)},
+  win(){const c=ctx();if(!c)return;[523,659,784,1047].forEach((f,i)=>{const o=c.createOscillator(),g=c.createGain();o.type='sine';o.frequency.setValueAtTime(f,c.currentTime+i*.08);g.gain.setValueAtTime(.25,c.currentTime+i*.08);g.gain.exponentialRampToValueAtTime(.01,c.currentTime+i*.08+.35);o.connect(g);g.connect(c.destination);o.start(c.currentTime+i*.08);o.stop(c.currentTime+i*.08+.35)})}
+};
 
-        const bgmAudio = document.getElementById('main-bgm');
+// ==================== Game Engine ====================
+const NAMES={red:['','帥','仕','相','俥','傌','炮','兵'],black:['','將','士','象','車','馬','砲','卒']};
+function pName(c,r){return NAMES[c]?.[r]||'?'}
+function canCap(aR,dR){if(aR===1&&dR===7)return false;if(aR===7)return dR===1||dR===7;return aR<=dR}
 
-        function initAudio() {
-            if (!state.audioCtx) {
-                state.audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-            }
-            if (state.audioCtx.state === 'suspended') {
-                state.audioCtx.resume();
-            }
-        }
+function createBoard(){
+  const ps=[];
+  ps.push({id:'r1',color:'red',rank:1});
+  for(let i=0;i<2;i++)ps.push({id:`r2-${i}`,color:'red',rank:2});
+  for(let i=0;i<2;i++)ps.push({id:`r3-${i}`,color:'red',rank:3});
+  for(let i=0;i<2;i++)ps.push({id:`r4-${i}`,color:'red',rank:4});
+  for(let i=0;i<2;i++)ps.push({id:`r5-${i}`,color:'red',rank:5});
+  for(let i=0;i<2;i++)ps.push({id:`r6-${i}`,color:'red',rank:6});
+  for(let i=0;i<5;i++)ps.push({id:`r7-${i}`,color:'red',rank:7});
+  ps.push({id:'b1',color:'black',rank:1});
+  for(let i=0;i<2;i++)ps.push({id:`b2-${i}`,color:'black',rank:2});
+  for(let i=0;i<2;i++)ps.push({id:`b3-${i}`,color:'black',rank:3});
+  for(let i=0;i<2;i++)ps.push({id:`b4-${i}`,color:'black',rank:4});
+  for(let i=0;i<2;i++)ps.push({id:`b5-${i}`,color:'black',rank:5});
+  for(let i=0;i<2;i++)ps.push({id:`b6-${i}`,color:'black',rank:6});
+  for(let i=0;i<5;i++)ps.push({id:`b7-${i}`,color:'black',rank:7});
+  for(let i=ps.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[ps[i],ps[j]]=[ps[j],ps[i]]}
+  const b=[];let idx=0;
+  for(let r=0;r<4;r++){const row=[];for(let c=0;c<8;c++)row.push({...ps[idx++],faceUp:false});b.push(row)}
+  return b;
+}
 
-        function tryResumeAudio() {
-            if (state.bgmPlaying && bgmAudio.paused) {
-                bgmAudio.play().catch(e => {});
-            }
-        }
+function genMoves(b,r,c){
+  const p=b[r]?.[c];if(!p||!p.faceUp)return[];
+  const moves=[],cl=p.color,rk=p.rank,d=[[-1,0],[1,0],[0,-1],[0,1]];
+  if(rk===6){for(const[dr,dc]of d){const nr=r+dr,nc=c+dc;if(nr>=0&&nr<4&&nc>=0&&nc<8&&!b[nr][nc])moves.push({row:nr,col:nc,type:'move'});let tr=r+dr,tc=c+dc,bf=false;while(tr>=0&&tr<4&&tc>=0&&tc<8){const t=b[tr][tc];if(!t){tr+=dr;tc+=dc;continue}if(!bf){bf=true;tr+=dr;tc+=dc;continue}if(t.faceUp&&t.color!==cl)moves.push({row:tr,col:tc,type:'capture'});break}}}
+  else{for(const[dr,dc]of d){const nr=r+dr,nc=c+dc;if(nr<0||nr>3||nc<0||nc>7)continue;const t=b[nr][nc];if(!t)moves.push({row:nr,col:nc,type:'move'});else if(t.faceUp&&t.color!==cl&&canCap(rk,t.rank))moves.push({row:nr,col:nc,type:'capture'})}}
+  return moves;
+}
 
-        document.getElementById('bgm-toggle').onclick = (e) => {
-            e.stopPropagation();
-            initAudio();
-            state.bgmPlaying = !state.bgmPlaying;
-            
-            const btn = document.getElementById('bgm-toggle');
-            if (state.bgmPlaying) {
-                btn.classList.remove('muted');
-                bgmAudio.volume = 0.4;
-                bgmAudio.play().catch(err => {});
-            } else {
-                btn.classList.add('muted');
-                bgmAudio.pause();
-            }
-        };
+function cloneB(b){return b.map(r=>r.map(c=>c?{...c}:null))}
 
-        function playSound(type) {
-            try {
-                initAudio();
-                const osc = state.audioCtx.createOscillator();
-                const gain = state.audioCtx.createGain();
-                osc.connect(gain);
-                gain.connect(state.audioCtx.destination);
-                gain.gain.value = 0.1;
+// ==================== AI Engine ====================
+const BASE_V={1:10000,2:7000,3:4500,4:3000,5:1500,6:5000,7:1000};
 
-                if (type === 'flip') {
-                    osc.frequency.value = 880;
-                    gain.gain.exponentialRampToValueAtTime(0.01, state.audioCtx.currentTime + 0.12);
-                    osc.start(state.audioCtx.currentTime);
-                    osc.stop(state.audioCtx.currentTime + 0.12);
-                } else if (type === 'move') {
-                    osc.type = 'sine';
-                    osc.frequency.setValueAtTime(600, state.audioCtx.currentTime);
-                    osc.frequency.exponentialRampToValueAtTime(400, state.audioCtx.currentTime + 0.1);
-                    gain.gain.setValueAtTime(0.1, state.audioCtx.currentTime);
-                    gain.gain.exponentialRampToValueAtTime(0.01, state.audioCtx.currentTime + 0.1);
-                    osc.start(state.audioCtx.currentTime);
-                    osc.stop(state.audioCtx.currentTime + 0.1);
-                } else if (type === 'capture') {
-                    osc.type = 'square';
-                    osc.frequency.setValueAtTime(400, state.audioCtx.currentTime);
-                    osc.frequency.exponentialRampToValueAtTime(150, state.audioCtx.currentTime + 0.15);
-                    gain.gain.setValueAtTime(0.15, state.audioCtx.currentTime);
-                    gain.gain.exponentialRampToValueAtTime(0.001, state.audioCtx.currentTime + 0.15);
-                    osc.start(state.audioCtx.currentTime);
-                    osc.stop(state.audioCtx.currentTime + 0.15);
-                } else if (type === 'win') {
-                    const notes = [523, 659, 784, 1047];
-                    notes.forEach((freq, i) => {
-                        const o = state.audioCtx.createOscillator();
-                        const g = state.audioCtx.createGain();
-                        o.connect(g);
-                        g.connect(state.audioCtx.destination);
-                        g.gain.value = 0.08;
-                        o.frequency.value = freq;
-                        g.gain.exponentialRampToValueAtTime(0.01, state.audioCtx.currentTime + 0.25 + i * 0.18);
-                        o.start(state.audioCtx.currentTime + i * 0.18);
-                        o.stop(state.audioCtx.currentTime + 0.25 + i * 0.18);
-                    });
-                }
-            } catch(e) {}
-        }
+function allMoves(b,cl){
+  const ms=[];
+  for(let r=0;r<4;r++)for(let c=0;c<8;c++){const p=b[r][c];if(p&&p.faceUp&&p.color===cl)genMoves(b,r,c).forEach(m=>ms.push({fr:r,fc:c,tr:m.row,tc:m.col,type:m.type}))}
+  return ms;
+}
 
-        // --- Improved AI Logic ---
+function kingDanger(b,cl){
+  let kp=null;
+  for(let r=0;r<4;r++)for(let c=0;c<8;c++){const p=b[r][c];if(p&&p.faceUp&&p.rank===1&&p.color===cl)kp={r,c}}
+  if(!kp)return true;
+  const en=cl==='red'?'black':'red';
+  for(let r=0;r<4;r++)for(let c=0;c<8;c++){const p=b[r][c];if(p&&p.faceUp&&p.color===en){const ms=genMoves(b,r,c);if(ms.some(m=>m.row===kp.r&&m.col===kp.c&&m.type==='capture'))return true}}
+  return false;
+}
 
-        function isThreatened(idx, boardState, attackerColor) {
-            for (let i = 0; i < 32; i++) {
-                const attacker = boardState[i];
-                if (!attacker.isEmpty && attacker.isRevealed && attacker.piece.color === attackerColor) {
-                    if (isValidMove(i, idx, boardState)) return true;
-                }
-            }
-            return false;
-        }
+function evalBoard(b,cl,captureGM){
+  const en=cl==='red'?'black':'red';let my=0,ey=0;let mg=false,eg=false;
+  for(let r=0;r<4;r++)for(let c=0;c<8;c++){const p=b[r][c];if(p&&p.faceUp&&p.rank===1){if(p.color===en)eg=true;if(p.color===cl)mg=true}}
+  for(let r=0;r<4;r++)for(let c=0;c<8;c++){const p=b[r][c];if(!p||!p.faceUp)continue;const im=p.color===cl;let v=BASE_V[p.rank]||0;
+    if(p.rank===7){if(im&&!eg)v=100;else if(!im&&!mg)v=100;else v+=500}
+    const ms=genMoves(b,r,c);let mob=ms.length*20;if(!ms.length&&p.rank!==6)v*=.7;let tot=v+mob;
+    for(const mv of ms)if(mv.type==='capture'){const t=b[mv.row][mv.col];if(t)tot+=BASE_V[t.rank]*.1}
+    im?my+=tot:ey+=tot;
+  }
+  for(let r=0;r<4;r++)for(let c=0;c<8;c++){const p=b[r][c];if(p&&p.faceUp&&p.color===en){const ems=genMoves(b,r,c);for(const mv of ems)if(mv.type==='capture'){const t=b[mv.row][mv.col];if(t&&t.color===cl)my-=BASE_V[t.rank]*.8}}}
+  let s=my-ey;
+  if(captureGM&&kingDanger(b,cl))s-=20000;
+  return s;
+}
 
-        function evaluateBoard(boardState, aiColor) {
-            let score = 0;
-            const oppColor = aiColor === 'red' ? 'black' : 'red';
-            let myPieceCount = 0;
-            let oppPieceCount = 0;
+function simMove(b,fr,fc,tr,tc){const nb=cloneB(b);nb[tr][tc]=nb[fr][fc];nb[fr][fc]=null;return nb}
 
-            boardState.forEach((cell, idx) => {
-                if (cell.isEmpty) return;
-                
-                if (cell.isRevealed) {
-                    const isOwn = cell.piece.color === aiColor;
-                    let pieceVal = cell.piece.value;
-                    
-                    if (isOwn) {
-                        myPieceCount++;
-                        // Positioning bonus: prefer center slightly
-                        const x = idx % 4;
-                        const y = Math.floor(idx / 4);
-                        pieceVal += (1.5 - Math.abs(1.5 - x)) * 10;
-                        pieceVal += (3.5 - Math.abs(3.5 - y)) * 10;
+function alphaBeta(brd,depth,alpha,beta,maxing,cl,aiCl,captureGM,hist){
+  const ms=allMoves(brd,cl);
+  if(!depth||!ms.length)return{score:evalBoard(brd,aiCl,captureGM),move:null};
+  ms.sort((m1,m2)=>{const at=brd[m1.tr][m1.tc],bt=brd[m2.tr][m2.tc];return(bt?BASE_V[bt.rank]:0)-(at?BASE_V[at.rank]:0)});
+  let best=null,bs=maxing?-Infinity:Infinity;
+  for(const mv of ms){
+    const nb=simMove(brd,mv.fr,mv.fc,mv.tr,mv.tc);const t=brd[mv.tr][mv.tc];
+    if(captureGM&&t&&t.rank===1&&t.color!==cl)return{score:maxing?999999:-999999,move:mv};
+    const nc=cl==='red'?'black':'red';const hk=`${cl}-${mv.fr}${mv.fc}-${mv.tr}${mv.tc}`;const pn=(hist.get(hk)||0)*2000;
+    const r=alphaBeta(nb,depth-1,alpha,beta,!maxing,nc,aiCl,captureGM,hist);
+    let cs=r.score;cs+=maxing?-pn:pn;
+    if(maxing){if(cs>bs){bs=cs;best=mv}alpha=Math.max(alpha,bs)}else{if(cs<bs){bs=cs;best=mv}beta=Math.min(beta,bs)}
+    if(alpha>=beta)break;
+  }
+  return{score:bs,move:best};
+}
 
-                        // Defensive Awareness: penalty if piece is currently threatened by revealed player pieces
-                        if (isThreatened(idx, boardState, oppColor)) {
-                            pieceVal -= cell.piece.value * 0.8;
-                        }
-                        score += pieceVal;
-                    } else {
-                        oppPieceCount++;
-                        // Target value
-                        score -= pieceVal;
-                        // Endgame bonus: if few opponent pieces left, value cornering them
-                        if (oppPieceCount <= 3) {
-                            score -= 50; // Extra pressure to eliminate
-                        }
-                    }
-                } else {
-                    // Hidden pieces value - slight bias to keep them if winning
-                    score += 5; 
-                }
-            });
+function getPool(b){
+  const tc={red:{1:1,2:2,3:2,4:2,5:2,6:2,7:5},black:{1:1,2:2,3:2,4:2,5:2,6:2,7:5}};let uc=0;
+  for(let r=0;r<4;r++)for(let c=0;c<8;c++){const p=b[r][c];if(p){if(p.faceUp)tc[p.color][p.rank]--;else uc++}}
+  return{pool:tc,total:uc};
+}
 
-            // Cannon bonus: encourage positions where cannons have a jumping platform
-            boardState.forEach((cell, idx) => {
-                if (!cell.isEmpty && cell.isRevealed && cell.piece.color === aiColor && cell.piece.rank === 2) {
-                    const targets = getValidMoves(idx, boardState);
-                    targets.forEach(t => {
-                        const targetCell = boardState[t];
-                        if (!targetCell.isEmpty && targetCell.isRevealed && targetCell.piece.color === oppColor) {
-                            score += targetCell.piece.value * 0.5; // High priority for Cannon jumps
-                        }
-                    });
-                }
-            });
+function aiDecide(b,aiCl,captureGM,difficulty){
+  const uv=[];for(let r=0;r<4;r++)for(let c=0;c<8;c++)if(b[r][c]&&!b[r][c].faceUp)uv.push({r,c});
+  const ms=allMoves(b,aiCl);
+  const depthMap={easy:2,medium:4,hard:6};let depth=depthMap[difficulty]||4;
+  const fu=32-uv.length;if(difficulty==='hard'&&fu>=18)depth=7;
+  const hist=new Map();
+  let bestResult=ms.length?alphaBeta(b,depth,-Infinity,Infinity,true,aiCl,aiCl,captureGM,hist):null;
+  let bestFlip=null,mxEV=-Infinity;
+  if(uv.length){const{pool,total}=getPool(b);
+    for(const t of uv){let ev=0,sd=0,sp=0;const dir=[[-1,0],[1,0],[0,-1],[0,1]];
+      for(const[dr,dc]of dir){const nr=t.r+dr,nc=t.c+dc;if(nr>=0&&nr<4&&nc>=0&&nc<8){const adj=b[nr][nc];if(adj&&adj.faceUp){if(adj.color!==aiCl)sd+=BASE_V[adj.rank]*.4;else sp+=BASE_V[adj.rank]*.4}}}
+      ['red','black'].forEach(cl=>{for(let rk=1;rk<=7;rk++){const cnt=pool[cl][rk];if(cnt>0){const prob=cnt/total,im=cl===aiCl;let pv=BASE_V[rk];ev+=im?prob*(pv*.5-sd):-prob*(pv*.5-sp)}}});
+      if(ev>mxEV){mxEV=ev;bestFlip=t}}
+  }
+  const curScore=evalBoard(b,aiCl,captureGM);
+  let doFlip=false;
+  if(uv.length){if(!bestResult||!bestResult.move)doFlip=true;else if(curScore+mxEV>bestResult.score+1500)doFlip=true}
+  if(doFlip&&bestFlip)return{type:'flip',tr:bestFlip.r,tc:bestFlip.c};
+  if(bestResult&&bestResult.move){const mv=bestResult.move;return{type:'move',fr:mv.fr,fc:mv.fc,tr:mv.tr,tc:mv.tc,mvt:mv.type}}
+  if(uv.length){const u=uv[Math.floor(Math.random()*uv.length)];return{type:'flip',tr:u.r,tc:u.c}}
+  return null;
+}
 
-            return score;
-        }
+function checkWin(b){
+  let hasUR=false;for(let r=0;r<4;r++){for(let c=0;c<8;c++){if(b[r][c]&&!b[r][c].faceUp){hasUR=true;break}}if(hasUR)break}
+  if(hasUR)return null;
+  let rp=0,bp=0,rm=0,bm=0;
+  for(let r=0;r<4;r++)for(let c=0;c<8;c++){const p=b[r][c];if(!p)continue;const ms=genMoves(b,r,c);if(p.color==='red'){rp++;rm+=ms.length}else{bp++;bm+=ms.length}}
+  if(!rp||!rm)return{winner:'black',reason:!rp?'紅方被全殲':'紅方無子可走'};
+  if(!bp||!bm)return{winner:'red',reason:!bp?'黑方被全殲':'黑方無子可走'};
+  return null;
+}
 
-        function getAllActions(boardState, color) {
-            const moves = [];
-            const flips = [];
-            boardState.forEach((c, from) => {
-                if (!c.isEmpty) {
-                    if (!c.isRevealed) {
-                        flips.push({ type: 'flip', idx: from });
-                    } else if (c.piece.color === color) {
-                        for (let to = 0; to < 32; to++) {
-                            if (isValidMove(from, to, boardState)) {
-                                moves.push({ type: 'move', from, to });
-                            }
-                        }
-                    }
-                }
-            });
-            return { moves, flips };
-        }
+// ==================== React Components ====================
+const Piece=memo(({piece,sel,animClass,onClick})=>{
+  if(!piece)return null;const{color,rank,faceUp}=piece,isRed=color==='red',isBack=!faceUp;
+  let cn=`piece ${isBack?'piece-back':(isRed?'piece-red':'piece-black')}`;if(sel)cn+=' piece-sel';if(animClass)cn+=' '+animClass;
+  return html`<div className=${cn} style=${{fontSize:faceUp?'clamp(1.2rem,4.5vw,2.2rem)':'0',color:faceUp?(isRed?'#fff6f0':'#f0f1f4'):'transparent'}} onClick=${onClick} onTouchEnd=${onClick}>${faceUp?pName(color,rank):''}</div>`;
+});
 
-        function simulateAction(boardState, action) {
-            const newBoard = boardState.map(c => ({ ...c }));
-            if (action.type === 'flip') {
-                newBoard[action.idx].isRevealed = true;
-            } else if (action.type === 'move') {
-                newBoard[action.to] = { ...newBoard[action.from] };
-                newBoard[action.from] = { isEmpty: true };
-            }
-            return newBoard;
-        }
+const Cell=memo(({row,col,piece,hl,hlType,sel,onClick,animCell,onDragStart,onDragOver,onDrop,onDragEnd,dragOver,animIndex})=>{
+  const hc=e=>{e.preventDefault();onClick(row,col)};
+  let cn='cell';if(hl)cn+=hlType==='capture'?' cell-hl-capture':' cell-hl-move';if(animCell)cn+=' anim-cell';if(dragOver)cn+=' cell-drag-over';
+  return html`<div className=${cn} style=${{animationDelay:`${(animIndex||0)*.004}s`}}
+    onTouchEnd=${hc} onClick=${hc} onDragOver=${e=>{e.preventDefault();onDragOver(row,col)}} onDrop=${e=>{e.preventDefault();onDrop(row,col)}} onDragEnd=${onDragEnd}>
+    ${piece&&html`<${Piece} piece=${piece} sel=${sel} onClick=${hc} animClass=${piece._anim||''} />`}
+  </div>`;
+});
 
-        // Depth 3 Minimax with Alpha-Beta
-        function minimax(board, depth, alpha, beta, isMaximizing, aiColor) {
-            if (depth === 0) return evaluateBoard(board, aiColor);
+// ==================== App ====================
+function App(){
+  const[board,setBoard]=useState(()=>createBoard());
+  const[turn,setTurn]=useState(null);
+  const[pColor,setPColor]=useState(null);
+  const[sel,setSel]=useState(null);
+  const[hl,setHl]=useState([]);
+  const[gameOver,setGameOver]=useState(false);
+  const[winner,setWinner]=useState(null);
+  const[winReason,setWinReason]=useState('');
+  const[mode,setMode]=useState('pvp');
+  const[aiCl,setAiCl]=useState(null);
+  const[capGM,setCapGM]=useState(false);
+  const[redCap,setRedCap]=useState(0);
+  const[blkCap,setBlkCap]=useState(0);
+  const[lastMove,setLastMove]=useState(null);
+  const[history,setHistory]=useState([]);
+  const[undoStack,setUndoStack]=useState([]);
+  const[sfxOn,setSfxOn]=useState(true);
+  const[timerOn,setTimerOn]=useState(false);
+  const[difficulty,setDifficulty]=useState('medium');
+  const[timerR,setTimerR]=useState(15);
+  const[timerB,setTimerB]=useState(15);
+  const[settingsOpen,setSettingsOpen]=useState(false);
+  const[particles,setParticles]=useState([]);
+  const[animBoard,setAnimBoard]=useState(false);
+  const aiHist=useRef(new Map());
+  const timerRef=useRef(null);
+  const dragRef=useRef(null);
 
-            const currentColor = isMaximizing ? aiColor : (aiColor === 'red' ? 'black' : 'red');
-            const { moves } = getAllActions(board, currentColor);
-            
-            // If no moves, game over or stalemate state
-            if (moves.length === 0) return isMaximizing ? -20000 : 20000;
+  const playSfx=useCallback((t)=>{if(sfxOn)SFX[t]?.()},[sfxOn]);
 
-            if (isMaximizing) {
-                let maxEval = -Infinity;
-                for (const move of moves) {
-                    const eval = minimax(simulateAction(board, move), depth - 1, alpha, beta, false, aiColor);
-                    maxEval = Math.max(maxEval, eval);
-                    alpha = Math.max(alpha, eval);
-                    if (beta <= alpha) break;
-                }
-                return maxEval;
-            } else {
-                let minEval = Infinity;
-                for (const move of moves) {
-                    const eval = minimax(simulateAction(board, move), depth - 1, alpha, beta, true, aiColor);
-                    minEval = Math.min(minEval, eval);
-                    beta = Math.min(beta, eval);
-                    if (beta <= alpha) break;
-                }
-                return minEval;
-            }
-        }
+  // Timer
+  useEffect(()=>{if(!timerOn||gameOver||!turn)return;const c=turn==='red'?timerR:timerB;if(c<=0)return;timerRef.current=setInterval(()=>{if(turn==='red')setTimerR(p=>p-.1);else setTimerB(p=>p-.1)},100);return()=>clearInterval(timerRef.current)},[timerOn,gameOver,turn,timerR,timerB]);
+  useEffect(()=>{if(timerR<=0&&turn==='red'){setGameOver(true);setWinner('black');setWinReason('紅方超時');playSfx('win')}if(timerB<=0&&turn==='black'){setGameOver(true);setWinner('red');setWinReason('黑方超時');playSfx('win')}},[timerR,timerB,turn,playSfx]);
 
-        function aiPlay() {
-            if (!state.isGameActive || state.turn !== 'ai') return;
-            
-            document.getElementById('status').innerText = "大師推演中...";
+  const showParticles=useCallback((cl)=>{const ps=[];for(let i=0;i<20;i++){ps.push({id:i,x:50+Math.random()*10-5,y:50+Math.random()*10-5,dx:(Math.random()-.5)*200,dy:(Math.random()-.5)*200,cl:cl==='red'?'#ff6b4a':'#d0d4de',size:4+Math.random()*6,delay:Math.random()*.3})}setParticles(ps);setTimeout(()=>setParticles([]),1500)},[]);
 
-            setTimeout(() => {
-                const { moves, flips } = getAllActions(state.board, state.aiColor);
-                
-                if (moves.length === 0 && flips.length === 0) {
-                    state.isGameActive = false;
-                    showMessage({ text: "棋局終焉，玩家勝！", buttons:[{text:'再開一局', callback:restartGame}]});
-                    return;
-                }
+  const proceedTurn=useCallback((nb,nextT,fr,fc,tr,tc,target,flipP)=>{
+    if(target){playSfx('capture');target.color==='red'?setBlkCap(p=>p+1):setRedCap(p=>p+1)}
+    else if(flipP)playSfx('flip');
+    else playSfx('move');
+    setLastMove({fr,fc,tr,tc});
+    const atk=nb[tr][tc];const entry=`${pName(atk.color,atk.rank)}${target?`吃${pName(target.color,target.rank)}`:flipP?'翻牌':'移動'} (${String.fromCharCode(65+fc)}${fr+1}→${String.fromCharCode(65+tc)}${tr+1})`;
+    setHistory(h=>[...h,{color:atk.color,text:entry,idx:h.length+1}]);
+    setBoard(nb);setTurn(nextT);setSel(null);setHl([]);
+    if(timerOn){if(nextT==='red')setTimerR(15);else setTimerB(15)}
+  },[playSfx,timerOn]);
 
-                let bestAction = null;
-                let bestScore = -Infinity;
+  const doMove=useCallback((fr,fc,tr,tc)=>{
+    if(gameOver)return;
+    const nb=cloneB(board);const atk=nb[fr][fc];const tgt=nb[tr][tc];
+    setUndoStack(s=>[...s,{board:cloneB(board),turn,redCap,blkCap,history:[...history],lastMove}]);
+    nb[tr][tc]=atk;nb[fr][fc]=null;
+    if(capGM&&tgt&&tgt.rank===1){setBoard(nb);setGameOver(true);setWinner(atk.color);setWinReason(tgt.color==='red'?'紅方主帥被奪':'黑方主將被奪');setSel(null);setHl([]);playSfx('win');showParticles(atk.color);return}
+    const wr=checkWin(nb);if(wr){setBoard(nb);setGameOver(true);setWinner(wr.winner);setWinReason(wr.reason);setSel(null);setHl([]);playSfx('win');showParticles(wr.winner);return}
+    proceedTurn(nb,turn==='red'?'black':'red',fr,fc,tr,tc,tgt,false);
+  },[board,turn,gameOver,capGM,redCap,blkCap,history,lastMove,playSfx,showParticles,proceedTurn]);
 
-                // 1. Evaluate moves using Minimax
-                for (const move of moves) {
-                    const nextBoard = simulateAction(state.board, move);
-                    let score = minimax(nextBoard, 3, -Infinity, Infinity, false, state.aiColor);
-                    
-                    // Direct capture incentive (immediate reward weight)
-                    const targetCell = state.board[move.to];
-                    if (!targetCell.isEmpty && targetCell.isRevealed) {
-                        score += targetCell.piece.value * 1.2;
-                    }
+  const doFlip=useCallback((r,c)=>{
+    if(gameOver)return;
+    const nb=cloneB(board);const p=nb[r][c];
+    setUndoStack(s=>[...s,{board:cloneB(board),turn,redCap,blkCap,history:[...history],lastMove}]);
+    nb[r][c]={...p,faceUp:true};nb[r][c]._anim='anim-flip';
+    if(!turn){const fc=p.color;setPColor(fc);if(mode==='ai')setAiCl(fc==='red'?'black':'red');setTurn(fc==='red'?'black':'red');setBoard(nb);playSfx('flip');setTimeout(()=>{const nb2=cloneB(nb);for(let rr=0;rr<4;rr++)for(let cc=0;cc<8;cc++)if(nb2[rr][cc]&&nb2[rr][cc]._anim)delete nb2[rr][cc]._anim;setBoard(nb2)},400);return}
+    const nt=turn==='red'?'black':'red';
+    const wr=checkWin(nb);if(wr){const nb2=cloneB(nb);for(let rr=0;rr<4;rr++)for(let cc=0;cc<8;cc++)if(nb2[rr][cc]&&nb2[rr][cc]._anim)delete nb2[rr][cc]._anim;setBoard(nb2);setGameOver(true);setWinner(wr.winner);setWinReason(wr.reason);playSfx('win');showParticles(wr.winner);return}
+    proceedTurn(nb,nt,r,c,r,c,null,p);
+    setTimeout(()=>{const nb2=cloneB(nb);for(let rr=0;rr<4;rr++)for(let cc=0;cc<8;cc++)if(nb2[rr][cc]&&nb2[rr][cc]._anim)delete nb2[rr][cc]._anim;setBoard(nb2)},400);
+  },[board,turn,gameOver,mode,redCap,blkCap,history,lastMove,playSfx,showParticles,proceedTurn]);
 
-                    if (score > bestScore) {
-                        bestScore = score;
-                        bestAction = move;
-                    }
-                }
+  const handleUndo=useCallback(()=>{
+    if(gameOver||!undoStack.length||(mode==='ai'&&undoStack.length<2))return;
+    let st=undoStack[undoStack.length-1];
+    if(mode==='ai'&&undoStack.length>=2)st=undoStack[undoStack.length-2];
+    const newStack=mode==='ai'?undoStack.slice(0,-2):undoStack.slice(0,-1);
+    setBoard(st.board);setTurn(st.turn);setRedCap(st.redCap);setBlkCap(st.blkCap);setHistory(st.history);setLastMove(st.lastMove);setUndoStack(newStack);setSel(null);setHl([]);setAnimBoard(true);setTimeout(()=>setAnimBoard(false),300);
+    playSfx('move');
+  },[gameOver,undoStack,mode,playSfx]);
 
-                // 2. Decide between best move or a strategic flip
-                // If the best move score is mediocre or we have no captures, consider flipping
-                const topCapture = moves.reduce((max, m) => {
-                    const t = state.board[m.to];
-                    return (t.isRevealed && !t.isEmpty) ? Math.max(max, t.piece.value) : max;
-                }, 0);
+  const handleRestart=useCallback(()=>{setBoard(createBoard());setTurn(null);setPColor(null);setAiCl(null);setSel(null);setHl([]);setGameOver(false);setWinner(null);setWinReason('');setRedCap(0);setBlkCap(0);setLastMove(null);setHistory([]);setUndoStack([]);setTimerR(15);setTimerB(15);aiHist.current.clear();setAnimBoard(true);setTimeout(()=>setAnimBoard(false),300)},[]);
 
-                if (flips.length > 0) {
-                    // Only flip if no high-value capture (> rank 3) or if best move is dangerous
-                    if (topCapture < 1000 || bestScore < -500) {
-                        // Heuristic: flip pieces near own pieces or away from enemy threats
-                        flips.sort((a, b) => {
-                            const dEnemyA = getMinDist(a.idx, state.playerColor);
-                            const dEnemyB = getMinDist(b.idx, state.playerColor);
-                            return dEnemyB - dEnemyA; // Prefer flipping far from enemy threats
-                        });
-                        
-                        // Small chance to ignore minimax and flip for variety/tactical discovery
-                        if (bestScore < 2000 || Math.random() < 0.2) {
-                            bestAction = flips[0];
-                        }
-                    }
-                }
+  const toggleMode=()=>{setMode(p=>p==='pvp'?'ai':'pvp');handleRestart()};
 
-                if (bestAction) {
-                    if (bestAction.type === 'flip') executeFlip(bestAction.idx, false);
-                    else executeMove(bestAction.from, bestAction.to);
-                }
-            }, 800);
-        }
+  const handleCellClick=useCallback((r,c)=>{
+    if(gameOver||(mode==='ai'&&turn&&turn===aiCl))return;
+    const p=board[r][c];
+    if(!turn&&p&&!p.faceUp){doFlip(r,c);return}
+    if(sel){const hit=hl.find(h=>h.row===r&&h.col===c);if(hit){doMove(sel.row,sel.col,r,c);return}setSel(null);setHl([]);if(p&&p.faceUp&&p.color===turn){const ms=genMoves(board,r,c);setSel({row:r,col:c});setHl(ms)}return}
+    if(!p)return;
+    if(!p.faceUp){doFlip(r,c);return}
+    if(p.color===turn){const ms=genMoves(board,r,c);setSel({row:r,col:c});setHl(ms)}
+  },[board,turn,gameOver,sel,hl,doFlip,doMove,mode,aiCl]);
 
-        function getMinDist(idx, color) {
-            let minD = 100;
-            const x = idx % 4, y = Math.floor(idx / 4);
-            state.board.forEach((c, i) => {
-                if (!c.isEmpty && c.isRevealed && c.piece.color === color) {
-                    const dx = Math.abs(x - (i % 4)), dy = Math.abs(y - Math.floor(i / 4));
-                    minD = Math.min(minD, dx + dy);
-                }
-            });
-            return minD;
-        }
+  // Drag support
+  const handleDragStart=useCallback((r,c)=>{if(gameOver||(mode==='ai'&&turn&&turn===aiCl))return;const p=board[r][c];if(p&&p.faceUp&&p.color===turn){dragRef.current={r,c};setSel({row:r,col:c});setHl(genMoves(board,r,c))}},[board,turn,gameOver,mode,aiCl]);
+  const handleDragOver=useCallback((r,c)=>{},[]);
+  const handleDrop=useCallback((r,c)=>{if(!dragRef.current)return;const{row:fr,col:fc}=dragRef.current;dragRef.current=null;const hit=hl.find(h=>h.row===r&&h.col===c);if(hit)doMove(fr,fc,r,c);else{setSel(null);setHl([])}},[hl,doMove]);
+  const handleDragEnd=useCallback(()=>{dragRef.current=null},[]);
 
-        // --- Core Game Functions ---
+  // AI decision
+  useEffect(()=>{if(gameOver||mode!=='ai'||!turn||!aiCl||turn!==aiCl)return;const t=setTimeout(()=>{const d=aiDecide(board,aiCl,capGM,difficulty);if(!d)return;if(d.type==='flip')doFlip(d.tr,d.tc);else doMove(d.fr,d.fc,d.tr,d.tc)},500);return()=>clearTimeout(t)},[board,turn,gameOver,mode,aiCl,capGM,difficulty,doFlip,doMove]);
 
-        function initGame() {
-            const deck = [...INITIAL_DECK];
-            deck.sort(() => Math.random() - 0.5);
-            state.board = deck.map(id => ({ piece: PIECES[id], isRevealed: false, isEmpty: false }));
-            render();
-            updateUI();
-        }
+  // ==================== Render ====================
+  const cells=[];
+  for(let c=0;c<8;c++)for(let r=0;r<4;r++){const p=board[r][c],ih=hl.some(h=>h.row===r&&h.col===c),ht=hl.find(h=>h.row===r&&h.col===c)?.type||'move',isS=sel&&sel.row===r&&sel.col===c,k=`c-${r}-${c}`;cells.push(html`<${Cell} key=${k} row=${r} col=${c} piece=${p} hl=${ih} hlType=${ht} sel=${isS} onClick=${handleCellClick} animCell=${animBoard} animIndex=${r*8+c} onDragStart=${handleDragStart} onDragOver=${handleDragOver} onDrop=${handleDrop} onDragEnd=${handleDragEnd} dragOver=${false}/>`)}
 
-        function restartGame() {
-            Object.values(state.timers).forEach(t => t && clearTimeout(t));
-            state.playerColor = null; 
-            state.aiColor = null; 
-            state.selectedIdx = -1;
-            state.isGameActive = true; 
-            state.highlightCells = [];
-            state.lastMoveTarget = -1; 
-            state.lastFlipTarget = -1; 
-            state.turn = 'player';
-            initGame();
-        }
+  const turnLabel=turn?(turn==='red'?'紅方':'黑方'):'';
+  const timerRTxt=timerR<=0?'超時':timerR.toFixed(1)+'s';const timerBTxt=timerB<=0?'超時':timerB.toFixed(1)+'s';
+  const dTag=difficulty==='easy'?'初級':difficulty==='medium'?'中級':'高級';
+  const dCls=difficulty==='easy'?'easy':difficulty==='medium'?'medium':'hard';
 
-        function clearAnimationFlags() {
-            state.lastMoveTarget = -1;
-            state.lastFlipTarget = -1;
-            render();
-        }
+  return html`<div className="app-container" role="main" aria-label="暗棋 Pro">
+    <div className="main-area">
+      <div className="top-bar">
+        <div className="flex items-center gap-2">
+          <span className="text-wood-300 text-xs font-black tracking-wider">暗棋 Pro</span>
+          ${mode==='ai'?html`<span className="difficulty-tag ${dCls}">${dTag}</span>`:html`<span className="text-wood-500 text-[10px] font-bold">雙人</span>`}
+        </div>
+        <div className="flex items-center gap-2">
+          ${timerOn?html`<span className=${"timer-display"+(turn==='red'&&timerR<=5||turn==='black'&&timerB<=5?' urgent':'')}>${turn==='red'?timerRTxt:timerB<=0?'超時':timerBTxt}</span>`:null}
+          <div className="counter-badge"><div className="dot r"></div>${redCap}</div>
+          <div className="turn-indicator"><div className=${"turn-dot "+(turn==='red'?'red':turn==='black'?'black':'idle')}></div><span className="text-wood-300 font-bold text-xs">${turnLabel}</span></div>
+          <div className="counter-badge"><div className="dot b"></div>${blkCap}</div>
+        </div>
+      </div>
+      <div className="board-area"><div className="board-wrapper"><div className="board-inner relative"><div className="board-grid">${cells}</div>
+        ${gameOver&&winner?html`<div className="victory-overlay">
+          ${particles.map(p=>html`<div key=${p.id} className="particle" style=${{left:p.x+'%',top:p.y+'%','--dx':p.dx+'px','--dy':p.dy+'px',width:p.size+'px',height:p.size+'px',background:p.cl,animationDelay:p.delay+'s'}}></div>`)}
+          <div className=${"victory-title "+(winner==='red'?'v-red':'v-black')}>${winner==='red'?'紅方獲勝':'黑方獲勝'}</div>
+          <div className="victory-sub">${winReason}</div>
+          <div className="victory-stats"><span>紅吃 ${redCap}</span><span>黑吃 ${blkCap}</span></div>
+          <button className="victory-btn" onClick=${handleRestart}>重新對局</button>
+        </div>`:null}
+      </div></div></div>
+      <div className="bottom-bar">
+        <button className="btn-primary" onClick=${toggleMode}>${mode==='pvp'?'電腦':'雙人'}</button>
+        <button onClick=${()=>setSettingsOpen(!settingsOpen)}>設定</button>
+        <button onClick=${handleUndo} disabled=${!undoStack.length||(mode==='ai'&&undoStack.length<2)} style=${{opacity:(undoStack.length&&(!(mode==='ai'&&undoStack.length<2)))?1:.35}}>悔棋</button>
+        <button className="btn-primary" onClick=${handleRestart}>重開</button>
+      </div>
+    </div>
+    <div className="side-panel">
+      <section style=${{flex:1,minHeight:0}}>
+        <h3>走棋記錄</h3>
+        <div className="history-list">${history.length?history.map(e=>html`<div key=${e.idx} className=${"entry "+(e.color==='red'?'red-move':'black-move')}><span className="move-num">${e.idx}.</span>${e.text}</div>`):html`<div className="text-wood-700 text-[10px] p-1">尚無記錄</div>`}</div>
+      </section>
+      ${settingsOpen?html`<section>
+        <h3>設定</h3>
+        <div className="settings-row"><label>音效</label><label className="toggle-sw"><input type="checkbox" checked=${sfxOn} onChange=${()=>setSfxOn(!sfxOn)}/><span className="slider"></span></label></div>
+        <div className="settings-row"><label>計時</label><label className="toggle-sw"><input type="checkbox" checked=${timerOn} onChange=${()=>setTimerOn(!timerOn)}/><span className="slider"></span></label></div>
+        ${mode==='ai'?html`<div className="settings-row"><label>難度</label><select value=${difficulty} onChange=${e=>setDifficulty(e.target.value)}><option value="easy">初級</option><option value="medium">中級</option><option value="hard">高級</option></select></div>`:null}
+        <div className="settings-row"><label>奪帥</label><label className="toggle-sw"><input type="checkbox" checked=${capGM} onChange=${()=>setCapGM(!capGM)}/><span className="slider"></span></label></div>
+      </section>`:null}
+    </div>
+  </div>`;
+}
 
-        function render() {
-            const boardEl = document.getElementById('board');
-            boardEl.innerHTML = '';
-
-            let validMoves = [];
-            if (state.selectedIdx !== -1 && !state.board[state.selectedIdx].isEmpty && state.board[state.selectedIdx].isRevealed) {
-                validMoves = getValidMoves(state.selectedIdx, state.board);
-            }
-
-            state.board.forEach((cell, idx) => {
-                const div = document.createElement('div');
-                div.className = 'cell';
-                
-                if (validMoves.includes(idx)) {
-                    const targetCell = state.board[idx];
-                    const isCapture = !targetCell.isEmpty && targetCell.isRevealed;
-                    div.classList.add(isCapture ? 'valid-capture' : 'valid-move');
-                }
-                
-                if (state.highlightCells.includes(idx)) div.classList.add('cell-highlight');
-                div.onclick = () => handlePlayerAction(idx);
-
-                if (!cell.isEmpty) {
-                    const pieceDiv = document.createElement('div');
-                    let pieceClass = `piece ${cell.isRevealed ? 'revealed' : 'unrevealed'}`;
-                    
-                    if (cell.isRevealed) {
-                        pieceClass += ` ${cell.piece.color}`;
-                        if (idx === state.selectedIdx) pieceClass += ' selected';
-                        if (idx === state.lastMoveTarget) pieceClass += ' animate-pop';
-                        if (idx === state.lastFlipTarget) pieceClass += ' animate-flip';
-                        pieceDiv.innerText = cell.piece.name;
-                    }
-
-                    pieceDiv.className = pieceClass;
-                    div.appendChild(pieceDiv);
-                }
-                boardEl.appendChild(div);
-            });
-        }
-
-        function updateUI() {
-            const statusEl = document.getElementById('status');
-            if (state.playerColor) {
-                const pName = state.playerColor === 'red' ? '紅方' : '黑方';
-                const aName = state.aiColor === 'red' ? '紅方' : '黑方';
-                const pColor = state.playerColor === 'red' ? '#ff7675' : '#ccc';
-                const aColor = state.aiColor === 'red' ? '#ff7675' : '#ccc';
-                statusEl.innerHTML = `<span style="color:${pColor}">君子(${pName})</span> ｜ <span style="color:${aColor}">對弈大師</span>`;
-            } else {
-                statusEl.innerText = "開卷有益 · 點擊啟局";
-            }
-            
-            const ti = document.getElementById('turn-indicator');
-            if (state.turn === 'player') {
-                ti.innerText = '君子落子';
-                ti.style.color = '#d4af37';
-                ti.style.borderColor = 'rgba(212, 175, 55, 0.6)';
-            } else {
-                ti.innerText = '大師推演';
-                ti.style.color = '#aaa';
-                ti.style.borderColor = 'rgba(255, 255, 255, 0.2)';
-            }
-        }
-
-        function isValidMove(from, to, currentBoard) {
-            if (from === to) return false;
-            const fromX = from % 4, fromY = Math.floor(from / 4);
-            const toX = to % 4, toY = Math.floor(to / 4);
-            const dx = Math.abs(fromX - toX), dy = Math.abs(fromY - toY);
-            
-            const attackerCell = currentBoard[from];
-            if (!attackerCell || attackerCell.isEmpty || !attackerCell.isRevealed) return false;
-            
-            const attacker = attackerCell.piece;
-            const target = currentBoard[to];
-
-            if (attacker.rank === 2) {
-                if (fromX !== toX && fromY !== toY) return false;
-                let count = 0;
-                if (fromY === toY) { 
-                    for (let x = Math.min(fromX, toX) + 1; x < Math.max(fromX, toX); x++) {
-                        if (!currentBoard[fromY * 4 + x].isEmpty) count++;
-                    }
-                } else { 
-                    for (let y = Math.min(fromY, toY) + 1; y < Math.max(fromY, toY); y++) {
-                        if (!currentBoard[y * 4 + fromX].isEmpty) count++;
-                    }
-                }
-                
-                if (count === 0 && target.isEmpty && (dx + dy === 1)) return true;
-                if (count === 1 && !target.isEmpty && target.isRevealed && target.piece.color !== attacker.color) return true;
-                return false;
-            } else {
-                if (dx + dy !== 1) return false;
-                if (target.isEmpty) return true;
-                if (!target.isRevealed || target.piece.color === attacker.color) return false;
-                if (attacker.rank === 7 && target.piece.rank === 1) return false;
-                if (attacker.rank === 1 && target.piece.rank === 7) return true;
-                return attacker.rank >= target.piece.rank;
-            }
-        }
-
-        function getValidMoves(from, board) {
-            const moves = [];
-            for (let to = 0; to < 32; to++) {
-                if (isValidMove(from, to, board)) moves.push(to);
-            }
-            return moves;
-        }
-
-        function handlePlayerAction(idx) {
-            if (state.turn !== 'player' || !state.isGameActive) return;
-            initAudio();
-            tryResumeAudio();
-
-            const cell = state.board[idx];
-
-            if (!cell.isEmpty && !cell.isRevealed) {
-                if (state.selectedIdx !== -1) { state.selectedIdx = -1; render(); return; }
-                executeFlip(idx, true);
-                return;
-            }
-
-            if (state.selectedIdx !== -1) {
-                if (isValidMove(state.selectedIdx, idx, state.board)) {
-                    executeMove(state.selectedIdx, idx);
-                } else if (!cell.isEmpty && cell.isRevealed && cell.piece.color === state.playerColor) {
-                    state.selectedIdx = (state.selectedIdx === idx) ? -1 : idx;
-                    render();
-                } else {
-                    state.selectedIdx = -1;
-                    render();
-                }
-            } else if (!cell.isEmpty && cell.isRevealed && cell.piece.color === state.playerColor) {
-                state.selectedIdx = idx;
-                render();
-            }
-        }
-
-        function executeFlip(idx, isPlayer) {
-            clearTimeout(state.timers.highlight);
-            clearTimeout(state.timers.animationClear);
-            
-            state.highlightCells = [];
-            state.board[idx].isRevealed = true;
-            state.lastFlipTarget = idx;
-            state.lastMoveTarget = -1; 
-            
-            playSound('flip');
-            
-            if (!state.playerColor) {
-                state.playerColor = isPlayer ? state.board[idx].piece.color : (state.board[idx].piece.color === 'red' ? 'black' : 'red');
-                state.aiColor = state.playerColor === 'red' ? 'black' : 'red';
-                if (state.bgmPlaying) bgmAudio.play().catch(e=>{});
-            }
-
-            state.timers.animationClear = setTimeout(clearAnimationFlags, 500);
-            endTurn();
-        }
-
-        function executeMove(from, to) {
-            clearTimeout(state.timers.highlight);
-            clearTimeout(state.timers.animationClear);
-            
-            const target = state.board[to];
-            const isCapture = !target.isEmpty && target.isRevealed;
-            
-            state.board[to] = { ...state.board[from] }; 
-            state.board[from] = { isEmpty: true };
-            state.lastMoveTarget = to;
-            state.lastFlipTarget = -1; 
-            state.highlightCells = [from, to];
-            
-            playSound(isCapture ? 'capture' : 'move');
-            
-            state.timers.highlight = setTimeout(() => {
-                state.highlightCells = [];
-                render();
-            }, 600);
-
-            state.timers.animationClear = setTimeout(clearAnimationFlags, 400);
-            endTurn();
-        }
-
-        function endTurn() {
-            state.selectedIdx = -1;
-            checkWin().then(over => {
-                if (over) return;
-                state.turn = state.turn === 'player' ? 'ai' : 'player';
-                render();
-                updateUI();
-                if (state.turn === 'ai') aiPlay();
-            });
-        }
-
-        async function checkWin() {
-            let red = 0, black = 0;
-            state.board.forEach(c => { if (!c.isEmpty) c.piece.color === 'red' ? red++ : black++; });
-            if (red === 0 || black === 0) {
-                state.isGameActive = false;
-                render();
-                updateUI();
-                const winner = red === 0 ? "黑方" : "紅方";
-                playSound('win');
-                await showMessage({
-                    text: `${winner} 棋高一著，凱旋而歸！`,
-                    buttons: [{ text: '再對一局', callback: restartGame }]
-                });
-                return true;
-            }
-            return false;
-        }
-
-        function showMessage(config) {
-            return new Promise((resolve) => {
-                const overlay = document.getElementById('message-overlay');
-                const msgText = document.getElementById('message-text');
-                const btnContainer = document.getElementById('message-buttons');
-                btnContainer.innerHTML = '';
-                msgText.innerText = config.text;
-                overlay.classList.add('active');
-
-                const buttons = config.buttons || [{ text: '知曉', callback: resolve }];
-                buttons.forEach(btn => {
-                    const button = document.createElement('button');
-                    button.innerText = btn.text;
-                    button.onclick = () => {
-                        overlay.classList.remove('active');
-                        btn.callback();
-                    };
-                    btnContainer.appendChild(button);
-                });
-            });
-        }
-
-        initGame();
-    </script>
-</body></html>
+const root=ReactDOM.createRoot(document.getElementById('root'));
+root.render(html`<${React.StrictMode}><${App}/></>`);
+</script>
+</body>
+</html>

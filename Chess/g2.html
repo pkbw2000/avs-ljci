@@ -461,8 +461,8 @@ function App(){
     const nb=cloneB(board);const atk=nb[fr][fc];const tgt=nb[tr][tc];
     setUndoStack(s=>[...s,{board:cloneB(board),turn,redCap,blkCap,history:[...history],lastMove}]);
     nb[tr][tc]=atk;nb[fr][fc]=null;
-    if(capGM&&tgt&&tgt.rank===1){setBoard(nb);setGameOver(true);setWinner(atk.color);setWinReason(tgt.color==='red'?'紅方主帥被奪':'黑方主將被奪');setSel(null);setHl([]);playSfx('win');showParticles(atk.color);return}
-    const wr=checkWin(nb);if(wr){setBoard(nb);setGameOver(true);setWinner(wr.winner);setWinReason(wr.reason);setSel(null);setHl([]);playSfx('win');showParticles(wr.winner);return}
+    if(capGM&&tgt&&tgt.rank===1){tgt.color==='red'?setBlkCap(p=>p+1):setRedCap(p=>p+1);setBoard(nb);setGameOver(true);setWinner(atk.color);setWinReason(tgt.color==='red'?'紅方主帥被奪':'黑方主將被奪');setSel(null);setHl([]);playSfx('win');showParticles(atk.color);return}
+    const wr=checkWin(nb);if(wr){if(tgt)tgt.color==='red'?setBlkCap(p=>p+1):setRedCap(p=>p+1);setBoard(nb);setGameOver(true);setWinner(wr.winner);setWinReason(wr.reason);setSel(null);setHl([]);playSfx('win');showParticles(wr.winner);return}
     proceedTurn(nb,turn==='red'?'black':'red',fr,fc,tr,tc,tgt,false);
   },[board,turn,gameOver,capGM,redCap,blkCap,history,lastMove,playSfx,showParticles,proceedTurn]);
 

@@ -44,7 +44,7 @@ html,body{margin:0;padding:0;height:100%;height:100dvh;overflow:hidden;font-fami
 .cell-hl-capture{box-shadow:inset 0 0 0 2px rgba(220,100,100,.6),0 0 12px rgba(220,100,100,.1)}
 .cell-hl-capture::after{content:"✕";position:absolute;font-size:16px;color:rgba(220,100,100,.55);font-weight:900;pointer-events:none}
 .cell-drag-over{box-shadow:inset 0 0 0 3px rgba(212,168,83,.7),0 0 16px rgba(212,168,83,.2)}
-.piece{width:auto;height:auto;max-width:86%;max-height:86%;aspect-ratio:1;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:clamp(1.2rem,4.5vw,2.2rem);line-height:1;cursor:pointer;touch-action:none;position:relative;transition:transform .12s ease,box-shadow .12s ease;will-change:transform;text-shadow:0 1px 4px rgba(0,0,0,.4)}
+.piece{width:86%;height:86%;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:clamp(1.2rem,4.5vw,2.2rem);line-height:1;cursor:pointer;touch-action:none;position:relative;transition:transform .12s ease,box-shadow .12s ease;will-change:transform;text-shadow:0 1px 4px rgba(0,0,0,.4)}
 .piece:active{transform:scale(.94)}
 .piece-red{background:radial-gradient(circle at 35% 28%,#f8a090,#d95a48,#9a2a1a);border:1.5px solid rgba(255,210,180,.35);box-shadow:0 3px 0 rgba(0,0,0,.2),0 6px 14px rgba(0,0,0,.3),0 0 10px rgba(255,107,74,.15);color:#fff6f0}
 .piece-black{background:radial-gradient(circle at 35% 28%,#c8ccd6,#5a5e6a,#1e2128);border:1.5px solid rgba(200,210,220,.2);box-shadow:0 3px 0 rgba(0,0,0,.25),0 6px 14px rgba(0,0,0,.35),0 0 8px rgba(160,168,184,.1);color:#f0f1f4}
@@ -92,6 +92,9 @@ html,body{margin:0;padding:0;height:100%;height:100dvh;overflow:hidden;font-fami
 .bottom-bar button{border:none;border-radius:12px;font-weight:800;font-size:.7rem;background:rgba(50,36,24,.5);border:1px solid rgba(180,150,110,.1);color:#c0b090;cursor:pointer;touch-action:manipulation;transition:transform .1s,background .1s}
 .bottom-bar button:active{transform:scale(.96)}
 .bottom-bar .btn-primary{background:linear-gradient(135deg,#8a6240,#6f4d30);color:#f0e6d8;border-color:rgba(200,170,130,.25)}
+
+.settings-confirm-btn{display:block;width:100%;margin-top:10px;padding:8px 0;background:linear-gradient(135deg,#8a6240,#6f4d30);color:#f0e6d8;border:1px solid rgba(200,170,130,.25);border-radius:10px;font-weight:800;font-size:.7rem;cursor:pointer}
+.settings-confirm-btn:active{transform:scale(.96)}
 
 /* ============ 第 1 档：小屏手机 < 380px ============ */
 @media(max-width:379px){
@@ -159,16 +162,14 @@ html,body{margin:0;padding:0;height:100%;height:100dvh;overflow:hidden;font-fami
   .top-bar{grid-area:top}
   .bottom-bar{grid-area:buttons}
   .board-area{grid-area:board}
-  .side-panel{grid-area:panel}
+  .side-panel{grid-area:panel;max-height:none;padding:0 2px}
 
-  /* 设定面板 overlay 浮层，不占布局空间 */
+  /* 设定面板 inline 展开，不占额外布局空间 */
   .settings-panel{
-    position:fixed;bottom:0;left:0;right:0;z-index:50;
-    max-height:55dvh;overflow-y:auto;
-    border-radius:16px 16px 0 0;
-    box-shadow:0 -8px 40px rgba(0,0,0,.7),0 0 0 100vmax rgba(0,0,0,.5);
-    padding:12px 16px calc(12px + env(safe-area-inset-bottom,0px)) 16px;
-    background:rgba(24,18,10,.95);backdrop-filter:blur(16px);
+    width:100%;overflow-y:auto;
+    border-radius:12px;
+    padding:8px 12px;
+    background:rgba(24,18,10,.95);backdrop-filter:blur(8px);
     border:1px solid rgba(180,150,110,.15);
   }
   .settings-panel h3{
@@ -176,6 +177,13 @@ html,body{margin:0;padding:0;height:100%;height:100dvh;overflow:hidden;font-fami
     letter-spacing:2px;padding:4px 0;
     border-bottom:1px solid rgba(180,150,110,.15);margin-bottom:8px;
   }
+  .settings-confirm-btn{
+    display:block;width:100%;margin-top:10px;padding:8px 0;
+    background:linear-gradient(135deg,#8a6240,#6f4d30);
+    color:#f0e6d8;border:1px solid rgba(200,170,130,.25);
+    border-radius:10px;font-weight:800;font-size:.7rem;cursor:pointer;
+  }
+  .settings-confirm-btn:active{transform:scale(.96)}
   .settings-row{padding:4px 0;font-size:.65rem}
 }
 
@@ -542,16 +550,13 @@ function App(){
       </div>
     </div>
     <div className="side-panel">
-      <section style=${{flex:1,minHeight:0}}>
-        <h3>走棋記錄</h3>
-        <div className="history-list">${history.length?history.map(e=>html`<div key=${e.idx} className=${"entry "+(e.color==='red'?'red-move':'black-move')}><span className="move-num">${e.idx}.</span>${e.text}</div>`):html`<div className="text-wood-700 text-[10px] p-1">尚無記錄</div>`}</div>
-      </section>
       ${settingsOpen?html`<section className="settings-panel">
         <h3>設定</h3>
         <div className="settings-row"><label>音效</label><label className="toggle-sw"><input type="checkbox" checked=${sfxOn} onChange=${()=>setSfxOn(!sfxOn)}/><span className="slider"></span></label></div>
         <div className="settings-row"><label>計時</label><label className="toggle-sw"><input type="checkbox" checked=${timerOn} onChange=${()=>setTimerOn(!timerOn)}/><span className="slider"></span></label></div>
         ${mode==='ai'?html`<div className="settings-row"><label>難度</label><select value=${difficulty} onChange=${e=>setDifficulty(e.target.value)}><option value="easy">初級</option><option value="medium">中級</option><option value="hard">高級</option></select></div>`:null}
         <div className="settings-row"><label>奪帥</label><label className="toggle-sw"><input type="checkbox" checked=${capGM} onChange=${()=>setCapGM(!capGM)}/><span className="slider"></span></label></div>
+        <button class="settings-confirm-btn" onClick=${()=>setSettingsOpen(false)}>確定</button>
       </section>`:null}
     </div>
   </div>`;

@@ -395,7 +395,7 @@ function checkWin(b){
 const Piece=memo(({piece,sel,animClass,onClick})=>{
   if(!piece)return null;const{color,rank,faceUp}=piece,isRed=color==='red',isBack=!faceUp;
   let cn=`piece ${isBack?'piece-back':(isRed?'piece-red':'piece-black')}`;if(sel)cn+=' piece-sel';if(animClass)cn+=' '+animClass;
-  return html`<div className=${cn} style=${{fontSize:faceUp?'clamp(1.2rem,4.5vw,2.2rem)':'0',color:faceUp?(isRed?'#fff6f0':'#f0f1f4'):'transparent'}} onClick=${onClick} onTouchEnd=${onClick}>${faceUp?pName(color,rank):''}</div>`;
+  return html`<div className=${cn} style=${{fontSize:faceUp?'clamp(1.2rem,4.5vw,2.2rem)':'0',color:faceUp?(isRed?'#fff6f0':'#f0f1f4'):'transparent'}} onClick=${e=>{e.stopPropagation();onClick(e)}} onTouchEnd=${e=>{e.preventDefault();e.stopPropagation();onClick(e)}}>${faceUp?pName(color,rank):''}</div>`;
 });
 
 const Cell=memo(({row,col,piece,hl,hlType,sel,onClick,animCell,onDragStart,onDragOver,onDrop,onDragEnd,dragOver,animIndex})=>{
@@ -543,8 +543,8 @@ function App(){
         </div>`:null}
       </div></div></div>
       <div className="bottom-bar">
-        <button className="btn-primary" onClick=${toggleMode}>${mode==='pvp'?'電腦':'雙人'}</button>
-        <button onClick=${()=>setSettingsOpen(!settingsOpen)}>設定</button>
+        <button className="btn-primary" onClick=${toggleMode} disabled=${!!turn} style=${{opacity:turn?0.5:1}}>${mode==='pvp'?'電腦':'雙人'}</button>
+        <button onClick=${()=>setSettingsOpen(!settingsOpen)} disabled=${!!turn} style=${{opacity:turn?0.5:1}}>設定</button>
         <button onClick=${handleUndo} disabled=${!undoStack.length||(mode==='ai'&&undoStack.length<2)} style=${{opacity:(undoStack.length&&(!(mode==='ai'&&undoStack.length<2)))?1:.35}}>悔棋</button>
         <button className="btn-primary" onClick=${handleRestart}>重開</button>
       </div>

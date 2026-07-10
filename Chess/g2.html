@@ -44,7 +44,7 @@ html,body{margin:0;padding:0;height:100%;height:100dvh;overflow:hidden;font-fami
 .cell-hl-capture{box-shadow:inset 0 0 0 2px rgba(220,100,100,.6),0 0 12px rgba(220,100,100,.1)}
 .cell-hl-capture::after{content:"✕";position:absolute;font-size:16px;color:rgba(220,100,100,.55);font-weight:900;pointer-events:none}
 .cell-drag-over{box-shadow:inset 0 0 0 3px rgba(212,168,83,.7),0 0 16px rgba(212,168,83,.2)}
-.piece{width:86%;height:86%;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:clamp(1.2rem,4.5vw,2.2rem);line-height:1;cursor:pointer;touch-action:none;position:relative;transition:transform .12s ease,box-shadow .12s ease;will-change:transform;text-shadow:0 1px 4px rgba(0,0,0,.4)}
+.piece{width:auto;height:auto;max-width:86%;max-height:86%;aspect-ratio:1;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:clamp(1.2rem,4.5vw,2.2rem);line-height:1;cursor:pointer;touch-action:none;position:relative;transition:transform .12s ease,box-shadow .12s ease;will-change:transform;text-shadow:0 1px 4px rgba(0,0,0,.4)}
 .piece:active{transform:scale(.94)}
 .piece-red{background:radial-gradient(circle at 35% 28%,#f8a090,#d95a48,#9a2a1a);border:1.5px solid rgba(255,210,180,.35);box-shadow:0 3px 0 rgba(0,0,0,.2),0 6px 14px rgba(0,0,0,.3),0 0 10px rgba(255,107,74,.15);color:#fff6f0}
 .piece-black{background:radial-gradient(circle at 35% 28%,#c8ccd6,#5a5e6a,#1e2128);border:1.5px solid rgba(200,210,220,.2);box-shadow:0 3px 0 rgba(0,0,0,.25),0 6px 14px rgba(0,0,0,.35),0 0 8px rgba(160,168,184,.1);color:#f0f1f4}
@@ -95,8 +95,8 @@ html,body{margin:0;padding:0;height:100%;height:100dvh;overflow:hidden;font-fami
 
 /* ============ 第 1 档：小屏手机 < 380px ============ */
 @media(max-width:379px){
-  .app-container{padding:3px 4px calc(2px + env(safe-area-inset-bottom,0px)) 4px;gap:3px}
-  .board-wrapper{aspect-ratio:1/1;padding:3px;border-radius:10px}
+  .app-container{padding:3px 4px 0 4px;gap:0}
+  .board-wrapper{aspect-ratio:4/8;padding:3px;border-radius:10px}
   .board-grid{gap:1px}
   .cell{border-radius:4px}
   .piece{font-size:clamp(0.85rem,5vw,1.3rem)!important}
@@ -108,7 +108,7 @@ html,body{margin:0;padding:0;height:100%;height:100dvh;overflow:hidden;font-fami
   .timer-display{font-size:.6rem;min-width:32px}
   .bottom-bar{height:34px;gap:3px}
   .bottom-bar button{font-size:.6rem;border-radius:8px;min-height:34px}
-  .side-panel{max-height:74px;gap:3px}
+  .side-panel{max-height:60px;gap:3px}
   .side-panel section{padding:3px 6px;border-radius:8px}
   .side-panel section h3{font-size:.5rem;margin:0 0 1px;letter-spacing:1px}
   .history-list{font-size:.5rem;line-height:1.3}
@@ -124,10 +124,10 @@ html,body{margin:0;padding:0;height:100%;height:100dvh;overflow:hidden;font-fami
 
 /* ============ 第 2 档：标准手机 380 ~ 430px ============ */
 @media(min-width:380px) and (max-width:430px){
-  .app-container{padding:4px 6px calc(4px + env(safe-area-inset-bottom,0px)) 6px;gap:4px}
-  .board-wrapper{aspect-ratio:5/8}
+  .app-container{padding:4px 6px 0 6px;gap:0}
+  .board-wrapper{aspect-ratio:4/8}
   .piece{font-size:clamp(1rem,5.5vw,1.5rem)!important}
-  .side-panel{max-height:94px}
+  .side-panel{max-height:68px}
   .side-panel section h3{font-size:.55rem}
   .history-list{font-size:.55rem}
   .settings-row{font-size:.55rem}
@@ -135,15 +135,48 @@ html,body{margin:0;padding:0;height:100%;height:100dvh;overflow:hidden;font-fami
 
 /* ============ 第 3 档：大屏手机 431 ~ 600px ============ */
 @media(min-width:431px) and (max-width:600px){
-  .app-container{padding:8px 12px calc(8px + env(safe-area-inset-bottom,0px)) 12px;gap:6px}
-  .board-wrapper{aspect-ratio:4/7;max-width:min(92vw,480px)}
+  .app-container{padding:8px 12px 0 12px;gap:0}
+  .board-wrapper{aspect-ratio:4/8;max-width:min(92vw,480px)}
   .piece{font-size:clamp(1.3rem,5.5vw,2rem)!important}
-  .side-panel{max-height:120px;gap:6px}
+  .side-panel{max-height:82px;gap:6px}
   .side-panel section h3{font-size:.65rem}
   .history-list{font-size:.65rem;line-height:1.5}
   .bottom-bar{height:42px;gap:6px}
   .bottom-bar button{font-size:.75rem;min-height:42px}
   .top-bar{min-height:40px;padding:4px 12px}
+}
+
+/* ============ 手机统一：Grid 重排 + 设定 overlay（<601px） ============ */
+@media(max-width:600px){
+  /* Grid 重排：功能在上、棋盘在下 */
+  .app-container{
+    display:grid;
+    grid-template-columns:1fr;
+    grid-template-rows:auto auto auto 1fr;
+    grid-template-areas:"top" "buttons" "panel" "board";
+  }
+  .main-area{display:contents}
+  .top-bar{grid-area:top}
+  .bottom-bar{grid-area:buttons}
+  .board-area{grid-area:board}
+  .side-panel{grid-area:panel}
+
+  /* 设定面板 overlay 浮层，不占布局空间 */
+  .settings-panel{
+    position:fixed;bottom:0;left:0;right:0;z-index:50;
+    max-height:55dvh;overflow-y:auto;
+    border-radius:16px 16px 0 0;
+    box-shadow:0 -8px 40px rgba(0,0,0,.7),0 0 0 100vmax rgba(0,0,0,.5);
+    padding:12px 16px calc(12px + env(safe-area-inset-bottom,0px)) 16px;
+    background:rgba(24,18,10,.95);backdrop-filter:blur(16px);
+    border:1px solid rgba(180,150,110,.15);
+  }
+  .settings-panel h3{
+    font-size:.7rem;font-weight:800;color:#8a7a60;
+    letter-spacing:2px;padding:4px 0;
+    border-bottom:1px solid rgba(180,150,110,.15);margin-bottom:8px;
+  }
+  .settings-row{padding:4px 0;font-size:.65rem}
 }
 
 /* ============ 第 4 档：平板竖屏 601 ~ 900px ============ */
@@ -513,7 +546,7 @@ function App(){
         <h3>走棋記錄</h3>
         <div className="history-list">${history.length?history.map(e=>html`<div key=${e.idx} className=${"entry "+(e.color==='red'?'red-move':'black-move')}><span className="move-num">${e.idx}.</span>${e.text}</div>`):html`<div className="text-wood-700 text-[10px] p-1">尚無記錄</div>`}</div>
       </section>
-      ${settingsOpen?html`<section>
+      ${settingsOpen?html`<section className="settings-panel">
         <h3>設定</h3>
         <div className="settings-row"><label>音效</label><label className="toggle-sw"><input type="checkbox" checked=${sfxOn} onChange=${()=>setSfxOn(!sfxOn)}/><span className="slider"></span></label></div>
         <div className="settings-row"><label>計時</label><label className="toggle-sw"><input type="checkbox" checked=${timerOn} onChange=${()=>setTimerOn(!timerOn)}/><span className="slider"></span></label></div>

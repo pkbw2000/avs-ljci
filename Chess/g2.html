@@ -16,12 +16,11 @@
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;outline:none}
 html,body{margin:0;padding:0;height:100%;height:100dvh;overflow:hidden;font-family:'Inter',system-ui,sans-serif;background:var(--bg-deep);touch-action:manipulation;-webkit-user-select:none;user-select:none}
 #root{height:100%;height:100dvh;display:flex;align-items:center;justify-content:center;background:radial-gradient(ellipse at 50% 20%,#221911 0%,#0d0a07 50%,#050302 100%);padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left)}
-.app-container{width:100%;max-width:520px;height:100%;height:100dvh;display:flex;padding:6px 10px 8px;gap:6px;overflow:hidden;flex-direction:row}
-/* Left panel */
-.main-area{flex:1;min-width:0;display:flex;flex-direction:column;gap:6px}
-/* Right panel */
-.side-panel{width:140px;flex-shrink:0;display:flex;flex-direction:column;gap:6px;overflow:hidden}
-@media(max-width:440px){.app-container{flex-direction:column;padding:4px 6px 6px}.side-panel{width:100%;height:auto;max-height:120px;flex-direction:row;gap:4px;overflow-x:auto}}
+.app-container{width:100%;max-width:100%;height:100dvh;display:flex;flex-direction:column;padding:6px 10px 8px;gap:6px;overflow:hidden}
+/* Main area */
+.main-area{flex:1;min-height:0;display:flex;flex-direction:column;gap:6px}
+/* Side panel — default as bottom bar */
+.side-panel{flex-shrink:0;width:100%;display:flex;flex-direction:row;gap:4px;overflow-x:auto;max-height:110px}
 .top-bar{flex-shrink:0;display:flex;align-items:center;justify-content:space-between;padding:4px 10px;background:rgba(24,18,10,.7);backdrop-filter:blur(8px);border-radius:16px;border:1px solid rgba(180,150,110,.1);gap:4px;min-height:38px}
 .turn-indicator{display:flex;align-items:center;gap:6px;padding:2px 8px;border-radius:20px;background:rgba(0,0,0,.3);border:1px solid rgba(180,150,110,.08)}
 .turn-dot{width:10px;height:10px;border-radius:50%;transition:all .3s}
@@ -73,7 +72,7 @@ html,body{margin:0;padding:0;height:100%;height:100dvh;overflow:hidden;font-fami
 .particles-container{position:absolute;inset:0;pointer-events:none;overflow:hidden;z-index:21}
 .particle{position:absolute;border-radius:50%;animation:particleFly 1s ease-out forwards;pointer-events:none}
 @keyframes particleFly{0%{transform:translate(0,0) scale(1);opacity:1}100%{transform:translate(var(--dx),var(--dy)) scale(0);opacity:0}}
-.side-panel section{background:rgba(24,18,10,.7);backdrop-filter:blur(8px);border-radius:12px;border:1px solid rgba(180,150,110,.08);padding:6px 8px;overflow:hidden;display:flex;flex-direction:column}
+.side-panel section{background:rgba(24,18,10,.7);backdrop-filter:blur(8px);border-radius:12px;border:1px solid rgba(180,150,110,.08);padding:6px 8px;overflow:hidden;display:flex;flex-direction:column;flex:1;min-width:0}
 .side-panel section h3{font-size:.65rem;color:#8a7a60;font-weight:800;text-transform:uppercase;letter-spacing:2px;margin:0 0 4px;flex-shrink:0}
 .history-list{flex:1;overflow-y:auto;min-height:0;font-size:.65rem;color:#a09078;line-height:1.6}
 .history-list .entry{padding:1px 4px;border-radius:3px;display:flex;gap:4px;border-bottom:1px solid rgba(180,150,110,.04)}
@@ -93,7 +92,112 @@ html,body{margin:0;padding:0;height:100%;height:100dvh;overflow:hidden;font-fami
 .bottom-bar button{border:none;border-radius:12px;font-weight:800;font-size:.7rem;background:rgba(50,36,24,.5);border:1px solid rgba(180,150,110,.1);color:#c0b090;cursor:pointer;touch-action:manipulation;transition:transform .1s,background .1s}
 .bottom-bar button:active{transform:scale(.96)}
 .bottom-bar .btn-primary{background:linear-gradient(135deg,#8a6240,#6f4d30);color:#f0e6d8;border-color:rgba(200,170,130,.25)}
-@media(max-width:440px){.bottom-bar{height:34px;grid-template-columns:1fr 1fr;gap:4px}.bottom-bar button{font-size:.65rem;border-radius:8px}}
+
+/* ============ 第 1 档：小屏手机 < 380px ============ */
+@media(max-width:379px){
+  .app-container{padding:3px 4px calc(2px + env(safe-area-inset-bottom,0px)) 4px;gap:3px}
+  .board-wrapper{aspect-ratio:1/1;padding:3px;border-radius:10px}
+  .board-grid{gap:1px}
+  .cell{border-radius:4px}
+  .piece{font-size:clamp(0.85rem,5vw,1.3rem)!important}
+  .piece-back::after{font-size:clamp(0.6rem,3.5vw,0.85rem)}
+  .top-bar{min-height:30px;padding:2px 6px;font-size:.6rem;border-radius:10px}
+  .counter-badge{font-size:.55rem;padding:1px 4px}
+  .turn-indicator{padding:1px 4px;gap:3px}
+  .turn-dot{width:7px;height:7px}
+  .timer-display{font-size:.6rem;min-width:32px}
+  .bottom-bar{height:34px;gap:3px}
+  .bottom-bar button{font-size:.6rem;border-radius:8px;min-height:34px}
+  .side-panel{max-height:74px;gap:3px}
+  .side-panel section{padding:3px 6px;border-radius:8px}
+  .side-panel section h3{font-size:.5rem;margin:0 0 1px;letter-spacing:1px}
+  .history-list{font-size:.5rem;line-height:1.3}
+  .history-list .entry{padding:0 2px;gap:2px}
+  .history-list .entry .move-num{min-width:10px}
+  .settings-row{font-size:.5rem;padding:1px 0}
+  .settings-row select,.settings-row input[type=range]{font-size:.5rem;max-width:56px}
+  .toggle-sw{width:26px;height:14px}
+  .toggle-sw .slider::before{width:10px;height:10px}
+  .toggle-sw input:checked+.slider::before{transform:translateX(12px)}
+  .difficulty-tag{font-size:.5rem;padding:0px 4px}
+}
+
+/* ============ 第 2 档：标准手机 380 ~ 430px ============ */
+@media(min-width:380px) and (max-width:430px){
+  .app-container{padding:4px 6px calc(4px + env(safe-area-inset-bottom,0px)) 6px;gap:4px}
+  .board-wrapper{aspect-ratio:5/8}
+  .piece{font-size:clamp(1rem,5.5vw,1.5rem)!important}
+  .side-panel{max-height:94px}
+  .side-panel section h3{font-size:.55rem}
+  .history-list{font-size:.55rem}
+  .settings-row{font-size:.55rem}
+}
+
+/* ============ 第 3 档：大屏手机 431 ~ 600px ============ */
+@media(min-width:431px) and (max-width:600px){
+  .app-container{padding:8px 12px calc(8px + env(safe-area-inset-bottom,0px)) 12px;gap:6px}
+  .board-wrapper{aspect-ratio:4/7;max-width:min(92vw,480px)}
+  .piece{font-size:clamp(1.3rem,5.5vw,2rem)!important}
+  .side-panel{max-height:120px;gap:6px}
+  .side-panel section h3{font-size:.65rem}
+  .history-list{font-size:.65rem;line-height:1.5}
+  .bottom-bar{height:42px;gap:6px}
+  .bottom-bar button{font-size:.75rem;min-height:42px}
+  .top-bar{min-height:40px;padding:4px 12px}
+}
+
+/* ============ 第 4 档：平板竖屏 601 ~ 900px ============ */
+@media(min-width:601px) and (max-width:900px){
+  .app-container{
+    flex-direction:row;max-width:100%;
+    padding:12px 16px calc(12px + env(safe-area-inset-bottom,0px)) 16px;
+    gap:12px;max-height:100dvh;
+  }
+  .main-area{flex:3;min-width:0}
+  .side-panel{
+    flex:1;min-width:180px;max-width:280px;
+    flex-direction:column;gap:8px;max-height:none;overflow-x:hidden;overflow-y:auto;
+  }
+  .side-panel section{flex:1;min-height:0}
+  .board-wrapper{aspect-ratio:5/7}
+  .piece{font-size:clamp(1.5rem,4vw,2.5rem)!important}
+  .bottom-bar{height:46px;gap:8px}
+  .bottom-bar button{font-size:.85rem;min-height:46px;border-radius:14px}
+  .top-bar{min-height:46px;padding:6px 16px}
+  .history-list{font-size:.7rem;line-height:1.6}
+  .history-list .entry{padding:2px 6px}
+  .settings-row{font-size:.7rem;padding:4px 0}
+  .difficulty-tag{font-size:.65rem}
+}
+
+/* ============ 第 5 档：电脑版 > 900px（恢复原样） ============ */
+@media(min-width:901px){
+  .app-container{
+    flex-direction:row;max-width:520px;
+    padding:6px 10px 8px;gap:6px;max-height:100dvh;
+  }
+  .main-area{flex:1;min-width:0}
+  .side-panel{
+    width:140px;min-width:140px;max-width:140px;
+    flex-direction:column;gap:6px;max-height:none;overflow-x:hidden;overflow-y:hidden;
+  }
+  .side-panel section{flex:auto;min-height:0}
+  .board-wrapper{aspect-ratio:4/8}
+  .piece{font-size:clamp(1.2rem,4.5vw,2.2rem)!important}
+  .bottom-bar{height:38px;gap:6px}
+  .bottom-bar button{font-size:.7rem;min-height:auto;border-radius:12px}
+  .top-bar{min-height:38px;padding:4px 10px}
+  .history-list{font-size:.65rem;line-height:1.6}
+  .history-list .entry{padding:1px 4px}
+  .settings-row{font-size:.65rem;padding:3px 0}
+  .difficulty-tag{font-size:.6rem}
+}
+
+/* ============ iPhone 安全区域增强 ============ */
+@supports(padding-bottom:env(safe-area-inset-bottom)){
+  .app-container{padding-bottom:calc(8px + env(safe-area-inset-bottom))}
+  .bottom-bar{padding-bottom:env(safe-area-inset-bottom)}
+}
 .difficulty-tag{display:inline-block;padding:1px 6px;border-radius:6px;font-size:.6rem;font-weight:800;letter-spacing:1px}
 .difficulty-tag.easy{background:rgba(90,180,90,.15);color:#6ab86a}
 .difficulty-tag.medium{background:rgba(212,168,83,.15);color:var(--gold)}

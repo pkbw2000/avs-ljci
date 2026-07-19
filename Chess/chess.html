@@ -3,18 +3,18 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>乾坤暗棋 · 尊榮版</title>
+    <title>乾坤暗棋 · 尊榮重構完美版</title>
     <!-- 引入古典中文字型 -->
     <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@600;900&display=swap" rel="stylesheet">
     <style>
         :root {
-            --cell-size: 60px; /* 由 JS 動態計算，適應全機種螢幕 */
-            --piece-size: calc(var(--cell-size) * 0.82);
+            --cell-size: 55px; /* 由 JS 依據剩餘空間 RWD 精密動態計算，確保不變形 */
+            --piece-size: calc(var(--cell-size) * 0.84);
             --gold-glow: 0 0 12px rgba(212, 175, 55, 0.5);
             --red-glow: 0 0 12px rgba(239, 68, 68, 0.6);
         }
 
-        /* 鎖定全視窗防滑動，確保絕不產生滾動條 */
+        /* 全域鎖定，防止橡皮筋回彈與意外縮放 */
         * {
             box-sizing: border-box;
             -webkit-user-select: none;
@@ -22,300 +22,66 @@
             -webkit-tap-highlight-color: transparent;
         }
 
-        body {
+        html, body {
+            width: 100%;
+            height: 100%;
             margin: 0;
             padding: 0;
+            overflow: hidden;
+            position: fixed;
+        }
+
+        body {
             background: radial-gradient(circle, #1a110b 0%, #050302 100%);
             color: #f3e5ab;
             font-family: 'Noto Serif TC', serif;
-            width: 100vw;
-            height: 100vh;
-            height: 100dvh;
-            overflow: hidden;
-            position: fixed;
             display: flex;
             justify-content: center;
             align-items: center;
-            touch-action: none; /* 徹底杜絕 iOS 彈性滑動與雙擊縮放 */
+            touch-action: none;
         }
 
-        /* 尊榮三欄式框架 */
+        /* 尊榮整合式主框架 */
         .game-wrapper {
-            display: grid;
-            grid-template-columns: 1fr 2.2fr 1fr; /* 左面板、中棋盤、右面板 */
+            display: flex;
             width: 100vw;
             height: 100vh;
             height: 100dvh;
             padding: 10px;
             gap: 12px;
-            align-items: center;
-            max-width: 960px; /* 在平板或PC上呈現黃金比例 */
-        }
-
-        /* 兩側對稱高級面板 */
-        .side-panel {
-            height: 94%;
-            background: rgba(26, 17, 11, 0.85);
-            border: 1.5px solid rgba(212, 175, 55, 0.25);
-            border-radius: 14px;
-            padding: 12px 10px;
-            display: flex;
-            flex-direction: column;
-            gap: 12px;
-            box-shadow: 0 10px 25px rgba(0,0,0,0.8), inset 0 2px 8px rgba(255,255,255,0.05);
-            backdrop-filter: blur(5px);
-            overflow: hidden;
-        }
-
-        .left-panel {
-            border-right: 2.5px solid #d4af37;
-        }
-
-        .right-panel {
-            border-left: 2.5px solid #d4af37;
-        }
-
-        /* 品牌字樣 */
-        .brand-box {
-            text-align: center;
-            border-bottom: 1px dashed rgba(212, 175, 55, 0.3);
-            padding-bottom: 8px;
-        }
-
-        .brand-sub {
-            font-size: 10px;
-            color: rgba(243, 229, 171, 0.5);
-            letter-spacing: 2px;
-        }
-
-        .brand-title {
-            font-size: 18px;
-            font-weight: 900;
-            background: linear-gradient(135deg, #ffe082, #d4af37, #aa8010);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            text-shadow: 0 2px 4px rgba(0,0,0,0.6);
-            letter-spacing: 1px;
-            margin-top: 2px;
-        }
-
-        /* 功能分區 */
-        .panel-section {
-            display: flex;
-            flex-direction: column;
-            gap: 6px;
-        }
-
-        .section-title {
-            font-size: 11px;
-            color: rgba(243, 229, 171, 0.6);
-            font-weight: bold;
-            border-left: 3px solid #d4af37;
-            padding-left: 6px;
-            text-shadow: 0 1px 2px rgba(0,0,0,0.8);
-        }
-
-        /* 陣營玩家卡片 */
-        .player-card {
-            background: rgba(15, 10, 6, 0.9);
-            border: 1px solid rgba(212, 175, 55, 0.15);
-            border-radius: 10px;
-            padding: 8px;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            transition: all 0.3s;
-        }
-
-        .player-card.active {
-            border-color: #ef4444;
-            box-shadow: var(--red-glow);
-            transform: scale(1.02);
-        }
-
-        .avatar {
-            width: 32px;
-            height: 32px;
-            border-radius: 50%;
-            background: radial-gradient(circle, #3d2b1f, #1e140d);
-            border: 1.5px solid #d4af37;
-            display: flex;
             justify-content: center;
             align-items: center;
-            font-size: 13px;
-            font-weight: bold;
-            color: #d4af37;
+            max-width: 1000px;
         }
 
-        .player-card.active .avatar {
-            border-color: #ef4444;
-            animation: pulse-border 1.5s infinite alternate;
-        }
-
-        @keyframes pulse-border {
-            0% { box-shadow: 0 0 4px #ef4444; }
-            100% { box-shadow: 0 0 12px #ef4444; }
-        }
-
-        .card-info {
-            display: flex;
-            flex-direction: column;
-        }
-
-        .card-name {
-            font-size: 10px;
-            color: rgba(243, 229, 171, 0.5);
-        }
-
-        .card-status {
-            font-size: 13px;
-            font-weight: bold;
-        }
-
-        .red-text { color: #ff4d4d; text-shadow: 0 0 5px rgba(255,77,77,0.3); }
-        .black-text { color: #e0e0e0; text-shadow: 0 0 5px rgba(255,255,255,0.2); }
-
-        /* 難度選擇 Segment */
-        .difficulty-group {
-            display: flex;
-            flex-direction: column;
-            gap: 5px;
-        }
-
-        .diff-btn {
-            background: rgba(18, 12, 8, 0.9);
-            border: 1px solid rgba(212, 175, 55, 0.2);
-            color: rgba(243, 229, 171, 0.6);
-            padding: 8px 0;
-            border-radius: 8px;
-            font-size: 11px;
-            font-weight: bold;
-            cursor: pointer;
-            transition: all 0.3s;
-            font-family: 'Noto Serif TC', serif;
-        }
-
-        .diff-btn.active {
-            background: linear-gradient(135deg, #d4af37, #aa8010);
-            color: #130a05;
-            border-color: #ffe082;
-            box-shadow: var(--gold-glow);
-        }
-
-        /* 右側戰損區 */
-        .dock-container {
-            flex-grow: 1;
-            background: rgba(15, 10, 6, 0.9);
-            border: 1px solid rgba(212, 175, 55, 0.15);
-            border-radius: 10px;
-            padding: 8px;
-            display: flex;
-            flex-direction: column;
-            gap: 6px;
-            overflow: hidden;
-        }
-
-        .dock-title {
-            font-size: 10px;
-            font-weight: bold;
-        }
-
-        .captured-dock {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 3px;
-            align-content: flex-start;
-            flex-grow: 1;
-            overflow-y: auto;
-            min-height: 50px;
-        }
-
-        /* 戰損棋子微縮版 */
-        .mini-piece {
-            width: 20px;
-            height: 20px;
-            border-radius: 50%;
-            display: inline-flex;
-            justify-content: center;
-            align-items: center;
-            font-size: 9px;
-            font-weight: 900;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.5);
-            animation: mini-pop 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-        }
-
-        @keyframes mini-pop {
-            0% { transform: scale(0); }
-            100% { transform: scale(1); }
-        }
-
-        .mini-piece.red {
-            background: radial-gradient(circle, #fdf4e4, #e5bf84);
-            border: 1px solid #b22222;
-            color: #b22222;
-        }
-
-        .mini-piece.black {
-            background: radial-gradient(circle, #fdf4e4, #e5bf84);
-            border: 1px solid #2c3e50;
-            color: #1a1a1a;
-        }
-
-        /* 系統按鈕 */
-        .system-controls {
-            display: flex;
-            flex-direction: column;
-            gap: 6px;
-        }
-
-        .sys-btn {
-            background: rgba(212, 175, 55, 0.08);
-            border: 1px solid rgba(212, 175, 55, 0.3);
-            color: #d4af37;
-            padding: 8px 0;
-            border-radius: 8px;
-            font-size: 12px;
-            cursor: pointer;
-            font-weight: bold;
-            transition: all 0.2s;
-            font-family: 'Noto Serif TC', serif;
-        }
-
-        .sys-btn:active {
-            transform: scale(0.97);
-            background: rgba(212, 175, 55, 0.2);
-        }
-
-        .sys-btn.restart {
-            background: linear-gradient(135deg, #422f1d, #271a0f);
-            border-color: #d4af37;
-        }
-
-        /* 中間棋盤區 */
+        /* 棋盤主體區 (充盈剩餘空間) */
         .center-panel {
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            height: 100%;
+            flex: 1 1 auto;
+            min-height: 0; /* 允許 flex 子項收縮，防溢出 */
+            width: 100%;
         }
 
         /* 局勢指示條 */
         .turn-indicator {
             font-size: 13px;
             color: #ffe082;
-            margin-bottom: 12px;
+            margin-bottom: 8px;
             text-shadow: 0 1px 3px rgba(0,0,0,0.9);
             font-weight: bold;
             letter-spacing: 1.5px;
             text-align: center;
-            background: rgba(26, 17, 11, 0.7);
+            background: rgba(26, 17, 11, 0.85);
             padding: 6px 18px;
             border-radius: 15px;
-            border: 1px solid rgba(212, 175, 55, 0.15);
+            border: 1px solid rgba(212, 175, 55, 0.2);
+            flex-shrink: 0;
         }
 
-        /* 奢華棋盤 */
+        /* 奢華 3D 棋盤 */
         .board {
             display: grid;
             grid-template-columns: repeat(4, var(--cell-size));
@@ -324,22 +90,24 @@
             border: 6px solid #1c0e07;
             outline: 2px solid #d4af37;
             border-radius: 6px;
-            box-shadow: 0 15px 35px rgba(0,0,0,0.8), inset 0 4px 10px rgba(0,0,0,0.7);
+            box-shadow: 0 12px 30px rgba(0,0,0,0.85), inset 0 4px 10px rgba(0,0,0,0.7);
             position: relative;
+            width: calc(var(--cell-size) * 4);
+            height: calc(var(--cell-size) * 8);
+            flex-shrink: 0;
         }
 
-        /* 棋盤抖動特效 */
+        /* 棋盤震動特效 */
         .shake {
-            animation: shake-effect 0.3s ease-out;
+            animation: shake-effect 0.28s ease-out;
         }
-
         @keyframes shake-effect {
             0%, 100% { transform: translate(0, 0); }
             20%, 60% { transform: translate(-2px, 2px); }
             40%, 80% { transform: translate(2px, -2px); }
         }
 
-        /* 包角飾紋 */
+        /* 包角金屬紋飾 */
         .board-corner {
             position: absolute;
             width: 14px;
@@ -354,14 +122,12 @@
         .board-corner.bottom-left { bottom: -4px; left: -4px; border-width: 0 0 4px 4px; }
         .board-corner.bottom-right { bottom: -4px; right: -4px; border-width: 0 4px 4px 0; }
 
-        /* 棋格 */
+        /* 棋格內飾角 */
         .cell {
             position: relative;
             box-sizing: border-box;
             border: 1px solid rgba(212, 175, 55, 0.12);
         }
-
-        /* 棋格內飾角 */
         .cell::before, .cell::after {
             content: "";
             position: absolute;
@@ -374,7 +140,7 @@
         .cell::before { top: 3px; left: 3px; border-width: 1px 0 0 1px; }
         .cell::after { bottom: 3px; right: 3px; border-width: 0 1px 1px 0; }
 
-        /* 可移動提示點 */
+        /* 可走子動態提示點 */
         .cell.highlight-target::after {
             content: "";
             position: absolute;
@@ -387,13 +153,12 @@
             transform: translate(-50%, -50%);
             animation: pulse-ring 1.2s infinite;
         }
-
         @keyframes pulse-ring {
             0% { transform: translate(-50%, -50%) scale(0.7); opacity: 0.8; }
             100% { transform: translate(-50%, -50%) scale(1.3); opacity: 0; }
         }
 
-        /* 棋子圖層 */
+        /* 棋子渲染層 */
         .pieces-layer {
             position: absolute;
             top: 0;
@@ -404,7 +169,7 @@
             z-index: 10;
         }
 
-        /* 3D 棋子 */
+        /* 逼真 3D 棋子 */
         .piece-container {
             width: var(--piece-size);
             height: var(--piece-size);
@@ -412,11 +177,10 @@
             cursor: pointer;
             position: absolute;
             pointer-events: auto;
-            transition: left 0.3s cubic-bezier(0.25, 0.8, 0.25, 1), top 0.3s cubic-bezier(0.25, 0.8, 0.25, 1), transform 0.2s;
+            transition: left 0.28s cubic-bezier(0.25, 0.8, 0.25, 1), top 0.28s cubic-bezier(0.25, 0.8, 0.25, 1), transform 0.2s;
         }
-
         .piece-container:active {
-            transform: scale(0.95);
+            transform: scale(0.94);
         }
 
         .piece-inner {
@@ -426,7 +190,6 @@
             transform-style: preserve-3d;
             transition: transform 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275);
         }
-
         .piece-container.flipped .piece-inner {
             transform: rotateY(180deg);
         }
@@ -443,7 +206,7 @@
             box-sizing: border-box;
         }
 
-        /* 棋子背面：燙金漆黑 */
+        /* 棋子背面：神秘古典燙金黑 */
         .piece-back {
             background: radial-gradient(circle at 30% 30%, #2f1d14, #120905);
             border: 2.5px double #d4af37;
@@ -452,11 +215,10 @@
                 inset 0 -4px 6px rgba(0,0,0,0.8),
                 0 4px 8px rgba(0,0,0,0.6);
         }
-
         .piece-back::after {
             content: "棋";
             font-family: 'Noto Serif TC', serif;
-            font-size: 15px;
+            font-size: calc(var(--piece-size) * 0.38);
             font-weight: bold;
             color: #d4af37;
             text-shadow: 0 1px 1px rgba(255,255,255,0.1), 0 -1px 2px rgba(0,0,0,0.8);
@@ -469,7 +231,7 @@
             align-items: center;
         }
 
-        /* 棋子正面：手工雕刻木質漸層 */
+        /* 棋子正面：黃梨木漸層 */
         .piece-front {
             transform: rotateY(180deg);
             background: radial-gradient(circle at 30% 30%, #fef3df, #e5bf84, #be995f);
@@ -478,51 +240,46 @@
                 inset 0 -5px 7px rgba(0,0,0,0.4),
                 0 5px 10px rgba(0,0,0,0.6);
         }
-
         .piece-front.red { border: 3px double #b22222; }
         .piece-front.black { border: 3px double #2c3e50; }
 
         .piece-front .char {
             font-family: 'Noto Serif TC', serif;
             font-weight: 900;
-            font-size: 22px;
+            font-size: calc(var(--piece-size) * 0.45);
             line-height: 1;
         }
-
         .piece-front.red .char {
             color: #b22222;
             text-shadow: 0 1px 1px rgba(255,255,255,0.45), 0 -1px 1px rgba(0,0,0,0.7);
         }
-
         .piece-front.black .char {
             color: #1a1a1a;
             text-shadow: 0 1px 1px rgba(255,255,255,0.45), 0 -1px 1px rgba(0,0,0,0.7);
         }
 
-        /* 呼吸發光效果 */
+        /* 選中呼吸發光 */
         @keyframes pulse-glow {
             0% { box-shadow: 0 0 4px rgba(212, 175, 55, 0.4), inset 0 3px 5px rgba(255,255,255,0.4), 0 5px 10px rgba(0,0,0,0.5); }
             50% { box-shadow: 0 0 15px rgba(212, 175, 55, 0.9), inset 0 3px 5px rgba(255,255,255,0.4), 0 5px 10px rgba(0,0,0,0.5); }
             100% { box-shadow: 0 0 4px rgba(212, 175, 55, 0.4), inset 0 3px 5px rgba(255,255,255,0.4), 0 5px 10px rgba(0,0,0,0.5); }
         }
-
         .piece-container.selected {
             animation: pulse-glow 1.2s infinite alternate;
             transform: scale(1.05) translateY(-3px);
             z-index: 100;
         }
 
-        /* 威脅光圈 */
+        /* 威脅紅光閃爍 */
         @keyframes pulse-threat {
             0% { box-shadow: 0 0 3px rgba(255, 0, 0, 0.4), 0 5px 10px rgba(0,0,0,0.5); }
             100% { box-shadow: 0 0 12px rgba(255, 0, 0, 0.9), 0 5px 10px rgba(0,0,0,0.5); }
         }
-
         .piece-container.threatened {
             animation: pulse-threat 0.8s infinite alternate;
         }
 
-        /* 特效畫布 */
+        /* 畫布特效層 */
         .effects-canvas {
             position: absolute;
             top: 0;
@@ -533,7 +290,303 @@
             z-index: 20;
         }
 
-        /* 高階彈窗 */
+        /* 【天人合一：統合式高級控制面板】 */
+        .unified-panel {
+            background: rgba(26, 17, 11, 0.9);
+            border: 1.5px solid rgba(212, 175, 55, 0.25);
+            border-radius: 14px;
+            padding: 12px;
+            display: flex;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.8), inset 0 2px 8px rgba(255,255,255,0.05);
+            backdrop-filter: blur(8px);
+            overflow: hidden;
+            gap: 12px;
+            flex-shrink: 0;
+        }
+
+        .brand-box {
+            text-align: center;
+            border-bottom: 1px dashed rgba(212, 175, 55, 0.3);
+            padding-bottom: 8px;
+            margin-bottom: 4px;
+        }
+        .brand-sub {
+            font-size: 10px;
+            color: rgba(243, 229, 171, 0.5);
+            letter-spacing: 2px;
+        }
+        .brand-title {
+            font-size: 18px;
+            font-weight: 900;
+            background: linear-gradient(135deg, #ffe082, #d4af37, #aa8010);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.6);
+            letter-spacing: 1px;
+            margin-top: 2px;
+        }
+
+        .panel-section {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+        .section-title {
+            font-size: 11px;
+            color: rgba(243, 229, 171, 0.6);
+            font-weight: bold;
+            border-left: 3px solid #d4af37;
+            padding-left: 6px;
+            text-shadow: 0 1px 2px rgba(0,0,0,0.8);
+        }
+
+        /* 雙方狀態卡 */
+        .status-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        .player-card {
+            background: rgba(15, 10, 6, 0.95);
+            border: 1px solid rgba(212, 175, 55, 0.15);
+            border-radius: 8px;
+            padding: 8px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.3s;
+        }
+        .player-card.active {
+            border-color: #ef4444;
+            box-shadow: var(--red-glow);
+        }
+
+        .avatar {
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            background: radial-gradient(circle, #3d2b1f, #1e140d);
+            border: 1.5px solid #d4af37;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 12px;
+            font-weight: bold;
+            color: #d4af37;
+        }
+        .player-card.active .avatar {
+            border-color: #ef4444;
+            animation: pulse-border 1.5s infinite alternate;
+        }
+        @keyframes pulse-border {
+            0% { box-shadow: 0 0 3px #ef4444; }
+            100% { box-shadow: 0 0 10px #ef4444; }
+        }
+
+        .card-info {
+            display: flex;
+            flex-direction: column;
+        }
+        .card-name {
+            font-size: 9px;
+            color: rgba(243, 229, 171, 0.5);
+        }
+        .card-status {
+            font-size: 12px;
+            font-weight: bold;
+        }
+
+        .red-text { color: #ff4d4d; text-shadow: 0 0 5px rgba(255,77,77,0.3); }
+        .black-text { color: #e0e0e0; text-shadow: 0 0 5px rgba(255,255,255,0.2); }
+
+        /* 難度選擇鈕 */
+        .difficulty-group {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+        .diff-btn {
+            background: rgba(18, 12, 8, 0.95);
+            border: 1px solid rgba(212, 175, 55, 0.2);
+            color: rgba(243, 229, 171, 0.6);
+            padding: 7px 0;
+            border-radius: 6px;
+            font-size: 11px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-family: 'Noto Serif TC', serif;
+        }
+        .diff-btn.active {
+            background: linear-gradient(135deg, #d4af37, #aa8010);
+            color: #130a05;
+            border-color: #ffe082;
+            box-shadow: var(--gold-glow);
+        }
+
+        /* 戰損御覽 */
+        .dock-container {
+            background: rgba(15, 10, 6, 0.95);
+            border: 1px solid rgba(212, 175, 55, 0.15);
+            border-radius: 8px;
+            padding: 8px;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            flex-grow: 1;
+        }
+        .dock-row {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .dock-title {
+            font-size: 10px;
+            font-weight: bold;
+            min-width: 32px;
+        }
+        .captured-dock {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 3px;
+            min-height: 20px;
+        }
+
+        /* 戰損微縮棋子 */
+        .mini-piece {
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            display: inline-flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 9px;
+            font-weight: 900;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.5);
+            animation: mini-pop 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        @keyframes mini-pop {
+            0% { transform: scale(0); }
+            100% { transform: scale(1); }
+        }
+        .mini-piece.red {
+            background: radial-gradient(circle, #fdf4e4, #e5bf84);
+            border: 1px solid #b22222;
+            color: #b22222;
+        }
+        .mini-piece.black {
+            background: radial-gradient(circle, #fdf4e4, #e5bf84);
+            border: 1px solid #2c3e50;
+            color: #1a1a1a;
+        }
+
+        /* 系統核心按鈕 */
+        .system-controls {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+        .sys-btn {
+            background: rgba(212, 175, 55, 0.08);
+            border: 1px solid rgba(212, 175, 55, 0.3);
+            color: #d4af37;
+            padding: 8px 0;
+            border-radius: 6px;
+            font-size: 12px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.2s;
+            font-family: 'Noto Serif TC', serif;
+        }
+        .sys-btn:active {
+            transform: scale(0.97);
+            background: rgba(212, 175, 55, 0.2);
+        }
+        .sys-btn.restart {
+            background: linear-gradient(135deg, #422f1d, #271a0f);
+            border-color: #d4af37;
+        }
+        .sys-btn.download {
+            background: linear-gradient(135deg, #1b3a1a, #0c1c0c);
+            border-color: #52b750;
+            color: #52b750;
+        }
+
+        /* ------------------ 【 電腦與平板橫向 (Landscape) 佈局 】 ------------------ */
+        @media (min-aspect-ratio: 1/1) {
+            .game-wrapper {
+                flex-direction: row;
+                justify-content: center;
+                align-items: center;
+                gap: 16px;
+            }
+            .center-panel {
+                height: 100%;
+            }
+            .unified-panel {
+                width: 280px;
+                height: 94%;
+                flex-direction: column;
+                justify-content: space-between;
+                border-left: 2.5px solid #d4af37;
+            }
+        }
+
+        /* ------------------ 【 手機直向 (Portrait) 佈局 】 ------------------ */
+        @media (max-aspect-ratio: 1/1) {
+            .game-wrapper {
+                flex-direction: column;
+                justify-content: space-between;
+                align-items: center;
+                padding: 10px;
+                gap: 8px;
+            }
+            .center-panel {
+                width: 100%;
+            }
+            .unified-panel {
+                width: 100%;
+                flex-direction: row;
+                flex-wrap: wrap;
+                justify-content: space-between;
+                align-items: stretch;
+                border-top: 2.5px solid #d4af37;
+                padding: 8px;
+                gap: 8px;
+            }
+            /* 隱藏裝飾標題以極致節省高度空間 */
+            .unified-panel .brand-box {
+                display: none;
+            }
+            /* 直向模式：四個區塊平均對稱分佈 */
+            .unified-panel .panel-section {
+                flex: 1 1 calc(50% - 6px);
+                justify-content: center;
+            }
+            .unified-panel .status-section { order: 1; }
+            .unified-panel .difficulty-section { order: 2; }
+            .unified-panel .dock-section { order: 3; }
+            .unified-panel .system-section { order: 4; justify-content: space-between; }
+
+            .status-group { flex-direction: row; gap: 4px; }
+            .player-card { flex: 1; padding: 4px 6px; }
+            .difficulty-group { flex-direction: row; gap: 4px; }
+            .diff-btn { flex: 1; padding: 6px 0; font-size: 9px; }
+            
+            .system-controls {
+                display: grid;
+                grid-template-columns: repeat(3, 1fr);
+                gap: 4px;
+                width: 100%;
+                height: 100%;
+                align-items: center;
+            }
+            .sys-btn { padding: 10px 0; font-size: 10px; }
+            .dock-container { padding: 4px 6px; }
+            .mini-piece { width: 14px; height: 14px; font-size: 8px; }
+        }
+
+        /* 彈窗樣式 */
         .modal-overlay {
             position: fixed;
             top: 0;
@@ -550,7 +603,6 @@
             pointer-events: none;
             transition: opacity 0.35s ease;
         }
-
         .modal-overlay.active {
             opacity: 1;
             pointer-events: auto;
@@ -569,7 +621,6 @@
             transition: transform 0.35s cubic-bezier(0.175, 0.885, 0.32, 1.275);
             color: #f3e5ab;
         }
-
         .modal-overlay.active .modal-content {
             transform: scale(1);
         }
@@ -581,14 +632,12 @@
             margin-bottom: 12px;
             font-weight: 900;
         }
-
         .modal-desc {
             font-size: 13px;
             line-height: 1.6;
             color: rgba(243, 229, 171, 0.8);
             margin-bottom: 20px;
         }
-
         .modal-btn {
             background: linear-gradient(135deg, #3d2b1f, #23160e);
             border: 1px solid #d4af37;
@@ -599,7 +648,6 @@
             font-weight: bold;
             cursor: pointer;
             width: 100%;
-            transition: all 0.2s;
             font-family: 'Noto Serif TC', serif;
         }
 
@@ -620,69 +668,17 @@
             transition: all 0.3s;
             z-index: 500;
         }
-
         .toast.active {
             opacity: 1;
             transform: translateY(0);
-        }
-
-        /* 窄螢幕直向防崩潰排版 (小於 540px，如大部份直向持握手機) */
-        @media (max-width: 540px) {
-            .game-wrapper {
-                grid-template-columns: 1fr 2.3fr 1fr;
-                padding: 6px;
-                gap: 6px;
-            }
-            .side-panel {
-                padding: 6px 4px;
-                gap: 8px;
-                height: 98%;
-            }
-            .brand-title { font-size: 13px; }
-            .brand-sub { font-size: 8px; }
-            .section-title { font-size: 9px; padding-left: 4px; }
-            .avatar { width: 24px; height: 24px; font-size: 10px; }
-            .card-status { font-size: 10px; }
-            .diff-btn { font-size: 9px; padding: 6px 0; }
-            .sys-btn { font-size: 9px; padding: 6px 0; }
-            .mini-piece { width: 14px; height: 14px; font-size: 8px; }
-            .turn-indicator { font-size: 11px; padding: 4px 10px; margin-bottom: 6px; }
-            .piece-front .char { font-size: calc(var(--piece-size) * 0.42); }
         }
     </style>
 </head>
 <body>
 
     <div class="game-wrapper" id="game-wrapper">
-        <!-- 【左側功能面板】 -->
-        <div class="side-panel left-panel">
-            <div class="brand-box">
-                <div class="brand-sub">極致奢華</div>
-                <div class="brand-title">乾坤暗棋</div>
-            </div>
-            
-            <div class="panel-section">
-                <div class="section-title">我方陣營</div>
-                <div class="player-card" id="player-card">
-                    <div class="avatar">我</div>
-                    <div class="card-info">
-                        <span class="card-name">執子顏色</span>
-                        <span class="card-status" id="player-color-text">未定</span>
-                    </div>
-                </div>
-            </div>
-
-            <div class="panel-section" style="flex-grow:1; justify-content:center;">
-                <div class="section-title" style="margin-bottom:6px;">玄機對弈</div>
-                <div class="difficulty-group">
-                    <button class="diff-btn active" data-diff="easy">初入江湖</button>
-                    <button class="diff-btn" data-diff="medium">臥虎藏龍</button>
-                    <button class="diff-btn" data-diff="hard">國士無雙</button>
-                </div>
-            </div>
-        </div>
-
-        <!-- 【中間棋盤區】 -->
+        
+        <!-- 【中間棋盤區 (主體 RWD)】 -->
         <div class="center-panel">
             <div class="turn-indicator" id="status-label">翻開任意棋子決定陣營</div>
             
@@ -703,34 +699,69 @@
             </div>
         </div>
 
-        <!-- 【右側功能面板】 -->
-        <div class="side-panel right-panel">
-            <div class="panel-section">
-                <div class="section-title">天工電腦</div>
-                <div class="player-card" id="computer-card">
-                    <div class="avatar">機</div>
-                    <div class="card-info">
-                        <span class="card-name">執子顏色</span>
-                        <span class="card-status" id="computer-color-text">未定</span>
+        <!-- 【統合控制面板】 -->
+        <div class="unified-panel" id="unified-panel">
+            <div class="brand-box">
+                <div class="brand-sub">極致奢華</div>
+                <div class="brand-title">乾坤暗棋</div>
+            </div>
+            
+            <!-- 1. 雙方陣營卡 -->
+            <div class="panel-section status-section">
+                <div class="section-title">對戰宿命</div>
+                <div class="status-group">
+                    <div class="player-card" id="player-card">
+                        <div class="avatar">我</div>
+                        <div class="card-info">
+                            <span class="card-name">我方執子</span>
+                            <span class="card-status" id="player-color-text">未定</span>
+                        </div>
+                    </div>
+                    <div class="player-card" id="computer-card">
+                        <div class="avatar">機</div>
+                        <div class="card-info">
+                            <span class="card-name">天工電腦</span>
+                            <span class="card-status" id="computer-color-text">未定</span>
+                        </div>
                     </div>
                 </div>
             </div>
 
-            <div class="panel-section" style="flex-grow: 1;">
-                <div class="section-title">戰損御覽</div>
-                <div class="dock-container">
-                    <span class="dock-title red-text">紅方戰亡:</span>
-                    <div id="red-captured" class="captured-dock"></div>
-                    <span class="dock-title black-text" style="margin-top: 4px;">黑方戰亡:</span>
-                    <div id="black-captured" class="captured-dock"></div>
+            <!-- 2. 對弈難度切換 -->
+            <div class="panel-section difficulty-section">
+                <div class="section-title">天工博弈</div>
+                <div class="difficulty-group">
+                    <button class="diff-btn active" data-diff="easy">初入江湖</button>
+                    <button class="diff-btn" data-diff="medium">臥虎藏龍</button>
+                    <button class="diff-btn" data-diff="hard">國士無雙</button>
                 </div>
             </div>
 
-            <div class="system-controls">
-                <button class="sys-btn" onclick="toggleHelp()">玄機 (規則)</button>
-                <button class="sys-btn restart" onclick="initGame()">重整棋局</button>
+            <!-- 3. 戰損御覽 -->
+            <div class="panel-section dock-section">
+                <div class="section-title">戰損御覽</div>
+                <div class="dock-container">
+                    <div class="dock-row">
+                        <span class="dock-title red-text">紅亡:</span>
+                        <div id="red-captured" class="captured-dock"></div>
+                    </div>
+                    <div class="dock-row" style="margin-top: auto;">
+                        <span class="dock-title black-text">黑亡:</span>
+                        <div id="black-captured" class="captured-dock"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 4. 系統核心按鈕 -->
+            <div class="panel-section system-section">
+                <div class="system-controls">
+                    <button class="sys-btn" onclick="toggleHelp()">規則</button>
+                    <button class="sys-btn restart" onclick="initGame()">重整</button>
+                    <button class="sys-btn download" onclick="downloadCurrentCode()">下載</button>
+                </div>
             </div>
         </div>
+
     </div>
 
     <!-- 遊戲結束彈窗 -->
@@ -759,7 +790,7 @@
                 <p><b>四、勝負：</b></p>
                 <p>吃光敵手明暗棋子，或將敵手圍困致無棋可走者為勝。連續 60 回合未發生吃子或翻牌則判定和局。</p>
             </div>
-            <button class="modal-btn" onclick="toggleHelp()" style="margin-top: 15px;">了然於胸</button>
+            <button class="modal-btn" onclick="toggleHelp()" style="margin-top: 15px; width: 100%;">了然於胸</button>
         </div>
     </div>
 
@@ -767,86 +798,133 @@
     <div id="toast" class="toast">陣營確定</div>
 
     <script>
-        // ------------------ 【 音效實時合成模組 】 ------------------
-        let audioCtx = null;
-        function initAudio() {
-            if (!audioCtx) {
-                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-            }
-        }
-        function playSound(type) {
-            try {
-                initAudio();
-                if (audioCtx.state === 'suspended') audioCtx.resume();
-                const now = audioCtx.currentTime;
-
-                if (type === 'flip') {
-                    const osc = audioCtx.createOscillator();
-                    const gain = audioCtx.createGain();
-                    osc.type = 'triangle';
-                    osc.frequency.setValueAtTime(140, now);
-                    osc.frequency.exponentialRampToValueAtTime(320, now + 0.04);
-                    gain.gain.setValueAtTime(0.3, now);
-                    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.08);
-                    osc.connect(gain); gain.connect(audioCtx.destination);
-                    osc.start(now); osc.stop(now + 0.08);
-                } else if (type === 'move') {
-                    const osc = audioCtx.createOscillator();
-                    const gain = audioCtx.createGain();
-                    osc.type = 'sine';
-                    osc.frequency.setValueAtTime(120, now);
-                    osc.frequency.exponentialRampToValueAtTime(70, now + 0.12);
-                    gain.gain.setValueAtTime(0.15, now);
-                    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.12);
-                    osc.connect(gain); gain.connect(audioCtx.destination);
-                    osc.start(now); osc.stop(now + 0.12);
-                } else if (type === 'capture') {
-                    const osc1 = audioCtx.createOscillator();
-                    const gain1 = audioCtx.createGain();
-                    osc1.type = 'sine';
-                    osc1.frequency.setValueAtTime(80, now);
-                    osc1.frequency.exponentialRampToValueAtTime(30, now + 0.25);
-                    gain1.gain.setValueAtTime(0.6, now);
-                    gain1.gain.exponentialRampToValueAtTime(0.01, now + 0.25);
-                    osc1.connect(gain1); gain1.connect(audioCtx.destination);
-                    osc1.start(now); osc1.stop(now + 0.25);
-
-                    const osc2 = audioCtx.createOscillator();
-                    const gain2 = audioCtx.createGain();
-                    osc2.type = 'triangle';
-                    osc2.frequency.setValueAtTime(160, now);
-                    osc2.frequency.exponentialRampToValueAtTime(450, now + 0.08);
-                    gain2.gain.setValueAtTime(0.4, now);
-                    gain2.gain.exponentialRampToValueAtTime(0.01, now + 0.08);
-                    osc2.connect(gain2); gain2.connect(audioCtx.destination);
-                    osc2.start(now); osc2.stop(now + 0.08);
-                } else if (type === 'win') {
-                    playTone(261.63, 'triangle', 0.2, now);
-                    playTone(329.63, 'triangle', 0.2, now + 0.12);
-                    playTone(392.00, 'triangle', 0.2, now + 0.24);
-                    playTone(523.25, 'triangle', 0.5, now + 0.36);
-                } else if (type === 'lose') {
-                    playTone(220.00, 'sawtooth', 0.3, now);
-                    playTone(261.63, 'sawtooth', 0.3, now + 0.15);
-                    playTone(311.13, 'sawtooth', 0.3, now + 0.3);
-                    playTone(196.00, 'sawtooth', 0.6, now + 0.45);
+        // ------------------ 【 清晰高音質音效合成器 (100% 防當機封裝) 】 ------------------
+        const Sfx = {
+            ctx: null,
+            init() {
+                try {
+                    if (!this.ctx) {
+                        this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+                    }
+                    if (this.ctx && this.ctx.state === 'suspended') {
+                        this.ctx.resume();
+                    }
+                } catch (e) {
+                    console.warn("Web Audio API is unsupported or blocked by browser security.", e);
                 }
-            } catch (e) {
-                console.warn("音訊上下文受限：", e);
-            }
-        }
-        function playTone(freq, type, duration, time) {
-            const osc = audioCtx.createOscillator();
-            const gain = audioCtx.createGain();
-            osc.type = type;
-            osc.frequency.setValueAtTime(freq, time);
-            gain.gain.setValueAtTime(0.2, time);
-            gain.gain.exponentialRampToValueAtTime(0.01, time + duration);
-            osc.connect(gain); gain.connect(audioCtx.destination);
-            osc.start(time); osc.stop(time + duration);
-        }
+            },
+            playFlip() {
+                try {
+                    this.init();
+                    if (!this.ctx) return;
+                    const now = this.ctx.currentTime;
+                    
+                    const clickOsc = this.ctx.createOscillator();
+                    const clickGain = this.ctx.createGain();
+                    clickOsc.type = 'triangle';
+                    clickOsc.frequency.setValueAtTime(650, now);
+                    clickOsc.frequency.exponentialRampToValueAtTime(140, now + 0.05);
+                    clickGain.gain.setValueAtTime(0.22, now);
+                    clickGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.05);
+                    clickOsc.connect(clickGain); clickGain.connect(this.ctx.destination);
+                    clickOsc.start(now); clickOsc.stop(now + 0.06);
 
-        // ------------------ 【 遊戲核心定義 】 ------------------
+                    const bodyOsc = this.ctx.createOscillator();
+                    const bodyGain = this.ctx.createGain();
+                    bodyOsc.type = 'sine';
+                    bodyOsc.frequency.setValueAtTime(190, now);
+                    bodyOsc.frequency.exponentialRampToValueAtTime(90, now + 0.12);
+                    bodyGain.gain.setValueAtTime(0.3, now);
+                    bodyGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.12);
+                    bodyOsc.connect(bodyGain); bodyGain.connect(this.ctx.destination);
+                    bodyOsc.start(now); bodyOsc.stop(now + 0.13);
+                } catch (err) {
+                    // 靜音降級
+                }
+            },
+            playMove() {
+                try {
+                    this.init();
+                    if (!this.ctx) return;
+                    const now = this.ctx.currentTime;
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(140, now);
+                    osc.frequency.linearRampToValueAtTime(105, now + 0.08);
+                    gain.gain.setValueAtTime(0.12, now);
+                    gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.08);
+                    osc.connect(gain); gain.connect(this.ctx.destination);
+                    osc.start(now); osc.stop(now + 0.09);
+                } catch (err) {}
+            },
+            playCapture() {
+                try {
+                    this.init();
+                    if (!this.ctx) return;
+                    const now = this.ctx.currentTime;
+                    const bodyOsc = this.ctx.createOscillator();
+                    const bodyGain = this.ctx.createGain();
+                    bodyOsc.type = 'triangle';
+                    bodyOsc.frequency.setValueAtTime(110, now);
+                    bodyOsc.frequency.exponentialRampToValueAtTime(40, now + 0.22);
+                    bodyGain.gain.setValueAtTime(0.45, now);
+                    bodyGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.22);
+                    bodyOsc.connect(bodyGain); bodyGain.connect(this.ctx.destination);
+                    bodyOsc.start(now); bodyOsc.stop(now + 0.23);
+
+                    const crackOsc = this.ctx.createOscillator();
+                    const crackGain = this.ctx.createGain();
+                    crackOsc.type = 'sine';
+                    crackOsc.frequency.setValueAtTime(1100, now);
+                    crackOsc.frequency.exponentialRampToValueAtTime(250, now + 0.07);
+                    crackGain.gain.setValueAtTime(0.18, now);
+                    crackGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.07);
+                    crackOsc.connect(crackGain); crackGain.connect(this.ctx.destination);
+                    crackOsc.start(now); crackOsc.stop(now + 0.08);
+                } catch (err) {}
+            },
+            playWin() {
+                try {
+                    this.init();
+                    if (!this.ctx) return;
+                    const now = this.ctx.currentTime;
+                    const notes = [261.63, 329.63, 392.00, 523.25];
+                    notes.forEach((freq, idx) => {
+                        const osc = this.ctx.createOscillator();
+                        const gain = this.ctx.createGain();
+                        osc.type = 'triangle';
+                        osc.frequency.setValueAtTime(freq, now + idx * 0.1);
+                        gain.gain.setValueAtTime(0, now + idx * 0.1);
+                        gain.gain.linearRampToValueAtTime(0.15, now + idx * 0.1 + 0.02);
+                        gain.gain.exponentialRampToValueAtTime(0.0001, now + idx * 0.1 + 0.35);
+                        osc.connect(gain); gain.connect(this.ctx.destination);
+                        osc.start(now + idx * 0.1); osc.stop(now + idx * 0.1 + 0.4);
+                    });
+                } catch (err) {}
+            },
+            playLose() {
+                try {
+                    this.init();
+                    if (!this.ctx) return;
+                    const now = this.ctx.currentTime;
+                    const notes = [293.66, 277.18, 261.63, 220.00];
+                    notes.forEach((freq, idx) => {
+                        const osc = this.ctx.createOscillator();
+                        const gain = this.ctx.createGain();
+                        osc.type = 'sine';
+                        osc.frequency.setValueAtTime(freq, now + idx * 0.12);
+                        gain.gain.setValueAtTime(0, now + idx * 0.12);
+                        gain.gain.linearRampToValueAtTime(0.15, now + idx * 0.12 + 0.02);
+                        gain.gain.exponentialRampToValueAtTime(0.0001, now + idx * 0.12 + 0.45);
+                        osc.connect(gain); gain.connect(this.ctx.destination);
+                        osc.start(now + idx * 0.12); osc.stop(now + idx * 0.12 + 0.5);
+                    });
+                } catch (err) {}
+            }
+        };
+
+        // ------------------ 【 遊戲核心資料結構與演算 】 ------------------
         const pieceTypes = [
             { name: '帥', side: 'red', rank: 7 },
             { name: '仕', side: 'red', rank: 6 }, { name: '仕', side: 'red', rank: 6 },
@@ -865,28 +943,24 @@
             { name: '卒', side: 'black', rank: 1 }, { name: '卒', side: 'black', rank: 1 }, { name: '卒', side: 'black', rank: 1 }, { name: '卒', side: 'black', rank: 1 }, { name: '卒', side: 'black', rank: 1 }
         ];
 
-        // 高階權重（AI 評估基礎值）
-        const RANK_VALUES = { 7: 1500, 6: 900, 5: 650, 4: 450, 3: 300, 2: 400, 1: 150 };
+        const RANK_VALUES = { 7: 1500, 6: 900, 5: 650, 4: 450, 3: 300, 2: 500, 1: 150 };
 
         let pieces = [];
-        let boardGrid = Array(4).fill(null).map(() => Array(8).fill(null)); // 二維網格緩存，AI 提速核心
+        let boardGrid = Array(4).fill(null).map(() => Array(8).fill(null)); // 二維網格緩存
         let selectedPiece = null;
-        let turn = 'player'; // 'player' or 'computer'
-        let playerColor = null; // 'red' or 'black'
+        let turn = 'player';
+        let playerColor = null;
         let aiColor = null;
         let difficulty = 'easy';
         let gameActive = true;
         let nonCaptureMovesCount = 0;
 
-        // 更新網格緩存
         function updateGridCache() {
             for (let x = 0; x < 4; x++) {
                 for (let y = 0; y < 8; y++) boardGrid[x][y] = null;
             }
             pieces.forEach(p => {
-                if (!p.isCaptured) {
-                    boardGrid[p.x][p.y] = p;
-                }
+                if (!p.isCaptured) boardGrid[p.x][p.y] = p;
             });
         }
 
@@ -950,33 +1024,30 @@
             resizeBoard();
         }
 
-        // ------------------ 【 Viewport 絕對防滑動自適應排版 】 ------------------
+        // ------------------ 【 100% 精準彈性 RWD 空間量測 RWD 】 ------------------
         function resizeBoard() {
-            const vh = window.innerHeight;
-            const vw = window.innerWidth;
-            
-            // 電腦或平板最大限制寬度
-            const activeWidth = Math.min(vw, 960);
-            
-            // 左20% 右20% 中間50% 的防溢出精密算法
-            const boardWAvail = activeWidth * 0.50; 
-            const boardHAvail = vh - 62; // 預留 Turn Indicator 高度與邊隙
-            
-            // 棋盤長寬比 4:8 (1:2)
-            const cellSize = Math.floor(Math.min(boardHAvail / 8, boardWAvail / 4));
-            document.documentElement.style.setProperty('--cell-size', `${cellSize}px`);
+            const centerPanel = document.querySelector('.center-panel');
+            const indicator = document.getElementById('status-label');
+            if (!centerPanel || !indicator) return;
 
-            const wrapper = document.getElementById('game-wrapper');
-            if (wrapper) {
-                wrapper.style.width = `${activeWidth}px`;
-                wrapper.style.height = `${vh}px`;
-            }
+            // JS 僅測量與填滿 .center-panel 的純物理剩餘空間
+            const availableHeight = centerPanel.clientHeight - indicator.offsetHeight - 16;
+            const availableWidth = centerPanel.clientWidth - 16;
 
+            const maxCellWidth = availableWidth / 4;
+            const maxCellHeight = availableHeight / 8;
+            const cellSize = Math.floor(Math.min(maxCellWidth, maxCellHeight));
+
+            const finalCellSize = Math.max(30, cellSize); // 確保不縮小至完全不見
+            document.documentElement.style.setProperty('--cell-size', `${finalCellSize}px`);
+
+            // 排列棋子
             pieces.forEach(p => {
                 const el = document.getElementById(`piece-${p.id}`);
                 if (el) updatePieceDOMPos(el, p.x, p.y);
             });
 
+            // 畫布
             const canvas = document.getElementById('effects-canvas');
             const board = document.getElementById('board');
             if (canvas && board) {
@@ -987,7 +1058,7 @@
 
         function getPieceCoords(x, y) {
             const cellSize = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--cell-size'));
-            const pieceSize = cellSize * 0.82;
+            const pieceSize = cellSize * 0.84;
             const offset = (cellSize - pieceSize) / 2;
             return {
                 left: x * cellSize + offset,
@@ -1001,7 +1072,7 @@
             el.style.top = `${coords.top}px`;
         }
 
-        // ------------------ 【 節點創建 】 ------------------
+        // ------------------ 【 節點生成 】 ------------------
         function createPieceDOM(piece) {
             const el = document.createElement('div');
             el.className = 'piece-container';
@@ -1023,7 +1094,6 @@
             return el;
         }
 
-        // 棋盤背景網格點擊
         const gridCells = document.querySelector('.grid-cells');
         for (let y = 0; y < 8; y++) {
             for (let x = 0; x < 4; x++) {
@@ -1039,11 +1109,10 @@
             }
         }
 
-        // ------------------ 【 玩家行為控管 】 ------------------
+        // ------------------ 【 玩家操作邏輯 】 ------------------
         function onPieceClick(piece) {
             if (!gameActive || turn !== 'player') return;
 
-            // 1. 翻牌
             if (!piece.isFlipped) {
                 flipPiece(piece);
                 nonCaptureMovesCount = 0;
@@ -1051,7 +1120,6 @@
                 return;
             }
 
-            // 2. 點擊己方棋
             if (piece.side === playerColor) {
                 if (selectedPiece && selectedPiece.id === piece.id) {
                     selectedPiece = null;
@@ -1059,14 +1127,13 @@
                 } else {
                     selectedPiece = piece;
                     updateHighlights();
-                    playSound('move');
+                    Sfx.playMove();
                 }
                 return;
             }
 
-            // 3. 點擊敵方棋（吃子）
             if (selectedPiece && piece.side !== playerColor) {
-                const moves = getLegalMoves(playerColor).filter(m => m.from && m.from.id === selectedPiece.id && m.type === 'capture' && m.to.id === piece.id);
+                const moves = getLegalMoves(playerColor, true).filter(m => m.from && m.from.id === selectedPiece.id && m.type === 'capture' && m.to.id === piece.id);
                 if (moves.length > 0) {
                     executeCapture(selectedPiece, piece);
                     nonCaptureMovesCount = 0;
@@ -1080,7 +1147,7 @@
         function onCellClick(x, y) {
             if (!gameActive || turn !== 'player' || !selectedPiece) return;
 
-            const moves = getLegalMoves(playerColor).filter(m => m.from && m.from.id === selectedPiece.id && m.type === 'move' && m.to.x === x && m.to.y === y);
+            const moves = getLegalMoves(playerColor, true).filter(m => m.from && m.from.id === selectedPiece.id && m.type === 'move' && m.to.x === x && m.to.y === y);
             if (moves.length > 0) {
                 executeMove(selectedPiece, x, y);
                 nonCaptureMovesCount++;
@@ -1093,12 +1160,12 @@
             }
         }
 
-        // ------------------ 【 動態展示效果 】 ------------------
+        // ------------------ 【 執行物理行棋與戰損御覽 】 ------------------
         function flipPiece(piece) {
             piece.isFlipped = true;
             const el = document.getElementById(`piece-${piece.id}`);
             if (el) el.classList.add('flipped');
-            playSound('flip');
+            Sfx.playFlip();
 
             if (playerColor === null) {
                 playerColor = piece.side;
@@ -1113,7 +1180,7 @@
                     pText.innerText = '黑方 · 楚'; pText.className = 'card-status black-text';
                     cText.innerText = '紅方 · 漢'; cText.className = 'card-status red-text';
                 }
-                showToast('陣營鎖定', `此局您執【${playerColor === 'red' ? '紅方' : '黑方'}】！`);
+                showToast('對決開始', `您執【${playerColor === 'red' ? '紅方' : '黑方'}】！`);
             }
             updateGridCache();
         }
@@ -1123,7 +1190,7 @@
             piece.y = ty;
             const el = document.getElementById(`piece-${piece.id}`);
             if (el) updatePieceDOMPos(el, tx, ty);
-            playSound('move');
+            Sfx.playMove();
             updateGridCache();
         }
 
@@ -1138,7 +1205,7 @@
             if (attEl) updatePieceDOMPos(attEl, tx, ty);
 
             defender.isCaptured = true;
-            playSound('capture');
+            Sfx.playCapture();
             triggerExplosion(tx, ty, defender.side === 'red');
 
             setTimeout(() => {
@@ -1155,10 +1222,12 @@
         function addPieceToCapturedDock(piece) {
             const dockId = piece.side === 'red' ? 'red-captured' : 'black-captured';
             const dock = document.getElementById(dockId);
-            const mini = document.createElement('div');
-            mini.className = `mini-piece ${piece.side}`;
-            mini.innerText = piece.name;
-            dock.appendChild(mini);
+            if (dock) {
+                const mini = document.createElement('div');
+                mini.className = `mini-piece ${piece.side}`;
+                mini.innerText = piece.name;
+                dock.appendChild(mini);
+            }
         }
 
         // ------------------ 【 勝負判定 】 ------------------
@@ -1182,7 +1251,7 @@
                 }
 
                 const currentSide = turn === 'player' ? playerColor : aiColor;
-                if (getLegalMoves(currentSide).length === 0) {
+                if (getLegalMoves(currentSide, true).length === 0) {
                     endGame(turn === 'player' ? 'lose' : 'win');
                     return true;
                 }
@@ -1196,17 +1265,17 @@
             const desc = document.getElementById('gameover-desc');
 
             if (result === 'win') {
-                title.innerText = '國士無雙 · 捷報';
-                desc.innerText = '算無遺策，一戰定乾坤！您成功覆滅電腦取得大勝！';
-                playSound('win');
+                title.innerText = '妙計制勝 · 凱旋';
+                desc.innerText = '您算無遺策，成功覆滅天工電腦，榮登棋壇宗師！';
+                Sfx.playWin();
             } else if (result === 'lose') {
-                title.innerText = '兵敗如山 · 遺憾';
-                desc.innerText = '天工人工，智慮難防。整理旗鼓，期待您東山再起。';
-                playSound('lose');
+                title.innerText = '大局已定 · 憾負';
+                desc.innerText = '天工人工，局勢難料。勝敗乃兵家常事，整理棋鼓再來一局！';
+                Sfx.playLose();
             } else if (result === 'draw') {
-                title.innerText = '旗鼓相當 · 言和';
-                desc.innerText = '六十合未曾吃子或翻棋，兩軍罷兵言和。';
-                playSound('win');
+                title.innerText = '旗鼓相當 · 握和';
+                desc.innerText = '兩軍智略超凡。焦灼抗衡達60回合無吃子或翻牌，罷兵言和。';
+                Sfx.playWin();
             }
             document.getElementById('gameover-modal').classList.add('active');
         }
@@ -1218,8 +1287,8 @@
                 turn = 'computer';
                 document.getElementById('player-card').classList.remove('active');
                 document.getElementById('computer-card').classList.add('active');
-                document.getElementById('status-label').innerText = '電腦冥想博弈中...';
-                setTimeout(executeComputerTurn, 650); // 合理延時模擬思考，提升對手實存感
+                document.getElementById('status-label').innerText = '電腦大師深度冥想中...';
+                setTimeout(executeComputerTurn, 650);
             } else {
                 turn = 'player';
                 document.getElementById('player-card').classList.add('active');
@@ -1228,7 +1297,7 @@
             }
         }
 
-        // ------------------ 【 超優化 AI 計算核 】 ------------------
+        // ------------------ 【 電腦博弈極速 AI 核 (排除盲翻死鎖) 】 ------------------
         function executeComputerTurn() {
             if (!gameActive) return;
 
@@ -1253,18 +1322,15 @@
         }
 
         function getBestMoveAI(aiSide, diff) {
-            const moves = getLegalMoves(aiSide);
+            const moves = getLegalMoves(aiSide, true); // 第一層決策允許包含翻牌
             if (moves.length === 0) return null;
 
-            // 新手隨機混合
             if (diff === 'easy' && Math.random() < 0.4) {
                 return moves[Math.floor(Math.random() * moves.length)];
             }
 
-            // 深度：勢均力敵=2步，國士無雙=3步(基於網格緩存，3步依然順滑無比)
             const depth = diff === 'hard' ? 3 : 2;
 
-            // 洗牌防止走步死板
             for (let i = moves.length - 1; i > 0; i--) {
                 const j = Math.floor(Math.random() * (i + 1));
                 [moves[i], moves[j]] = [moves[j], moves[i]];
@@ -1276,10 +1342,10 @@
             for (let move of moves) {
                 let score = 0;
                 if (move.type === 'flip') {
-                    // 對未知暗子採取智能安全翻牌估算
                     score = evaluateStaticFlip(move.piece, aiSide);
                 } else {
                     const undoInfo = simulateMove(move);
+                    // 樹搜尋內部（Minimax）必須調用 getLegalMoves(..., false) 排除隨機翻牌，防止評估極端化
                     score = minimax(depth - 1, -Infinity, Infinity, false, aiSide);
                     undoMove(move, undoInfo);
                 }
@@ -1292,128 +1358,25 @@
             return bestMove;
         }
 
-        // 核心局勢靜態評估
-        function evaluateBoardState(aiSide) {
-            const playerSide = aiSide === 'red' ? 'black' : 'red';
-            let score = 0;
-
-            // 動態監控對方可剋制我方的卒/兵數量，如果為0，我方將帥就是無敵存在
-            const oppActive = [];
-            const myActive = [];
-            
-            for (let x = 0; x < 4; x++) {
-                for (let y = 0; y < 8; y++) {
-                    const p = boardGrid[x][y];
-                    if (p) {
-                        if (p.isFlipped) {
-                            if (p.side === aiSide) myActive.push(p);
-                            else oppActive.push(p);
-                        }
-                    }
-                }
-            }
-
-            const oppTotal1s = pieces.filter(p => !p.isCaptured && p.side === playerSide && p.rank === 1).length;
-            const myTotal1s = pieces.filter(p => !p.isCaptured && p.side === aiSide && p.rank === 1).length;
-
-            // 1. 棋盤基本子力計分
-            pieces.forEach(p => {
-                if (p.isCaptured) return;
-                if (!p.isFlipped) return; // 覆蓋棋子獨立計算
-
-                let val = RANK_VALUES[p.rank] || 0;
-                
-                // 【無敵機制補貼】
-                if (p.rank === 7) {
-                    if (p.side === aiSide && oppTotal1s === 0) val += 1000; // 我方將帥無敵
-                    if (p.side === playerSide && myTotal1s === 0) val += 1000; // 對方將帥無敵
-                }
-
-                // 稍微給予中心格優勢，促使 AI 搶佔中路
-                let posBonus = 0;
-                if (p.x === 1 || p.x === 2) posBonus += 15;
-                if (p.y >= 2 && p.y <= 5) posBonus += 15;
-
-                if (p.side === aiSide) score += (val + posBonus);
-                else score -= (val + posBonus);
-            });
-
-            // 2. 威脅矩陣（1步安全前瞻）
-            // 檢查 AI 棋子是否會在下回合被吃
-            myActive.forEach(my => {
-                let threatened = false;
-                oppActive.forEach(op => {
-                    if (op.rank === 2) {
-                        if (getMiddleCount(op.x, op.y, my.x, my.y) === 1) threatened = true;
-                    } else {
-                        if (Math.abs(op.x - my.x) + Math.abs(op.y - my.y) === 1) {
-                            if (canCaptureRule(op, my)) threatened = true;
-                        }
-                    }
-                });
-                if (threatened) {
-                    score -= (RANK_VALUES[my.rank] * 0.85); // 巨額懲罰，迫使 AI 逃跑或保護
-                }
-            });
-
-            // 檢查 AI 能否吃對方的棋
-            oppActive.forEach(op => {
-                let canEat = false;
-                myActive.forEach(my => {
-                    if (my.rank === 2) {
-                        if (getMiddleCount(my.x, my.y, op.x, op.y) === 1) canEat = true;
-                    } else {
-                        if (Math.abs(my.x - op.x) + Math.abs(my.y - op.y) === 1) {
-                            if (canCaptureRule(my, op)) canEat = true;
-                        }
-                    }
-                });
-                if (canEat) {
-                    score += (RANK_VALUES[op.rank] * 0.45); // 獎勵，引導主動捕獲敵子
-                }
-            });
-
-            return score;
-        }
-
-        // 智能翻牌期望值計算
-        function evaluateStaticFlip(piece, aiSide) {
-            const playerSide = aiSide === 'red' ? 'black' : 'red';
-            let base = 30; // 基礎翻牌意願
-            
-            // 收集我方和對方在場上已亮牌的數量，如果我方局勢很差，應偏向多冒險翻牌（博地盤）
-            const myCount = pieces.filter(p => !p.isCaptured && p.isFlipped && p.side === aiSide).length;
-            const opCount = pieces.filter(p => !p.isCaptured && p.isFlipped && p.side === playerSide).length;
-            base += (opCount - myCount) * 12;
-
-            // 【高智商避雷針】：若該覆蓋子四周「有已亮起的敵方大子」，翻開後有大機率直接被捕獲，大幅降低翻牌意願！
-            const dirs = [{dx:0,dy:1},{dx:0,dy:-1},{dx:1,dy:0},{dx:-1,dy:0}];
-            dirs.forEach(d => {
-                const tx = piece.x + d.dx, ty = piece.y + d.dy;
-                if (tx >= 0 && tx < 4 && ty >= 0 && ty < 8) {
-                    const near = boardGrid[tx][ty];
-                    if (near && near.isFlipped && near.side === playerSide) {
-                        // 附近有敵子，威脅極大
-                        base -= (RANK_VALUES[near.rank] * 0.4);
-                    }
-                }
-            });
-            return base;
-        }
-
-        // Alpha-Beta 剪枝博弈算法
+        // Alpha-Beta 剪枝 (安全無當機版)
         function minimax(depth, alpha, beta, isMax, aiSide) {
-            if (depth === 0 || !gameActive) return evaluateBoardState(aiSide);
+            if (depth <= 0 || !gameActive) return evaluateBoardState(aiSide);
 
             const activeSide = isMax ? aiSide : (aiSide === 'red' ? 'black' : 'red');
-            const moves = getLegalMoves(activeSide);
+            const moves = getLegalMoves(activeSide, false); // 樹搜尋排除翻牌，純策略預判
 
-            if (moves.length === 0) return isMax ? -10000 : 10000;
+            if (moves.length === 0) {
+                // 如果無實體走法，但場上仍有暗子可翻，返還靜態估值，平滑防死鎖
+                const hasFlips = pieces.some(p => !p.isCaptured && !p.isFlipped);
+                if (hasFlips) {
+                    return evaluateBoardState(aiSide);
+                }
+                return isMax ? -10000 : 10000;
+            }
 
             if (isMax) {
                 let maxEval = -Infinity;
                 for (let move of moves) {
-                    if (move.type === 'flip') continue; // 樹搜尋忽略盲翻隨機性
                     const undo = simulateMove(move);
                     const ev = minimax(depth - 1, alpha, beta, false, aiSide);
                     undoMove(move, undo);
@@ -1425,7 +1388,6 @@
             } else {
                 let minEval = Infinity;
                 for (let move of moves) {
-                    if (move.type === 'flip') continue;
                     const undo = simulateMove(move);
                     const ev = minimax(depth - 1, alpha, beta, true, aiSide);
                     undoMove(move, undo);
@@ -1435,6 +1397,103 @@
                 }
                 return minEval;
             }
+        }
+
+        // 精密靜態棋盤矩陣評估
+        function evaluateBoardState(aiSide) {
+            const playerSide = aiSide === 'red' ? 'black' : 'red';
+            let score = 0;
+
+            const oppActive = [];
+            const myActive = [];
+            
+            for (let x = 0; x < 4; x++) {
+                for (let y = 0; y < 8; y++) {
+                    const p = boardGrid[x][y];
+                    if (p && p.isFlipped) {
+                        if (p.side === aiSide) myActive.push(p);
+                        else oppActive.push(p);
+                    }
+                }
+            }
+
+            const oppTotal1s = pieces.filter(p => !p.isCaptured && p.side === playerSide && p.rank === 1).length;
+            const myTotal1s = pieces.filter(p => !p.isCaptured && p.side === aiSide && p.rank === 1).length;
+
+            pieces.forEach(p => {
+                if (p.isCaptured || !p.isFlipped) return;
+
+                let val = RANK_VALUES[p.rank] || 0;
+                
+                // 無敵免役：若敵軍「卒/兵」全亡，我方「將/帥」無敵，給予極大加權
+                if (p.rank === 7) {
+                    if (p.side === aiSide && oppTotal1s === 0) val += 1200;
+                    if (p.side === playerSide && myTotal1s === 0) val += 1200;
+                }
+
+                // 稍微增加中路優勢
+                let posBonus = 0;
+                if (p.x === 1 || p.x === 2) posBonus += 15;
+                if (p.y >= 2 && p.y <= 5) posBonus += 15;
+
+                if (p.side === aiSide) score += (val + posBonus);
+                else score -= (val + posBonus);
+            });
+
+            // 1步威脅防禦扣分
+            myActive.forEach(my => {
+                let threatened = false;
+                oppActive.forEach(op => {
+                    if (op.rank === 2) {
+                        if (getMiddleCount(op.x, op.y, my.x, my.y) === 1) threatened = true;
+                    } else {
+                        if (Math.abs(op.x - my.x) + Math.abs(op.y - my.y) === 1) {
+                            if (canCaptureRule(op, my)) threatened = true;
+                        }
+                    }
+                });
+                if (threatened) score -= (RANK_VALUES[my.rank] * 0.85);
+            });
+
+            // 1步吃子積極獎勵
+            oppActive.forEach(op => {
+                let canEat = false;
+                myActive.forEach(my => {
+                    if (my.rank === 2) {
+                        if (getMiddleCount(my.x, my.y, op.x, op.y) === 1) canEat = true;
+                    } else {
+                        if (Math.abs(my.x - op.x) + Math.abs(my.y - op.y) === 1) {
+                            if (canCaptureRule(my, op)) canEat = true;
+                        }
+                    }
+                });
+                if (canEat) score += (RANK_VALUES[op.rank] * 0.45);
+            });
+
+            return score;
+        }
+
+        // 智能翻牌期望值計算
+        function evaluateStaticFlip(piece, aiSide) {
+            const playerSide = aiSide === 'red' ? 'black' : 'red';
+            let base = 180; // 優化期望基數
+            
+            const myCount = pieces.filter(p => !p.isCaptured && p.isFlipped && p.side === aiSide).length;
+            const opCount = pieces.filter(p => !p.isCaptured && p.isFlipped && p.side === playerSide).length;
+            base += (opCount - myCount) * 40; // 盤面越落後，越鼓勵冒險翻子
+
+            // 高智商避雷：鄰格若有已翻開的敵方大子，降低翻牌意願防送頭
+            const dirs = [{dx:0,dy:1},{dx:0,dy:-1},{dx:1,dy:0},{dx:-1,dy:0}];
+            dirs.forEach(d => {
+                const tx = piece.x + d.dx, ty = piece.y + d.dy;
+                if (tx >= 0 && tx < 4 && ty >= 0 && ty < 8) {
+                    const near = boardGrid[tx][ty];
+                    if (near && near.isFlipped && near.side === playerSide) {
+                        base -= (RANK_VALUES[near.rank] * 0.4);
+                    }
+                }
+            });
+            return base;
         }
 
         function simulateMove(move) {
@@ -1464,22 +1523,19 @@
             updateGridCache();
         }
 
-        // ------------------ 【 暗棋合法走步運算（利用 Cache 大幅加速） 】 ------------------
-        function getLegalMoves(side) {
+        // ------------------ 【 暗棋基本行棋規則 】 ------------------
+        function getLegalMoves(side, includeFlips = true) {
             const moves = [];
             
-            // 翻棋
-            pieces.forEach(p => {
-                if (!p.isCaptured && !p.isFlipped) {
-                    moves.push({ type: 'flip', piece: p });
-                }
-            });
+            if (includeFlips) {
+                pieces.forEach(p => {
+                    if (!p.isCaptured && !p.isFlipped) moves.push({ type: 'flip', piece: p });
+                });
+            }
 
-            // 明子移動與吃子
             pieces.forEach(p => {
                 if (p.isCaptured || !p.isFlipped || p.side !== side) return;
 
-                // 一般行棋（上下左右一格）
                 const dirs = [{dx:0,dy:1},{dx:0,dy:-1},{dx:1,dy:0},{dx:-1,dy:0}];
                 dirs.forEach(d => {
                     const tx = p.x + d.dx, ty = p.y + d.dy;
@@ -1495,7 +1551,6 @@
                     }
                 });
 
-                // 砲跳吃
                 if (p.rank === 2) {
                     const targets = pieces.filter(item => !item.isCaptured && item.isFlipped && item.side !== side);
                     targets.forEach(target => {
@@ -1510,8 +1565,9 @@
         }
 
         function canCaptureRule(attacker, defender) {
-            if (attacker.rank === 7 && defender.rank === 1) return false; // 將不吃兵
-            if (attacker.rank === 1 && defender.rank === 7) return true;  // 兵可吃將
+            if (attacker.rank === 7 && defender.rank === 1) return false;
+            if (attacker.rank === 1 && defender.rank === 7) return true;
+            if (attacker.rank === 1 && defender.rank > 1) return defender.rank === 1;
             return attacker.rank >= defender.rank;
         }
 
@@ -1534,7 +1590,7 @@
             return count;
         }
 
-        // ------------------ 【 UX：高亮與威脅特效 】 ------------------
+        // ------------------ 【 UX 亮點：高亮與威脅提示 】 ------------------
         function clearHighlights() {
             document.querySelectorAll('.cell').forEach(c => c.classList.remove('highlight-target'));
             document.querySelectorAll('.piece-container').forEach(p => p.classList.remove('threatened'));
@@ -1544,7 +1600,7 @@
             clearHighlights();
             if (!selectedPiece) return;
 
-            const moves = getLegalMoves(playerColor).filter(m => m.from && m.from.id === selectedPiece.id);
+            const moves = getLegalMoves(playerColor, true).filter(m => m.from && m.from.id === selectedPiece.id);
             moves.forEach(m => {
                 if (m.type === 'move') {
                     const cell = document.querySelector(`.cell[data-x="${m.to.x}"][data-y="${m.to.y}"]`);
@@ -1556,7 +1612,7 @@
             });
         }
 
-        // ------------------ 【 UX：粒子爆裂系統 】 ------------------
+        // ------------------ 【 UX 亮點：粒子物理爆裂引擎 】 ------------------
         const canvas = document.getElementById('effects-canvas');
         const ctx = canvas.getContext('2d');
         let particles = [];
@@ -1566,12 +1622,12 @@
                 this.x = x;
                 this.y = y;
                 this.vx = (Math.random() - 0.5) * 8;
-                this.vy = (Math.random() - 0.5) * 8 - 2;
+                this.vy = (Math.random() - 0.5) * 8 - 2.2;
                 this.radius = Math.random() * 3 + 1.5;
                 this.alpha = 1;
                 this.decay = Math.random() * 0.02 + 0.02;
                 this.color = color;
-                this.gravity = 0.15;
+                this.gravity = 0.16;
             }
             update() {
                 this.vx *= 0.98;
@@ -1600,7 +1656,7 @@
 
             const board = document.getElementById('board');
             board.classList.add('shake');
-            setTimeout(() => board.classList.remove('shake'), 300);
+            setTimeout(() => board.classList.remove('shake'), 280);
 
             const color = isRed ? '#ff4d4d' : '#ffe082';
             for (let i = 0; i < 24; i++) {
@@ -1619,9 +1675,9 @@
         }
         drawLoop();
 
-        // ------------------ 【 彈窗、阻擋 iOS 默認事件與輔助器 】 ------------------
+        // ------------------ 【 彈窗、導出代碼與觸控限制 】 ------------------
         function toggleHelp() {
-            initAudio();
+            Sfx.init();
             document.getElementById('help-modal').classList.toggle('active');
         }
 
@@ -1631,23 +1687,45 @@
 
         function showToast(title, desc) {
             const toast = document.getElementById('toast');
-            toast.innerText = `${title}：${desc}`;
-            toast.classList.add('active');
-            setTimeout(() => toast.classList.remove('active'), 2500);
+            if (toast) {
+                toast.innerText = `${title}：${desc}`;
+                toast.classList.add('active');
+                setTimeout(() => toast.classList.remove('active'), 2500);
+            }
         }
 
         // 難度選擇
         document.querySelectorAll('.diff-btn').forEach(btn => {
             btn.addEventListener('click', () => {
-                initAudio();
+                Sfx.init();
                 document.querySelectorAll('.diff-btn').forEach(b => b.classList.remove('active'));
                 btn.classList.add('active');
                 difficulty = btn.dataset.diff;
-                showToast('對戰難度變更', `電腦大師已轉型為【${btn.innerText}】模式！`);
+                showToast('對弈難度已變更', `天工電腦已切換為【${btn.innerText}】模式！`);
             });
         });
 
-        // 徹底阻擋 iOS 雙擊縮放及滾動
+        // 導出代碼功能
+        function downloadCurrentCode() {
+            try {
+                Sfx.init();
+                const fullHtml = "<!DOCTYPE html>\n" + document.documentElement.outerHTML;
+                const blob = new Blob([fullHtml], { type: 'text/html' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'premium_dark_chess_final.html';
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+                showToast('導出成功', '原始碼打包完成，可在離線環境直接玩！');
+            } catch (e) {
+                showToast('導出失敗', '您的瀏覽器不支援直接下載。');
+            }
+        }
+
+        // 鎖定蘋果及安卓 Safari 瀏覽器原生下拉刷新行為
         document.addEventListener('touchmove', function(e) {
             if (e.touches.length > 1) return;
             e.preventDefault();

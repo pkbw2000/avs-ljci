@@ -51,6 +51,7 @@
         document.addEventListener('alpine:init', () => {
             Alpine.data('matsuApp', () => ({
                 activeTab: 'itinerary', // 預設頁籤
+                planType: 'plan1', // 新增：方案選擇 (plan1: 松山/台中出發, plan2: 高雄出發)
                 islandTab: 'nangan',  
                 ferryFilter: 'all',
                 selectedDay: 1,
@@ -301,8 +302,21 @@
                     <p class="text-gray-400 text-sm mt-1">融合絕景、閩東古厝、戰地史蹟與夜間追藍眼淚。</p>
                 </div>
 
-                <!-- Day Selector Tabs -->
-                <div class="flex bg-navy-800 p-1 rounded-xl border border-gray-700">
+                <!-- 方案選擇器 (Plan Toggle) -->
+                <div class="flex bg-navy-800 p-1.5 rounded-xl border border-cyan-glow/30">
+                    <button @click="planType = 'plan1'; selectedDay = 1" :class="planType === 'plan1' ? 'bg-gradient-to-r from-cyan-deep to-cyan-glow text-navy-900 font-extrabold shadow-md' : 'text-gray-300 hover:text-white'" class="px-4 py-2 rounded-lg text-xs md:text-sm transition flex items-center gap-1.5">
+                        <i class="fa-solid fa-plane-departure"></i> 方案一：松山/台中出發
+                    </button>
+                    <button @click="planType = 'plan2'; selectedDay = 1" :class="planType === 'plan2' ? 'bg-gradient-to-r from-cyan-deep to-cyan-glow text-navy-900 font-extrabold shadow-md' : 'text-gray-300 hover:text-white'" class="px-4 py-2 rounded-lg text-xs md:text-sm transition flex items-center gap-1.5">
+                        <i class="fa-solid fa-plane-arrival"></i> 方案二：高雄出發
+                    </button>
+                </div>
+            </div>
+
+            <!-- ==================== 方案一：松山/台中出發內容 ==================== -->
+            <div x-show="planType === 'plan1'" class="space-y-6">
+                <!-- Day Selector Tabs for Plan 1 -->
+                <div class="flex bg-navy-800 p-1 rounded-xl border border-gray-700 w-fit">
                     <button @click="selectedDay = 1" :class="selectedDay === 1 ? 'bg-gold-accent text-navy-900 font-bold' : 'text-gray-300'" class="px-4 py-2 rounded-lg text-xs md:text-sm transition">
                         DAY 1 莒光雙島
                     </button>
@@ -316,11 +330,9 @@
                         DAY 4 北竿壁山
                     </button>
                 </div>
-            </div>
 
-            <!-- DAY 1 -->
-            <div x-show="selectedDay === 1" class="space-y-6">
-                <div class="glass-card p-6 rounded-2xl border-l-4 border-cyan-glow">
+                <!-- DAY 1 (Plan 1) -->
+                <div x-show="selectedDay === 1" class="glass-card p-6 rounded-2xl border-l-4 border-cyan-glow">
                     <div class="flex items-center gap-3 mb-4">
                         <span class="w-8 h-8 rounded-full bg-cyan-glow/20 text-cyan-glow flex items-center justify-center font-bold">1</span>
                         <h3 class="text-xl font-bold text-white">DAY 1：抵達南竿 ➔ 直奔莒光雙島（國之南端與方塊海奇景）</h3>
@@ -360,11 +372,9 @@
                         </div>
                     </div>
                 </div>
-            </div>
 
-            <!-- DAY 2 -->
-            <div x-show="selectedDay === 2" class="space-y-6">
-                <div class="glass-card p-6 rounded-2xl border-l-4 border-cyan-glow">
+                <!-- DAY 2 (Plan 1) -->
+                <div x-show="selectedDay === 2" class="glass-card p-6 rounded-2xl border-l-4 border-cyan-glow">
                     <div class="flex items-center gap-3 mb-4">
                         <span class="w-8 h-8 rounded-full bg-cyan-glow/20 text-cyan-glow flex items-center justify-center font-bold">2</span>
                         <h3 class="text-xl font-bold text-white">DAY 2：莒光返回南竿 ➔ 戰地坑道秘境 ➔ 夜間搖櫓尋淚</h3>
@@ -404,11 +414,9 @@
                         </div>
                     </div>
                 </div>
-            </div>
 
-            <!-- DAY 3 -->
-            <div x-show="selectedDay === 3" class="space-y-6">
-                <div class="glass-card p-6 rounded-2xl border-l-4 border-cyan-glow">
+                <!-- DAY 3 (Plan 1) -->
+                <div x-show="selectedDay === 3" class="glass-card p-6 rounded-2xl border-l-4 border-cyan-glow">
                     <div class="flex items-center gap-3 mb-4">
                         <span class="w-8 h-8 rounded-full bg-cyan-glow/20 text-cyan-glow flex items-center justify-center font-bold">3</span>
                         <h3 class="text-xl font-bold text-white">DAY 3：南竿 ➔ 大坵島賞梅花鹿 ➔ 北竿芹壁地中海風情</h3>
@@ -448,11 +456,9 @@
                         </div>
                     </div>
                 </div>
-            </div>
 
-            <!-- DAY 4 -->
-            <div x-show="selectedDay === 4" class="space-y-6">
-                <div class="glass-card p-6 rounded-2xl border-l-4 border-cyan-glow">
+                <!-- DAY 4 (Plan 1) -->
+                <div x-show="selectedDay === 4" class="glass-card p-6 rounded-2xl border-l-4 border-cyan-glow">
                     <div class="flex items-center gap-3 mb-4">
                         <span class="w-8 h-8 rounded-full bg-cyan-glow/20 text-cyan-glow flex items-center justify-center font-bold">4</span>
                         <h3 class="text-xl font-bold text-white">DAY 4：北竿壁山俯瞰 ➔ 橋仔漁港 ➔ 塘岐手信返航</h3>
@@ -476,6 +482,173 @@
                             <div class="text-xs text-cyan-glow font-mono mb-1">12:00 - 14:00</div>
                             <h4 class="text-lg font-bold text-gold-light">塘岐村伴手禮採買 & 機場登機返航</h4>
                             <p class="text-sm text-gray-300 mt-1">採購馬祖酥、芙蓉酥、馬祖老酒與淡菜乾。前往北竿機場搭機返航。</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ==================== 方案二：高雄出發內容 ==================== -->
+            <div x-show="planType === 'plan2'" class="space-y-6">
+                <!-- 高雄航班資訊卡 -->
+                <div class="p-4 rounded-xl bg-navy-800/90 border-l-4 border-gold-accent text-sm">
+                    <div class="font-bold text-gold-accent mb-1 flex items-center gap-2">
+                        <i class="fa-solid fa-plane"></i> 華信航空 高雄 (KHH) ⇄ 南竿 (LZN) 航班資訊
+                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-2 text-xs text-gray-300 mt-2">
+                        <p><strong>去程 (AE7925):</strong> 高雄 11:30 ➔ 南竿 13:10 (約 1 小時 40 分)</p>
+                        <p><strong>回程 (AE7926):</strong> 南竿 13:55 ➔ 高雄 15:35 (約 1 小時 40 分)</p>
+                    </div>
+                </div>
+
+                <!-- Day Selector Tabs for Plan 2 -->
+                <div class="flex bg-navy-800 p-1 rounded-xl border border-gray-700 w-fit">
+                    <button @click="selectedDay = 1" :class="selectedDay === 1 ? 'bg-gold-accent text-navy-900 font-bold' : 'text-gray-300'" class="px-4 py-2 rounded-lg text-xs md:text-sm transition">
+                        DAY 1 抵達南竿➔北竿
+                    </button>
+                    <button @click="selectedDay = 2" :class="selectedDay === 2 ? 'bg-gold-accent text-navy-900 font-bold' : 'text-gray-300'" class="px-4 py-2 rounded-lg text-xs md:text-sm transition">
+                        DAY 2 東莒尊榮巡禮
+                    </button>
+                    <button @click="selectedDay = 3" :class="selectedDay === 3 ? 'bg-gold-accent text-navy-900 font-bold' : 'text-gray-300'" class="px-4 py-2 rounded-lg text-xs md:text-sm transition">
+                        DAY 3 南竿戰地與藍眼淚
+                    </button>
+                    <button @click="selectedDay = 4" :class="selectedDay === 4 ? 'bg-gold-accent text-navy-900 font-bold' : 'text-gray-300'" class="px-4 py-2 rounded-lg text-xs md:text-sm transition">
+                        DAY 4 津沙采風➔高雄
+                    </button>
+                </div>
+
+                <!-- DAY 1 (Plan 2) -->
+                <div x-show="selectedDay === 1" class="glass-card p-6 rounded-2xl border-l-4 border-cyan-glow">
+                    <div class="flex items-center gap-3 mb-4">
+                        <span class="w-8 h-8 rounded-full bg-cyan-glow/20 text-cyan-glow flex items-center justify-center font-bold">1</span>
+                        <h3 class="text-xl font-bold text-white">DAY 1：高雄飛抵南竿 ➔ 轉船北竿經典文化巡禮</h3>
+                    </div>
+
+                    <div class="relative border-l-2 border-gray-700 ml-4 pl-6 space-y-8">
+                        <div>
+                            <div class="absolute -left-[9px] top-1 w-4 h-4 rounded-full bg-cyan-glow"></div>
+                            <div class="text-xs text-cyan-glow font-mono mb-1">11:30 - 13:10</div>
+                            <h4 class="text-lg font-bold text-white">搭乘華信航空 AE7925 前往南竿</h4>
+                            <p class="text-sm text-gray-300 mt-1">自高雄國際機場起飛，順利抵達馬祖南竿機場。</p>
+                        </div>
+                        <div>
+                            <div class="absolute -left-[9px] top-1 w-4 h-4 rounded-full bg-cyan-glow"></div>
+                            <div class="text-xs text-cyan-glow font-mono mb-1">13:40 - 14:10</div>
+                            <h4 class="text-lg font-bold text-white">福澳港搭船 ➔ 抵達北竿白沙港</h4>
+                            <p class="text-sm text-gray-300 mt-1">前往福澳碼頭搭乘接駁船轉往北竿（船程僅需約 12-15 分鐘）。</p>
+                        </div>
+                        <div>
+                            <div class="absolute -left-[9px] top-1 w-4 h-4 rounded-full bg-cyan-glow"></div>
+                            <div class="text-xs text-cyan-glow font-mono mb-1">14:30 - 17:30</div>
+                            <h4 class="text-lg font-bold text-gold-light">芹壁聚落漫步 & 壁山觀景台俯瞰</h4>
+                            <p class="text-sm text-gray-300 mt-1">入住「台版愛琴海」芹壁聚落，享用老酒麵線與龜島下午茶；隨後登頂馬祖最高峰壁山，鳥瞰北竿跑道與群島海岸。</p>
+                        </div>
+                        <div>
+                            <div class="absolute -left-[9px] top-1 w-4 h-4 rounded-full bg-cyan-glow"></div>
+                            <div class="text-xs text-cyan-glow font-mono mb-1">18:00 - 21:00</div>
+                            <h4 class="text-lg font-bold text-cyan-glow">塘岐村在地晚宴 & 夜間觀星踩沙</h4>
+                            <p class="text-sm text-gray-300 mt-1">享用北竿海鮮風味餐，夜間視季節安排夜尋沙灘星砂與藍眼淚。</p>
+                            <span class="inline-block mt-2 text-xs px-2.5 py-1 rounded bg-navy-900 text-gold-accent border border-gold-accent/30">夜宿: 北竿芹壁家威民宿 / 芹壁中山海岸民宿</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- DAY 2 (Plan 2) -->
+                <div x-show="selectedDay === 2" class="glass-card p-6 rounded-2xl border-l-4 border-cyan-glow">
+                    <div class="flex items-center gap-3 mb-4">
+                        <span class="w-8 h-8 rounded-full bg-cyan-glow/20 text-cyan-glow flex items-center justify-center font-bold">2</span>
+                        <h3 class="text-xl font-bold text-white">DAY 2：北竿 ➔ 南竿轉乘 ➔ 東莒尊榮跳島巡禮</h3>
+                    </div>
+
+                    <div class="relative border-l-2 border-gray-700 ml-4 pl-6 space-y-8">
+                        <div>
+                            <div class="absolute -left-[9px] top-1 w-4 h-4 rounded-full bg-cyan-glow"></div>
+                            <div class="text-xs text-cyan-glow font-mono mb-1">08:00 - 11:50</div>
+                            <h4 class="text-lg font-bold text-white">北竿返南竿 ➔ 轉搭船班赴東莒島</h4>
+                            <p class="text-sm text-gray-300 mt-1">搭乘早班船返回南竿，隨後轉乘 11:00 交通船前往東莒島（約 50 分鐘船程）。</p>
+                        </div>
+                        <div>
+                            <div class="absolute -left-[9px] top-1 w-4 h-4 rounded-full bg-cyan-glow"></div>
+                            <div class="text-xs text-cyan-glow font-mono mb-1">12:00 - 13:00</div>
+                            <h4 class="text-lg font-bold text-gold-light">東莒當地美饌午餐</h4>
+                            <p class="text-sm text-gray-300 mt-1">於東莒品嚐手作國利豆花、紅糟炒飯與地瓜餃小吃。</p>
+                        </div>
+                        <div>
+                            <div class="absolute -left-[9px] top-1 w-4 h-4 rounded-full bg-cyan-glow"></div>
+                            <div class="text-xs text-cyan-glow font-mono mb-1">13:30 - 16:30</div>
+                            <h4 class="text-lg font-bold text-white">東犬燈塔 & 福正聚落 & 神秘小海灣</h4>
+                            <p class="text-sm text-gray-300 mt-1">探訪百年英式純白燈塔，漫步大埔聚落石頭屋與福正沙灘，欣賞海蝕奇景。</p>
+                        </div>
+                        <div>
+                            <div class="absolute -left-[9px] top-1 w-4 h-4 rounded-full bg-cyan-glow"></div>
+                            <div class="text-xs text-cyan-glow font-mono mb-1">17:10 - 20:30</div>
+                            <h4 class="text-lg font-bold text-cyan-glow">返回南竿 ➔ 尊榮海鮮晚宴</h4>
+                            <p class="text-sm text-gray-300 mt-1">搭乘末班船返回南竿，享用紅糟老酒海鮮痛風鍋晚宴。</p>
+                            <span class="inline-block mt-2 text-xs px-2.5 py-1 rounded bg-navy-900 text-gold-accent border border-gold-accent/30">夜宿: 南竿日光春采海景民宿 / 斑斑精品旅店</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- DAY 3 (Plan 2) -->
+                <div x-show="selectedDay === 3" class="glass-card p-6 rounded-2xl border-l-4 border-cyan-glow">
+                    <div class="flex items-center gap-3 mb-4">
+                        <span class="w-8 h-8 rounded-full bg-cyan-glow/20 text-cyan-glow flex items-center justify-center font-bold">3</span>
+                        <h3 class="text-xl font-bold text-white">DAY 3：南竿戰地風情 ➔ 媽祖祈福 ➔ 北海坑道夜間搖櫓</h3>
+                    </div>
+
+                    <div class="relative border-l-2 border-gray-700 ml-4 pl-6 space-y-8">
+                        <div>
+                            <div class="absolute -left-[9px] top-1 w-4 h-4 rounded-full bg-cyan-glow"></div>
+                            <div class="text-xs text-cyan-glow font-mono mb-1">09:00 - 12:00</div>
+                            <h4 class="text-lg font-bold text-white">媽祖巨神像 & 馬港天后宮 & 八八坑道</h4>
+                            <p class="text-sm text-gray-300 mt-1">參拜香火鼎盛之馬港天后宮與媽祖巨神像，隨後前往八八坑道聞酒香。</p>
+                        </div>
+                        <div>
+                            <div class="absolute -left-[9px] top-1 w-4 h-4 rounded-full bg-cyan-glow"></div>
+                            <div class="text-xs text-cyan-glow font-mono mb-1">12:30 - 14:00</div>
+                            <h4 class="text-lg font-bold text-gold-light">尊榮午餐：【依嬤的店】無菜單料理</h4>
+                            <p class="text-sm text-gray-300 mt-1">品嚐鮮蒸淡菜、紅糟黃魚與繼光餅夾蛋名菜。</p>
+                        </div>
+                        <div>
+                            <div class="absolute -left-[9px] top-1 w-4 h-4 rounded-full bg-cyan-glow"></div>
+                            <div class="text-xs text-cyan-glow font-mono mb-1">14:30 - 17:00</div>
+                            <h4 class="text-lg font-bold text-white">鐵堡邊防巡禮 & 民俗文物館</h4>
+                            <p class="text-sm text-gray-300 mt-1">走入海中堡壘鐵堡，深入了解馬祖閩東文化與歷史背景。</p>
+                        </div>
+                        <div>
+                            <div class="absolute -left-[9px] top-1 w-4 h-4 rounded-full bg-cyan-glow"></div>
+                            <div class="text-xs text-cyan-glow font-mono mb-1">19:30 - 21:00</div>
+                            <h4 class="text-lg font-bold text-cyan-glow">重頭戲：北海坑道夜間搖櫓藍眼淚</h4>
+                            <p class="text-sm text-gray-300 mt-1">進入坑道搭乘木舟搖櫓，近距離欣賞水面泛起的藍色螢光奇蹟。</p>
+                            <span class="inline-block mt-2 text-xs px-2.5 py-1 rounded bg-navy-900 text-gold-accent border border-gold-accent/30">夜宿: 南竿日光春采海景民宿 / 斑斑精品旅店</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- DAY 4 (Plan 2) -->
+                <div x-show="selectedDay === 4" class="glass-card p-6 rounded-2xl border-l-4 border-cyan-glow">
+                    <div class="flex items-center gap-3 mb-4">
+                        <span class="w-8 h-8 rounded-full bg-cyan-glow/20 text-cyan-glow flex items-center justify-center font-bold">4</span>
+                        <h3 class="text-xl font-bold text-white">DAY 4：津沙聚落采風 ➔ 特產採買 ➔ 搭機返抵高雄</h3>
+                    </div>
+
+                    <div class="relative border-l-2 border-gray-700 ml-4 pl-6 space-y-8">
+                        <div>
+                            <div class="absolute -left-[9px] top-1 w-4 h-4 rounded-full bg-cyan-glow"></div>
+                            <div class="text-xs text-cyan-glow font-mono mb-1">08:30 - 10:30</div>
+                            <h4 class="text-lg font-bold text-white">津沙聚落古厝漫步 & 雲台山遠眺</h4>
+                            <p class="text-sm text-gray-300 mt-1">走訪南竿保存最完整的百年石厝聚落，喝杯老酒奶茶，登雲台山遠眺大陸沿海。</p>
+                        </div>
+                        <div>
+                            <div class="absolute -left-[9px] top-1 w-4 h-4 rounded-full bg-cyan-glow"></div>
+                            <div class="text-xs text-cyan-glow font-mono mb-1">10:30 - 12:00</div>
+                            <h4 class="text-lg font-bold text-gold-light">介壽獅子市場伴手禮採買</h4>
+                            <p class="text-sm text-gray-300 mt-1">採購馬祖酥、芙蓉酥、高粱酒與老酒麵線等名產。</p>
+                        </div>
+                        <div>
+                            <div class="absolute -left-[9px] top-1 w-4 h-4 rounded-full bg-cyan-glow"></div>
+                            <div class="text-xs text-cyan-glow font-mono mb-1">12:30 - 15:35</div>
+                            <h4 class="text-lg font-bold text-cyan-glow">南竿機場辦理登機 ➔ 返抵高雄</h4>
+                            <p class="text-sm text-gray-300 mt-1">搭乘華信航空 AE7926 班機 (13:55 起飛)，於 15:35 返抵高雄國際機場，結束精彩跳島之旅。</p>
                         </div>
                     </div>
                 </div>
@@ -663,7 +836,7 @@
                         </div>
                         <div class="glass-card p-5 rounded-2xl">
                             <div class="text-base font-bold text-white mb-1">阿婆姞寮老酒奶茶 (津沙)</div>
-                            <p class="text-xs text-gray-300 leading-relaxed">老酒與濃郁奶茶結合，香氣醇厚獨特，津沙聚落漫步必喝。</p>
+                            <p class="text-xs text-gray-300 leading-relaxed">老酒與濃郁奶茶結合，香氣醇厚獨景，津沙聚落漫步必喝。</p>
                         </div>
                     </div>
                 </div>
@@ -936,7 +1109,7 @@
                         <label class="block text-sm text-gray-300 mb-2">往返臺灣交通:</label>
                         <div class="grid grid-cols-2 gap-4">
                             <button @click="transport = 'flight'" :class="transport === 'flight' ? 'bg-cyan-glow text-navy-900 font-bold border-cyan-glow' : 'bg-navy-800 text-gray-300 border-gray-700'" class="p-3 rounded-xl border text-xs md:text-sm text-center">
-                                ✈️ 立榮航空 (約 NT$ 4,500/人)
+                                ✈️ 國內航空 (約 NT$ 4,500/人)
                             </button>
                             <button @click="transport = 'ferry'" :class="transport === 'ferry' ? 'bg-cyan-glow text-navy-900 font-bold border-cyan-glow' : 'bg-navy-800 text-gray-300 border-gray-700'" class="p-3 rounded-xl border text-xs md:text-sm text-center">
                                 🚢 新臺馬輪臥鋪 (約 NT$ 2,100/人)

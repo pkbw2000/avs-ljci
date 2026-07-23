@@ -10,7 +10,8 @@
     <title>馬祖 4天3夜 尊榮跳島智慧導航 Web App</title>
 
     <!-- Tailwind CSS CDN -->
-    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.tailwindcss.com">
+    </script>
     <!-- FontAwesome CDN -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <!-- Google Fonts -->
@@ -19,7 +20,8 @@
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700;900&display=swap" rel="stylesheet">
 
     <!-- Alpine.js 核心與初始化 script -->
-    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js">
+    </script>
 
     <script>
         tailwind.config = {
@@ -52,7 +54,7 @@
             Alpine.data('matsuApp', () => ({
                 activeTab: 'itinerary', // 預設頁籤
                 planType: 'plan1', // 新增：方案選擇 (plan1: 松山/台中出發, plan2: 高雄出發)
-                islandTab: 'nangan',  
+                islandTab: 'nangan',
                 ferryFilter: 'all',
                 selectedDay: 1,
                 mobileMenuOpen: false,
@@ -61,7 +63,7 @@
                 goToTab(tabName, targetId) {
                     this.activeTab = tabName;
                     this.mobileMenuOpen = false;
-                    
+
                     this.$nextTick(() => {
                         const target = document.getElementById(targetId);
                         if (target) {
@@ -75,8 +77,8 @@
                 // 預算試算器變數
                 travelers: 2,
                 transport: 'flight',
-                stayTier: 'luxury',  
-                mealTier: 'gourmet', 
+                stayTier: 'luxury',
+                mealTier: 'gourmet',
                 includeNightBoat: true,
                 includeDeerBoat: true,
 
@@ -108,7 +110,8 @@
                     return total;
                 },
                 totalCost() {
-                    return this.transportCost() + this.islandFerryCost() + this.stayCost() + this.scooterCost() + this.mealCost() + this.activityCost();
+                    return this.transportCost() + this.islandFerryCost() + this.stayCost() + this.scooterCost() + this
+                        .mealCost() + this.activityCost();
                 }
             }));
         });
@@ -116,8 +119,8 @@
 
     <style>
         /* 防止 Alpine 載入前畫面元素暴露出錯 (FOUC) */
-        [x-cloak] { 
-            display: none !important; 
+        [x-cloak] {
+            display: none !important;
         }
 
         body {
@@ -146,21 +149,23 @@
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
         }
-        
+
         @keyframes gold-shine {
-            0% { background-position: -200% center; }
-            100% { background-position: 200% center; }
+            0% {
+                background-position: -200% center;
+            }
+            100% {
+                background-position: 200% center;
+            }
         }
 
         .gold-shimmer-subtitle {
-            background: linear-gradient(
-                110deg, 
-                #BF953F 0%, 
-                #FCF6BA 25%, 
-                #FFFFFF 50%, 
-                #FCF6BA 75%, 
-                #B38728 100%
-            );
+            background: linear-gradient(110deg,
+                    #BF953F 0%,
+                    #FCF6BA 25%,
+                    #FFFFFF 50%,
+                    #FCF6BA 75%,
+                    #B38728 100%);
             background-size: 200% auto;
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
@@ -170,10 +175,25 @@
         }
 
         /* 自設滾動條 */
-        ::-webkit-scrollbar { width: 8px; height: 8px; }
-        ::-webkit-scrollbar-track { background: #0B132B; }
-        ::-webkit-scrollbar-thumb { background: #2A3B5C; border-radius: 4px; }
-        ::-webkit-scrollbar-thumb:hover { background: #00F5D4; }
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #0B132B;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #2A3B5C;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #00F5D4;
+        }
+
+        /* 手机按钮点击反馈 */
+        .nav-btn:active {
+            transform: scale(0.96);
+        }
     </style>
 </head>
 
@@ -245,7 +265,7 @@
             <div class="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-cyan-glow/10 border border-cyan-glow/30 text-cyan-glow text-xs font-semibold mb-6">
                 <i class="fa-solid fa-star text-gold-accent"></i> 頂級奢華跳島體驗 ‧ 整合四鄉五島全航班
             </div>
-            
+
             <h1 class="text-4xl md:text-6xl font-black text-white tracking-tight mb-4">
                 <span class="text-gradient-gold">馬祖</span> <span class="text-gradient-cyan">尊榮跳島之旅</span>
             </h1>
@@ -279,8 +299,9 @@
                 </div>
             </div>
 
-            <!-- 主按鈕，點擊跳轉與切換 -->
-            <div class="flex flex-wrap justify-center gap-4">
+            <!-- ===== 主按鈕區域：保留原有的兩個大按鈕，並新增三個導航按鈕 ===== -->
+            <!-- 第一行：原有的兩個核心按鈕（樣式不變） -->
+            <div class="flex flex-wrap justify-center gap-4 mb-4">
                 <button @click="goToTab('itinerary', 'main-content')" class="px-6 py-3 rounded-xl bg-gradient-to-r from-cyan-deep to-cyan-glow text-navy-900 font-bold shadow-lg hover:shadow-cyan-glow/50 transition-all duration-300 flex items-center gap-2 cursor-pointer">
                     <i class="fa-solid fa-compass"></i> 查看每日行程細節
                 </button>
@@ -288,6 +309,21 @@
                     <i class="fa-solid fa-ship"></i> 四鄉五島航班資訊
                 </button>
             </div>
+
+            <!-- 第二行：新增的三個導航選項（美食、追淚、試算） -->
+            <div class="flex flex-wrap justify-center gap-4">
+                <button @click="goToTab('gourmet', 'main-content')" class="px-5 py-2.5 rounded-xl glass-card border border-orange-400/30 text-orange-300 font-medium hover:bg-orange-400/10 transition-all duration-300 flex items-center gap-2 cursor-pointer text-sm md:text-base">
+                    <i class="fa-solid fa-utensils"></i> 美食景點與住宿
+                </button>
+                <button @click="goToTab('tears', 'main-content')" class="px-5 py-2.5 rounded-xl glass-card border border-purple-400/30 text-purple-300 font-medium hover:bg-purple-400/10 transition-all duration-300 flex items-center gap-2 cursor-pointer text-sm md:text-base">
+                    <i class="fa-solid fa-wand-magic-sparkles"></i> 追淚雷達
+                </button>
+                <button @click="goToTab('budget', 'main-content')" class="px-5 py-2.5 rounded-xl glass-card border border-emerald-400/30 text-emerald-300 font-medium hover:bg-emerald-400/10 transition-all duration-300 flex items-center gap-2 cursor-pointer text-sm md:text-base">
+                    <i class="fa-solid fa-calculator"></i> 費用試算器
+                </button>
+            </div>
+            <!-- ===== 修改結束 ===== -->
+
         </div>
     </header>
 
@@ -836,7 +872,7 @@
                         </div>
                         <div class="glass-card p-5 rounded-2xl">
                             <div class="text-base font-bold text-white mb-1">阿婆姞寮老酒奶茶 (津沙)</div>
-                            <p class="text-xs text-gray-300 leading-relaxed">老酒與濃郁奶茶結合，香氣醇厚獨景，津沙聚落漫步必喝。</p>
+                            <p class="text-xs text-gray-300 leading-relaxed">老酒與濃郁奶茶結合，香氣醇厚獨特，津沙聚落漫步必喝。</p>
                         </div>
                     </div>
                 </div>

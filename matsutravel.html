@@ -142,6 +142,248 @@
                     <i class="fa-solid fa-route"></i> 4天3夜全行程
                 </button>
                 <button @click="activeTab = 'gourmet'" :class="activeTab === 'gourmet' ? 'bg-gradient-to-r from-cyan-deep to-cyan-glow text-navy-900 font-bold shadow-md' : 'text-gray-300 hover:text-white'" class="px-4 py-2 rounded-lg text-sm transition-all duration-200 flex items-center gap-2">
+                    <i class="fa-solid fa-utensils"></i> 美食景點與住宿
+                </button>
+                <button @click="activeTab = 'tears'" :class="activeTab === 'tears' ? 'bg-gradient-to-r from-cyan-deep to-cyan-glow text-navy-900 font-bold shadow-md' : 'text-gray-300 hover:text-white'" class="px-4 py-2 rounded-lg text-sm transition-all duration-200 flex items-center gap-2">
+                    <i class="fa-solid fa-wand-magic-sparkles"></i> 追淚雷達
+                </button>
+                <button @click="activeTab = 'budget'" :class="activeTab === 'budget' ? 'bg-gradient-to-r from-cyan-deep to-cyan-glow text-navy-900 font-bold shadow-md' : 'text-gray-300 hover:text-white'" class="px-4 py-2 rounded-lg text-sm transition-all duration-200 flex items-center gap-2">
+                    <i class="fa-solid fa-calculator"></i> 費用試算器
+                </button>
+            </div>
+
+            <!-- Mobile Quick Button -->
+            <div class="md:hidden">
+                <button @click="mobileMenuOpen = !mobileMenuOpen" class="text-cyan-glow text-xl p-2">
+                    <i class="fa-solid" :class="mobileMenuOpen ? 'fa-xmark' : 'fa-bars'"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- Mobile Menu -->
+        <div x-show="mobileMenuOpen" x-transition class="md:hidden mt-3 pt-3 border-t border-gray-800 grid grid-cols-2 gap-2 text-xs">
+            <button @click="activeTab = 'ferry'; mobileMenuOpen = false" class="p-2.5 rounded-lg bg-navy-800 text-cyan-glow flex items-center gap-2">
+                <i class="fa-solid fa-ship"></i> 航班時刻表
+            </button>
+            <button @click="activeTab = 'itinerary'; mobileMenuOpen = false" class="p-2.5 rounded-lg bg-navy-800 text-cyan-glow flex items-center gap-2">
+                <i class="fa-solid fa-route"></i> 4天3夜行程
+            </button>
+            <button @click="activeTab = 'gourmet'; mobileMenuOpen = false" class="p-2.5 rounded-lg bg-navy-800 text-cyan-glow flex items-center gap-2">
+                <i class="fa-solid fa-utensils"></i> 美食景點與住宿
+            </button>
+            <button @click="activeTab = 'tears'; mobileMenuOpen = false" class="p-2.5 rounded-lg bg-navy-800 text-cyan-glow flex items-center gap-2">
+                <i class="fa-solid fa-wand-magic-sparkles"></i> 追淚雷達
+            </button>
+            <button @click="activeTab = 'budget'; mobileMenuOpen = false" class="col-span-2 p-2.5 rounded-lg bg-gold-accent text-navy-900 font-bold flex items-center justify-center gap-2">
+                <i class="fa-solid fa-calculator"></i> 預算試算器
+            </button>
+        </div>
+    </nav>
+
+    <!-- HERO HEADER SECTION -->
+    <header class="relative overflow-hidden py-16 px-4 bg-gradient-to-b from-navy-900 via-navy-800 to-navy-900 border-b border-gray-800">
+        <div class="absolute inset-0 opacity-20 pointer-events-none">
+            <div class="absolute -top-24 -left-24 w-96 h-96 bg-cyan-glow rounded-full blur-3xl"></div>
+            <div class="absolute top-1/2 right-0 w-96 h-96 bg-gold-accent rounded-full blur-3xl"></div>
+        </div>
+
+        <div class="max-w-6xl mx-auto text-center relative z-10">
+            <div class="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-cyan-glow/10 border border-cyan-glow/30 text-cyan-glow text-xs font-semibold mb-6">
+                <i class="fa-solid fa-star text-gold-accent"></i> 頂級奢華跳島體驗 ‧ 整合四鄉五島全航班
+            </div>
+            
+            <!-- 大標題已改為金色文字 text-gradient-gold -->
+            <h1 class="text-4xl md:text-6xl font-black text-white tracking-tight mb-4">
+                <span class="text-gradient-gold">馬祖 4天3夜</span> <span class="text-gradient-cyan">尊榮跳島之旅</span>
+            </h1>
+
+            <!-- 金色持續光效動態副標題 -->
+            <div class="mb-4">
+                <h2 class="text-xl md:text-2xl font-extrabold gold-shimmer-subtitle inline-block">
+                    -伊君旅行團專用-
+                </h2>
+            </div>
+
+            <p class="text-gray-300 text-base md:text-xl max-w-3xl mx-auto font-light leading-relaxed mb-8">
+                穿梭南竿、北竿、莒光雙島與大坵生態鹿島。精準掌握跳島船班時間、體驗閩東石頭屋風情、夜尋夢幻藍眼淚與品嚐道地紅糟老酒海鮮。
+            </p>
+
+            <!-- Quick Metrics Grid -->
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4 max-w-4xl mx-auto mb-8">
+                <div class="glass-card p-4 rounded-xl text-center">
+                    <div class="text-2xl md:text-3xl font-extrabold text-cyan-glow">4天3夜</div>
+                    <div class="text-xs text-gray-400 mt-1">黃金跳島配比</div>
+                </div>
+                <div class="glass-card p-4 rounded-xl text-center">
+                    <div class="text-2xl md:text-3xl font-extrabold text-gold-accent">4鄉5島</div>
+                    <div class="text-xs text-gray-400 mt-1">完整全覽不留遺撼</div>
+                </div>
+                <div class="glass-card p-4 rounded-xl text-center">
+                    <div class="text-2xl md:text-3xl font-extrabold text-cyan-glow">100%</div>
+                    <div class="text-xs text-gray-400 mt-1">精確航班時刻表</div>
+                </div>
+                <div class="glass-card p-4 rounded-xl text-center">
+                    <div class="text-2xl md:text-3xl font-extrabold text-gold-accent">夜間搖櫓</div>
+                    <div class="text-xs text-gray-400 mt-1">坑道尋藍眼淚奇景</div>
+                </div>
+            </div>
+
+            <div class="flex flex-wrap justify-center gap-4">
+                <button @click="activeTab = 'itinerary'" class="px-6 py-3 rounded-xl bg-gradient-to-r from-cyan-deep to-cyan-glow text-navy-900 font-bold shadow-lg hover:shadow-cyan-glow/50 transition-all duration-300 flex items-center gap-2">
+                    <i class="fa-solid fa-compass"></i> 查看每日行程細節
+                </button>
+                <button @click="activeTab = 'ferry'" class="px-6 py-3 rounded-xl glass-card text-gold-accent border border-gold-accent/40 font-semibold hover:bg-gold-accent/10 transition-all duration-300 flex items-center gap-2">
+                    <i class="fa-solid fa-ship"></i> 四鄉五島航班資訊
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- MAIN CONTENT AREA -->
+    <main class="max-w-7xl mx-auto px-4 py-12">
+
+        <!-- TAB 1: 🚢 四鄉五島航班時刻表 -->
+        <section x-show="activeTab === 'ferry'" x-transition class="space-y-8">
+            <div class="border-l-4 border-cyan-glow pl-4">
+                <h2 class="text-2xl md:text-3xl font-extrabold text-white">四鄉五島 島際航班時刻與接駁指南</h2>
+                <p class="text-gray-400 text-sm mt-1">南竿福澳港為全島轉運核心。建議提前15-20分鐘至碼頭購票登船。</p>
+            </div>
+
+            <!-- Route Filter Buttons -->
+            <div class="flex flex-wrap gap-2">
+                <button @click="ferryFilter = 'all'" :class="ferryFilter === 'all' ? 'bg-cyan-glow text-navy-900 font-bold' : 'bg-navy-800 text-gray-300'" class="px-4 py-2 rounded-lg text-xs md:text-sm transition">
+                    全部航線
+                </button>
+                <button @click="ferryFilter = 'nangan-beigan'" :class="ferryFilter === 'nangan-beigan' ? 'bg-cyan-glow text-navy-900 font-bold' : 'bg-navy-800 text-gray-300'" class="px-4 py-2 rounded-lg text-xs md:text-sm transition">
+                    南竿 ⇄ 北竿
+                </button>
+                <button @click="ferryFilter = 'nangan-juguang'" :class="ferryFilter === 'nangan-juguang' ? 'bg-cyan-glow text-navy-900 font-bold' : 'bg-navy-800 text-gray-300'" class="px-4 py-2 rounded-lg text-xs md:text-sm transition">
+                    南竿 ⇄ 莒光
+                </button>
+                <button @click="ferryFilter = 'dongju-xiju'" :class="ferryFilter === 'dongju-xiju' ? 'bg-cyan-glow text-navy-900 font-bold' : 'bg-navy-800 text-gray-300'" class="px-4 py-2 rounded-lg text-xs md:text-sm transition">
+                    東莒 ⇄ 西莒
+                </button>
+                <button @click="ferryFilter = 'nangan-dongyin'" :class="ferryFilter === 'nangan-dongyin' ? 'bg-cyan-glow text-navy-900 font-bold' : 'bg-navy-800 text-gray-300'" class="px-4 py-2 rounded-lg text-xs md:text-sm transition">
+                    南竿 ⇄ 東引
+                </button>
+                <button @click="ferryFilter = 'daqiu'" :class="ferryFilter === 'daqiu' ? 'bg-cyan-glow text-navy-900 font-bold' : 'bg-navy-800 text-gray-300'" class="px-4 py-2 rounded-lg text-xs md:text-sm transition">
+                    大坵梅花鹿專船
+                </button>
+            </div>
+
+            <!-- Ferry Cards Grid -->
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <!-- Card: Nangan - Beigan -->
+                <div x-show="ferryFilter === 'all' || ferryFilter === 'nangan-beigan'" class="glass-card glass-card-hover p-6 rounded-2xl relative overflow-hidden">
+                    <div class="flex justify-between items-start mb-4">
+                        <span class="px-3 py-1 rounded-full bg-cyan-glow/20 text-cyan-glow text-xs font-bold">高頻率航線</span>
+                        <span class="text-gold-accent font-extrabold text-lg">NT$ 160 / 人</span>
+                    </div>
+                    <h3 class="text-xl font-bold text-white mb-2 flex items-center gap-2">
+                        南竿 (福澳) ⇄ 北竿 (白沙)
+                    </h3>
+                    <p class="text-xs text-gray-400 mb-4"><i class="fa-solid fa-clock text-cyan-glow"></i> 航程約 15 - 20 分鐘</p>
+                    <div class="space-y-2 text-sm text-gray-300 mb-4 border-t border-gray-800 pt-3">
+                        <p><strong class="text-white">南竿發車:</strong> 07:00 至 17:10 (每半小時至一小時一班)</p>
+                        <p><strong class="text-white">北竿發車:</strong> 07:00 至 17:30 (班次極密)</p>
+                    </div>
+                    <div class="p-3 rounded-lg bg-navy-900/60 text-xs text-amber-300 border border-amber-500/20">
+                        💡 <strong>小提醒:</strong> 現場排隊購票即可，機動性極高，可配合行程彈性搭乘。
+                    </div>
+                </div>
+
+                <!-- Card: Nangan - Juguang -->
+                <div x-show="ferryFilter === 'all' || ferryFilter === 'nangan-juguang'" class="glass-card glass-card-hover p-6 rounded-2xl relative overflow-hidden">
+                    <div class="flex justify-between items-start mb-4">
+                        <span class="px-3 py-1 rounded-full bg-purple-500/20 text-purple-300 text-xs font-bold">固定三班次</span>
+                        <span class="text-gold-accent font-extrabold text-lg">NT$ 250 / 人</span>
+                    </div>
+                    <h3 class="text-xl font-bold text-white mb-2 flex items-center gap-2">
+                        南竿 (福澳) ⇄ 莒光 (東莒/西莒)
+                    </h3>
+                    <p class="text-xs text-gray-400 mb-4"><i class="fa-solid fa-clock text-cyan-glow"></i> 航程約 50 分鐘</p>
+                    <div class="space-y-2 text-sm text-gray-300 mb-4 border-t border-gray-800 pt-3">
+                        <p><strong class="text-white">每日固定3班:</strong> 07:00、11:00、14:30</p>
+                        <p><strong class="text-white">航向順序:</strong></p>
+                        <ul class="list-disc list-inside text-xs text-gray-400 space-y-1 pl-2">
+                            <li><span class="text-cyan-glow">單月:</span> 先西後東 (南竿 ➔ 西莒 ➔ 東莒)</li>
+                            <li><span class="text-gold-accent">雙月:</span> 先東後西 (南竿 ➔ 東莒 ➔ 西莒)</li>
+                        </ul>
+                    </div>
+                    <div class="p-3 rounded-lg bg-navy-900/60 text-xs text-amber-300 border border-amber-500/20">
+                        💡 <strong>小提醒:</strong> 建議搭乘 11:00 班次前往莒光，最順接續行程。
+                    </div>
+                </div>
+
+                <!-- Card: Dongju - Xiju -->
+                <div x-show="ferryFilter === 'all' || ferryFilter === 'dongju-xiju'" class="glass-card glass-card-hover p-6 rounded-2xl relative overflow-hidden">
+                    <div class="flex justify-between items-start mb-4">
+                        <span class="px-3 py-1 rounded-full bg-blue-500/20 text-blue-300 text-xs font-bold">莒光雙島接駁</span>
+                        <span class="text-gold-accent font-extrabold text-lg">NT$ 80 / 人</span>
+                    </div>
+                    <h3 class="text-xl font-bold text-white mb-2 flex items-center gap-2">
+                        東莒 (猛澳) ⇄ 西莒 (青帆)
+                    </h3>
+                    <p class="text-xs text-gray-400 mb-4"><i class="fa-solid fa-clock text-cyan-glow"></i> 航程約 10 - 15 分鐘</p>
+                    <div class="space-y-2 text-sm text-gray-300 mb-4 border-t border-gray-800 pt-3">
+                        <p><strong class="text-white">每日 4 班接駁船:</strong></p>
+                        <p class="text-xs text-cyan-glow font-mono">07:30 | 10:00 | 14:00 | 17:10</p>
+                    </div>
+                    <div class="p-3 rounded-lg bg-navy-900/60 text-xs text-amber-300 border border-amber-500/20">
+                        💡 <strong>小提醒:</strong> 適合安排西莒坤坵沙灘（方塊海）午後半日遊。
+                    </div>
+                </div>
+
+                <!-- Card: Nangan - Dongyin -->
+                <div x-show="ferryFilter === 'all' || ferryFilter === 'nangan-dongyin'" class="glass-card glass-card-hover p-6 rounded-2xl relative overflow-hidden">
+                    <div class="flex justify-between items-start mb-4">
+                        <span class="px-3 py-1 rounded-full bg-rose-500/20 text-rose-300 text-xs font-bold">新臺馬輪長途</span>
+                        <span class="text-gold-accent font-extrabold text-lg">NT$ 400 / 人</span>
+                    </div>
+                    <h3 class="text-xl font-bold text-white mb-2 flex items-center gap-2">
+                        南竿 (福澳) ⇄ 東引 (中柱港)
+                    </h3>
+                    <p class="text-xs text-gray-400 mb-4"><i class="fa-solid fa-clock text-cyan-glow"></i> 航程約 2 小時</p>
+                    <div class="space-y-2 text-sm text-gray-300 mb-4 border-t border-gray-800 pt-3">
+                        <p><strong class="text-white">每日 1 班:</strong> 約 08:30 發船             width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #0B132B;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #2A3B5C;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #00F5D4;
+        }
+    </style>
+</head>
+<body class="antialiased selection:bg-cyan-glow selection:text-navy-900" x-data="matsuApp()">
+
+    <!-- Sticky Navigation Bar -->
+    <nav class="sticky top-0 z-50 glass-card border-b border-gray-800 px-4 py-3">
+        <div class="max-w-7xl mx-auto flex justify-between items-center">
+            <div class="flex items-center space-x-3 cursor-pointer" @click="activeTab = 'itinerary'">
+                <div class="w-10 h-10 rounded-full bg-gradient-to-tr from-cyan-deep to-cyan-glow flex items-center justify-center text-navy-900 text-xl font-black">
+                    <i class="fa-solid fa-compass"></i>
+                </div>
+                <div>
+                    <h1 class="text-lg font-bold text-gradient-gold tracking-wide">馬祖 MATSU</h1>
+                    <p class="text-xs text-gray-400">4天3夜 尊榮跳島智慧導航</p>
+                </div>
+            </div>
+
+            <!-- Nav Tabs -->
+            <div class="hidden md:flex space-x-1 bg-navy-900/80 p-1.5 rounded-xl border border-gray-800">
+                <button @click="activeTab = 'ferry'" :class="activeTab === 'ferry' ? 'bg-gradient-to-r from-cyan-deep to-cyan-glow text-navy-900 font-bold shadow-md' : 'text-gray-300 hover:text-white'" class="px-4 py-2 rounded-lg text-sm transition-all duration-200 flex items-center gap-2">
+                    <i class="fa-solid fa-ship"></i> 四鄉五島航班
+                </button>
+                <button @click="activeTab = 'itinerary'" :class="activeTab === 'itinerary' ? 'bg-gradient-to-r from-cyan-deep to-cyan-glow text-navy-900 font-bold shadow-md' : 'text-gray-300 hover:text-white'" class="px-4 py-2 rounded-lg text-sm transition-all duration-200 flex items-center gap-2">
+                    <i class="fa-solid fa-route"></i> 4天3夜全行程
+                </button>
+                <button @click="activeTab = 'gourmet'" :class="activeTab === 'gourmet' ? 'bg-gradient-to-r from-cyan-deep to-cyan-glow text-navy-900 font-bold shadow-md' : 'text-gray-300 hover:text-white'" class="px-4 py-2 rounded-lg text-sm transition-all duration-200 flex items-center gap-2">
                     <i class="fa-solid fa-utensils"></i> 美食與住宿
                 </button>
                 <button @click="activeTab = 'tears'" :class="activeTab === 'tears' ? 'bg-gradient-to-r from-cyan-deep to-cyan-glow text-navy-900 font-bold shadow-md' : 'text-gray-300 hover:text-white'" class="px-4 py-2 rounded-lg text-sm transition-all duration-200 flex items-center gap-2">

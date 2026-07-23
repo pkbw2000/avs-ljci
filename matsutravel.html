@@ -74,14 +74,10 @@
             -webkit-text-fill-color: transparent;
         }
         
-        /* 金色動態光巡迴流光標題效果 (Shimmer Gold Subtitle Effect) */
+        /* 金色動態光流光標題效果 */
         @keyframes gold-shine {
-            0% {
-                background-position: -200% center;
-            }
-            100% {
-                background-position: 200% center;
-            }
+            0% { background-position: -200% center; }
+            100% { background-position: 200% center; }
         }
 
         .gold-shimmer-subtitle {
@@ -102,8 +98,249 @@
         }
 
         /* Custom scrollbar */
-        ::-webkit-scrollbar {
-            width: 8px;
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: #0B132B; }
+        ::-webkit-scrollbar-thumb { background: #2A3B5C; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #00F5D4; }
+    </style>
+</head>
+<body class="antialiased selection:bg-cyan-glow selection:text-navy-900" x-data="matsuApp()">
+
+    <!-- Sticky Navigation Bar -->
+    <nav class="sticky top-0 z-50 glass-card border-b border-gray-800 px-4 py-3">
+        <div class="max-w-7xl mx-auto flex justify-between items-center">
+            <div class="flex items-center space-x-3 cursor-pointer" @click="goToTab('itinerary', 'main-content')">
+                <div class="w-10 h-10 rounded-full bg-gradient-to-tr from-cyan-deep to-cyan-glow flex items-center justify-center text-navy-900 text-xl font-black">
+                    <i class="fa-solid fa-compass"></i>
+                </div>
+                <div>
+                    <h1 class="text-lg font-bold text-gradient-gold tracking-wide">馬祖 MATSU</h1>
+                    <p class="text-xs text-gray-400">4天3夜 尊榮跳島智慧導航</p>
+                </div>
+            </div>
+
+            <!-- Desktop Nav Tabs -->
+            <div class="hidden md:flex space-x-1 bg-navy-900/80 p-1.5 rounded-xl border border-gray-800">
+                <button @click="goToTab('itinerary', 'main-content')" :class="activeTab === 'itinerary' ? 'bg-gradient-to-r from-cyan-deep to-cyan-glow text-navy-900 font-bold shadow-md' : 'text-gray-300 hover:text-white'" class="px-4 py-2 rounded-lg text-sm transition-all duration-200 flex items-center gap-2">
+                    <i class="fa-solid fa-route"></i> 4天3夜全行程
+                </button>
+                <button @click="goToTab('ferry', 'main-content')" :class="activeTab === 'ferry' ? 'bg-gradient-to-r from-cyan-deep to-cyan-glow text-navy-900 font-bold shadow-md' : 'text-gray-300 hover:text-white'" class="px-4 py-2 rounded-lg text-sm transition-all duration-200 flex items-center gap-2">
+                    <i class="fa-solid fa-ship"></i> 四鄉五島航班
+                </button>
+                <button @click="goToTab('gourmet', 'main-content')" :class="activeTab === 'gourmet' ? 'bg-gradient-to-r from-cyan-deep to-cyan-glow text-navy-900 font-bold shadow-md' : 'text-gray-300 hover:text-white'" class="px-4 py-2 rounded-lg text-sm transition-all duration-200 flex items-center gap-2">
+                    <i class="fa-solid fa-utensils"></i> 美食景點與住宿
+                </button>
+                <button @click="goToTab('tears', 'main-content')" :class="activeTab === 'tears' ? 'bg-gradient-to-r from-cyan-deep to-cyan-glow text-navy-900 font-bold shadow-md' : 'text-gray-300 hover:text-white'" class="px-4 py-2 rounded-lg text-sm transition-all duration-200 flex items-center gap-2">
+                    <i class="fa-solid fa-wand-magic-sparkles"></i> 追淚雷達
+                </button>
+                <button @click="goToTab('budget', 'main-content')" :class="activeTab === 'budget' ? 'bg-gradient-to-r from-cyan-deep to-cyan-glow text-navy-900 font-bold shadow-md' : 'text-gray-300 hover:text-white'" class="px-4 py-2 rounded-lg text-sm transition-all duration-200 flex items-center gap-2">
+                    <i class="fa-solid fa-calculator"></i> 費用試算器
+                </button>
+            </div>
+
+            <!-- Mobile Quick Button -->
+            <div class="md:hidden">
+                <button @click="mobileMenuOpen = !mobileMenuOpen" class="text-cyan-glow text-xl p-2">
+                    <i class="fa-solid" :class="mobileMenuOpen ? 'fa-xmark' : 'fa-bars'"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- Mobile Menu -->
+        <div x-show="mobileMenuOpen" x-transition class="md:hidden mt-3 pt-3 border-t border-gray-800 grid grid-cols-2 gap-2 text-xs">
+            <button @click="goToTab('itinerary', 'main-content')" class="p-2.5 rounded-lg bg-navy-800 text-cyan-glow flex items-center gap-2">
+                <i class="fa-solid fa-route"></i> 4天3夜行程
+            </button>
+            <button @click="goToTab('ferry', 'main-content')" class="p-2.5 rounded-lg bg-navy-800 text-cyan-glow flex items-center gap-2">
+                <i class="fa-solid fa-ship"></i> 航班時刻表
+            </button>
+            <button @click="goToTab('gourmet', 'main-content')" class="p-2.5 rounded-lg bg-navy-800 text-cyan-glow flex items-center gap-2">
+                <i class="fa-solid fa-utensils"></i> 美食景點與住宿
+            </button>
+            <button @click="goToTab('tears', 'main-content')" class="p-2.5 rounded-lg bg-navy-800 text-cyan-glow flex items-center gap-2">
+                <i class="fa-solid fa-wand-magic-sparkles"></i> 追淚雷達
+            </button>
+            <button @click="goToTab('budget', 'main-content')" class="col-span-2 p-2.5 rounded-lg bg-gold-accent text-navy-900 font-bold flex items-center justify-center gap-2">
+                <i class="fa-solid fa-calculator"></i> 預算試算器
+            </button>
+        </div>
+    </nav>
+
+    <!-- HERO HEADER SECTION -->
+    <header class="relative overflow-hidden py-16 px-4 bg-gradient-to-b from-navy-900 via-navy-800 to-navy-900 border-b border-gray-800">
+        <div class="absolute inset-0 opacity-20 pointer-events-none">
+            <div class="absolute -top-24 -left-24 w-96 h-96 bg-cyan-glow rounded-full blur-3xl"></div>
+            <div class="absolute top-1/2 right-0 w-96 h-96 bg-gold-accent rounded-full blur-3xl"></div>
+        </div>
+
+        <div class="max-w-6xl mx-auto text-center relative z-10">
+            <div class="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-cyan-glow/10 border border-cyan-glow/30 text-cyan-glow text-xs font-semibold mb-6">
+                <i class="fa-solid fa-star text-gold-accent"></i> 頂級奢華跳島體驗 ‧ 整合四鄉五島全航班
+            </div>
+            
+            <!-- 大標題 -->
+            <h1 class="text-4xl md:text-6xl font-black text-white tracking-tight mb-4">
+                <span class="text-gradient-gold">馬祖 4天3夜</span> <span class="text-gradient-cyan">尊榮跳島之旅</span>
+            </h1>
+
+            <!-- 金色副標題 -->
+            <div class="mb-4">
+                <h2 class="text-xl md:text-2xl font-extrabold gold-shimmer-subtitle inline-block">
+                    -伊君旅行團專用-
+                </h2>
+            </div>
+
+            <p class="text-gray-300 text-base md:text-xl max-w-3xl mx-auto font-light leading-relaxed mb-8">
+                穿梭南竿、北竿、莒光雙島與大坵生態鹿島。精準掌握跳島船班時間、體驗閩東石頭屋風情、夜尋夢幻藍眼淚與品嚐道地紅糟老酒海鮮。
+            </p>
+
+            <!-- Quick Metrics Grid -->
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4 max-w-4xl mx-auto mb-8">
+                <div class="glass-card p-4 rounded-xl text-center cursor-pointer" @click="goToTab('itinerary', 'main-content')">
+                    <div class="text-2xl md:text-3xl font-extrabold text-cyan-glow">4天3夜</div>
+                    <div class="text-xs text-gray-400 mt-1">黃金跳島配比</div>
+                </div>
+                <div class="glass-card p-4 rounded-xl text-center cursor-pointer" @click="goToTab('ferry', 'main-content')">
+                    <div class="text-2xl md:text-3xl font-extrabold text-gold-accent">4鄉5島</div>
+                    <div class="text-xs text-gray-400 mt-1">完整全覽不留遺撼</div>
+                </div>
+                <div class="glass-card p-4 rounded-xl text-center cursor-pointer" @click="goToTab('gourmet', 'main-content')">
+                    <div class="text-2xl md:text-3xl font-extrabold text-cyan-glow">100%</div>
+                    <div class="text-xs text-gray-400 mt-1">在地秘境小吃</div>
+                </div>
+                <div class="glass-card p-4 rounded-xl text-center cursor-pointer" @click="goToTab('tears', 'main-content')">
+                    <div class="text-2xl md:text-3xl font-extrabold text-gold-accent">夜間搖櫓</div>
+                    <div class="text-xs text-gray-400 mt-1">坑道尋藍眼淚奇景</div>
+                </div>
+            </div>
+
+            <!-- 主按鈕，修正事件綁定 -->
+            <div class="flex flex-wrap justify-center gap-4">
+                <button @click="goToTab('itinerary', 'main-content')" class="px-6 py-3 rounded-xl bg-gradient-to-r from-cyan-deep to-cyan-glow text-navy-900 font-bold shadow-lg hover:shadow-cyan-glow/50 transition-all duration-300 flex items-center gap-2 cursor-pointer">
+                    <i class="fa-solid fa-compass"></i> 查看每日行程細節
+                </button>
+                <button @click="goToTab('ferry', 'main-content')" class="px-6 py-3 rounded-xl glass-card text-gold-accent border border-gold-accent/40 font-semibold hover:bg-gold-accent/10 transition-all duration-300 flex items-center gap-2 cursor-pointer">
+                    <i class="fa-solid fa-ship"></i> 四鄉五島航班資訊
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- MAIN CONTENT AREA -->
+    <main id="main-content" class="max-w-7xl mx-auto px-4 py-12">
+
+        <!-- TAB 1: 🗺️ 4天3夜全行程細節 (預設顯示) -->
+        <section x-show="activeTab === 'itinerary'" x-transition class="space-y-8">
+            <div class="flex flex-col md:flex-row justify-between items-start md:items-end gap-4 border-l-4 border-gold-accent pl-4">
+                <div>
+                    <h2 class="text-2xl md:text-3xl font-extrabold text-white">4天3夜 四鄉五島尊榮跳島日程表</h2>
+                    <p class="text-gray-400 text-sm mt-1">融合絕景、閩東古厝、戰地史蹟與夜間追藍眼淚。</p>
+                </div>
+
+                <!-- Day Selector Tabs -->
+                <div class="flex bg-navy-800 p-1 rounded-xl border border-gray-700">
+                    <button @click="selectedDay = 1" :class="selectedDay === 1 ? 'bg-gold-accent text-navy-900 font-bold' : 'text-gray-300'" class="px-4 py-2 rounded-lg text-xs md:text-sm transition">
+                        DAY 1 莒光雙島
+                    </button>
+                    <button @click="selectedDay = 2" :class="selectedDay === 2 ? 'bg-gold-accent text-navy-900 font-bold' : 'text-gray-300'" class="px-4 py-2 rounded-lg text-xs md:text-sm transition">
+                        DAY 2 南竿戰地
+                    </button>
+                    <button @click="selectedDay = 3" :class="selectedDay === 3 ? 'bg-gold-accent text-navy-900 font-bold' : 'text-gray-300'" class="px-4 py-2 rounded-lg text-xs md:text-sm transition">
+                        DAY 3 大坵/芹壁
+                    </button>
+                    <button @click="selectedDay = 4" :class="selectedDay === 4 ? 'bg-gold-accent text-navy-900 font-bold' : 'text-gray-300'" class="px-4 py-2 rounded-lg text-xs md:text-sm transition">
+                        DAY 4 北竿壁山
+                    </button>
+                </div>
+            </div>
+
+            <!-- DAY 1 CONTENT -->
+            <div x-show="selectedDay === 1" class="space-y-6">
+                <div class="glass-card p-6 rounded-2xl border-l-4 border-cyan-glow">
+                    <div class="flex items-center gap-3 mb-4">
+                        <span class="w-8 h-8 rounded-full bg-cyan-glow/20 text-cyan-glow flex items-center justify-center font-bold">1</span>
+                        <h3 class="text-xl font-bold text-white">DAY 1：抵達南竿 ➔ 直奔莒光雙島（國之南端與方塊海奇景）</h3>
+                    </div>
+
+                    <div class="relative border-l-2 border-gray-700 ml-4 pl-6 space-y-8">
+                        <div>
+                            <div class="absolute -left-[9px] top-1 w-4 h-4 rounded-full bg-cyan-glow"></div>
+                            <div class="text-xs text-cyan-glow font-mono mb-1">09:30 - 11:00</div>
+                            <h4 class="text-lg font-bold text-white">抵達南竿 ➔ 轉搭莒光渡輪</h4>
+                            <p class="text-sm text-gray-300 mt-1">抵達南竿機場/福澳港後，前往福澳碼頭購買 11:00 前往莒光之船票（航程約 50 分鐘）。</p>
+                        </div>
+
+                        <div>
+                            <div class="absolute -left-[9px] top-1 w-4 h-4 rounded-full bg-cyan-glow"></div>
+                            <div class="text-xs text-cyan-glow font-mono mb-1">12:30 - 13:30</div>
+                            <h4 class="text-lg font-bold text-gold-light">東莒當地美味午餐</h4>
+                            <p class="text-sm text-gray-300 mt-1">前往【楓樹林小吃】品嚐經典紅糟炒飯、黃金地瓜餃與特製老酒麵線。</p>
+                        </div>
+
+                        <div>
+                            <div class="absolute -left-[9px] top-1 w-4 h-4 rounded-full bg-cyan-glow"></div>
+                            <div class="text-xs text-cyan-glow font-mono mb-1">14:00 - 16:30</div>
+                            <h4 class="text-lg font-bold text-white">東犬燈塔 & 大埔古厝 & 神秘小海灣</h4>
+                            <p class="text-sm text-gray-300 mt-1">造訪百年英式純白燈塔（東莒島燈塔），俯瞰海天一色絕景；漫步大埔聚落石頭屋，欣賞神秘小海灣地質奇觀。</p>
+                        </div>
+
+                        <div>
+                            <div class="absolute -left-[9px] top-1 w-4 h-4 rounded-full bg-cyan-glow"></div>
+                            <div class="text-xs text-cyan-glow font-mono mb-1">16:30 - 18:30</div>
+                            <h4 class="text-lg font-bold text-white">西莒坤坵沙灘「方塊海」奇觀</h4>
+                            <p class="text-sm text-gray-300 mt-1">搭乘短程接駁船至西莒，配合退潮時間前往坤坵沙灘，觀賞雙向海浪交會形成之世界級「方塊海」自然奇觀。</p>
+                        </div>
+
+                        <div>
+                            <div class="absolute -left-[9px] top-1 w-4 h-4 rounded-full bg-cyan-glow"></div>
+                            <div class="text-xs text-cyan-glow font-mono mb-1">19:30 - 21:00</div>
+                            <h4 class="text-lg font-bold text-cyan-glow">夜間追淚：東莒福正沙灘藍眼淚</h4>
+                            <p class="text-sm text-gray-300 mt-1">夜宿東莒特色民宿，前往福正沙灘漫步踩淚，欣賞浪花激起之蔚藍螢光。</p>
+                            <span class="inline-block mt-2 text-xs px-2.5 py-1 rounded bg-navy-900 text-gold-accent border border-gold-accent/30">夜宿: 東莒船老大民宿 / 故鄉民宿</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- DAY 2 CONTENT -->
+            <div x-show="selectedDay === 2" class="space-y-6">
+                <div class="glass-card p-6 rounded-2xl border-l-4 border-cyan-glow">
+                    <div class="flex items-center gap-3 mb-4">
+                        <span class="w-8 h-8 rounded-full bg-cyan-glow/20 text-cyan-glow flex items-center justify-center font-bold">2</span>
+                        <h3 class="text-xl font-bold text-white">DAY 2：莒光返回南竿 ➔ 戰地坑道秘境 ➔ 夜間搖櫓尋淚</h3>
+                    </div>
+
+                    <div class="relative border-l-2 border-gray-700 ml-4 pl-6 space-y-8">
+                        <div>
+                            <div class="absolute -left-[9px] top-1 w-4 h-4 rounded-full bg-cyan-glow"></div>
+                            <div class="text-xs text-cyan-glow font-mono mb-1">07:50 - 09:00</div>
+                            <h4 class="text-lg font-bold text-white">搭船返回南竿 ➔ 八八坑道 & 馬祖酒廠</h4>
+                            <p class="text-sm text-gray-300 mt-1">搭首班船返回南竿，前往八八坑道感受濃厚陳年老酒香氣，參觀馬祖酒廠品嚐名酒。</p>
+                        </div>
+
+                        <div>
+                            <div class="absolute -left-[9px] top-1 w-4 h-4 rounded-full bg-cyan-glow"></div>
+                            <div class="text-xs text-cyan-glow font-mono mb-1">11:00 - 12:30</div>
+                            <h4 class="text-lg font-bold text-white">媽祖巨神像 & 馬港天后宮朝聖</h4>
+                            <p class="text-sm text-gray-300 mt-1">參拜香火鼎盛之馬港天后宮，登上高 28.8 公尺之媽祖巨神像，俯瞰壯麗海景。</p>
+                        </div>
+
+                        <div>
+                            <div class="absolute -left-[9px] top-1 w-4 h-4 rounded-full bg-cyan-glow"></div>
+                            <div class="text-xs text-cyan-glow font-mono mb-1">12:30 - 14:00</div>
+                            <h4 class="text-lg font-bold text-gold-light">尊榮風味午餐：【依嬤的店】</h4>
+                            <p class="text-sm text-gray-300 mt-1">享用馬祖頂級無菜單風味套餐：獨門紅糟黃魚、鮮蒸淡菜、繼光餅夾蚵仔蛋。</p>
+                        </div>
+
+                        <div>
+                            <div class="absolute -left-[9px] top-1 w-4 h-4 rounded-full bg-cyan-glow"></div>
+                            <div class="text-xs text-cyan-glow font-mono mb-1">14:30 - 17:00</div>
+                            <h4 class="text-lg font-bold text-white">津沙聚落 & 海上堡壘【鐵堡】</h4>
+                            <p class="text-sm text-gray-300 mt-1">漫步津沙石厝聚落品嚐老酒奶茶，隨後前往突出海面的邊防軍事據點鐵堡巡禮。</p>
+                        </div>
+
+                        <div>
+                            <div class="absolute -left-[9px] top-1 w-4 h-4 rounded-full bg-cyan-glow"></di            width: 8px;
             height: 8px;
         }
         ::-webkit-scrollbar-track {

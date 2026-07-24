@@ -1,0 +1,1245 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Neon Gomoku — 流光五子棋</title>
+<style>
+  *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+  :root {
+    --bg-deep: #06060c;
+    --bg-panel: oklch(0.12 0.02 250);
+    --neon-cyan: #00e5ff;
+    --neon-cyan-dim: #006880;
+    --purple: #b44dff;
+    --purple-glow: #7c2ae8;
+    --white-stone: #e8eaf0;
+    --text-primary: oklch(0.9 0.01 250);
+    --text-dim: oklch(0.6 0.01 250);
+    --danger: #ff3d71;
+    --cell-size: clamp(28px, 5vmin, 44px);
+    --board-gap: 1px;
+  }
+
+  body {
+    font-family: 'Segoe UI', 'Noto Sans TC', system-ui, sans-serif;
+    background: var(--bg-deep);
+    color: var(--text-primary);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    user-select: none;
+    -webkit-user-select: none;
+    position: relative;
+  }
+
+  #bg-canvas {
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+  }
+
+  .app {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: clamp(12px, 2vmin, 24px);
+    padding: clamp(12px, 2vmin, 32px);
+  }
+
+  .title-row {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+  .title {
+    font-size: clamp(1.4rem, 3vmin, 2.2rem);
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    background: linear-gradient(135deg, var(--neon-cyan), #80deea, var(--purple));
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    text-shadow: none;
+    filter: drop-shadow(0 0 12px rgba(0,229,255,0.3));
+  }
+
+  .panel-bar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .btn {
+    font-family: inherit;
+    font-size: 0.85rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    padding: 8px 18px;
+    border-radius: 6px;
+    cursor: pointer;
+    border: 1px solid oklch(0.25 0.03 250);
+    background: var(--bg-panel);
+    color: var(--text-primary);
+    transition: all 0.18s ease-out;
+    position: relative;
+    overflow: hidden;
+  }
+  .btn:hover {
+    border-color: var(--neon-cyan);
+    box-shadow: 0 0 18px rgba(0,229,255,0.18);
+    background: oklch(0.16 0.03 250);
+  }
+  .btn:active { transform: scale(0.96); }
+  .btn.active {
+    border-color: var(--neon-cyan);
+    background: oklch(0.18 0.04 250);
+    box-shadow: 0 0 20px rgba(0,229,255,0.25);
+    color: var(--neon-cyan);
+  }
+  .btn.danger { border-color: oklch(0.3 0.15 15); }
+  .btn.danger:hover {
+    border-color: var(--danger);
+    box-shadow: 0 0 18px rgba(255,61,113,0.25);
+    background: oklch(0.16 0.03 10);
+  }
+
+  select.btn {
+    appearance: none;
+    -webkit-appearance: none;
+    padding-right: 32px;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath d='M2 4l4 4 4-4' fill='none' stroke='%2300e5ff' stroke-width='2'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 10px center;
+  }
+
+  .game-container {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  canvas#board-canvas {
+    display: block;
+    cursor: pointer;
+    border-radius: 4px;
+    filter: drop-shadow(0 0 30px rgba(0,229,255,0.12));
+  }
+
+  .info-row {
+    display: flex;
+    gap: 24px;
+    align-items: center;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
+  .status-badge {
+    font-size: 0.95rem;
+    font-weight: 600;
+    padding: 8px 20px;
+    border-radius: 20px;
+    border: 1px solid oklch(0.22 0.03 250);
+    background: var(--bg-panel);
+    letter-spacing: 0.04em;
+  }
+  .status-badge.black-turn { border-color: var(--purple); color: var(--purple); box-shadow: 0 0 16px rgba(180,77,255,0.2); }
+  .status-badge.white-turn { border-color: var(--white-stone); color: var(--white-stone); box-shadow: 0 0 16px rgba(232,234,240,0.15); }
+  .status-badge.win { border-color: var(--neon-cyan); color: var(--neon-cyan); box-shadow: 0 0 28px rgba(0,229,255,0.35); animation: winPulse 0.8s ease-in-out infinite; }
+
+  @keyframes winPulse {
+    0%, 100% { box-shadow: 0 0 28px rgba(0,229,255,0.35); }
+    50% { box-shadow: 0 0 48px rgba(0,229,255,0.55); }
+  }
+
+  .timer {
+    font-family: 'JetBrains Mono', 'Cascadia Code', monospace;
+    font-size: 1.1rem;
+    padding: 8px 16px;
+    border-radius: 6px;
+    background: var(--bg-panel);
+    border: 1px solid oklch(0.2 0.02 250);
+    letter-spacing: 0.06em;
+    min-width: 80px;
+    text-align: center;
+  }
+  .timer.urgent { border-color: var(--danger); color: var(--danger); animation: urgentBlink 0.5s step-end infinite; }
+  @keyframes urgentBlink { 50% { opacity: 0.5; } }
+
+  .score {
+    display: flex;
+    gap: 20px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+  }
+  .score span { color: var(--text-dim); }
+  .score .val { color: var(--neon-cyan); font-size: 1.1rem; }
+
+  .mode-hint {
+    font-size: 0.75rem;
+    color: var(--text-dim);
+    letter-spacing: 0.06em;
+  }
+
+  @media (max-width: 600px) {
+    .info-row { gap: 12px; }
+    .panel-bar { gap: 6px; }
+    .btn { padding: 6px 12px; font-size: 0.78rem; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+  }
+</style>
+</head>
+<body>
+
+<canvas id="bg-canvas"></canvas>
+
+<div class="app">
+  <div class="title-row">
+    <span class="title">NEON GOMOKU</span>
+  </div>
+
+  <div class="panel-bar">
+    <button class="btn active" id="btn-pvp" onclick="setMode('pvp')">雙人對戰</button>
+    <button class="btn" id="btn-pve" onclick="setMode('pve')">人機對戰</button>
+    <select class="btn" id="difficulty" onchange="setDifficulty(this.value)" style="display:none">
+      <option value="easy">簡單</option>
+      <option value="medium" selected>中等</option>
+      <option value="hard">困難</option>
+    </select>
+    <button class="btn" id="btn-undo" onclick="undo()" disabled>悔棋</button>
+    <button class="btn danger" id="btn-reset" onclick="resetGame()">新局</button>
+  </div>
+
+  <div class="game-container">
+    <canvas id="board-canvas"></canvas>
+  </div>
+
+  <div class="info-row">
+    <div class="score">
+      <span>黑子</span><span class="val" id="score-black">0</span>
+      <span>白子</span><span class="val" id="score-white">0</span>
+    </div>
+    <div class="status-badge black-turn" id="status-text">黑方行棋</div>
+    <div class="timer" id="timer-black">05:00</div>
+    <div class="timer" id="timer-white">05:00</div>
+  </div>
+  <div class="mode-hint" id="mode-hint">雙人對戰模式</div>
+</div>
+
+<script>
+// ==================== Audio Engine ====================
+class AudioEngine {
+  constructor() {
+    this.ctx = null;
+    this.initialized = false;
+  }
+  init() {
+    if (this.initialized) return;
+    try {
+      this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+      this.initialized = true;
+    } catch(e) {}
+  }
+  playPlace() {
+    if (!this.ctx) return;
+    const t = this.ctx.currentTime;
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(880, t);
+    osc.frequency.exponentialRampToValueAtTime(440, t + 0.08);
+    gain.gain.setValueAtTime(0.12, t);
+    gain.gain.exponentialRampToValueAtTime(0.001, t + 0.12);
+    osc.connect(gain).connect(this.ctx.destination);
+    osc.start(t); osc.stop(t + 0.12);
+  }
+  playWin() {
+    if (!this.ctx) return;
+    const t = this.ctx.currentTime;
+    [523, 659, 784, 1047].forEach((freq, i) => {
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(freq, t + i * 0.12);
+      gain.gain.setValueAtTime(0.15, t + i * 0.12);
+      gain.gain.exponentialRampToValueAtTime(0.001, t + i * 0.12 + 0.4);
+      osc.connect(gain).connect(this.ctx.destination);
+      osc.start(t + i * 0.12); osc.stop(t + i * 0.12 + 0.4);
+    });
+  }
+  playClick() {
+    if (!this.ctx) return;
+    const t = this.ctx.currentTime;
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+    osc.type = 'square';
+    osc.frequency.setValueAtTime(1200, t);
+    gain.gain.setValueAtTime(0.04, t);
+    gain.gain.exponentialRampToValueAtTime(0.001, t + 0.04);
+    osc.connect(gain).connect(this.ctx.destination);
+    osc.start(t); osc.stop(t + 0.04);
+  }
+}
+
+// ==================== Particle Engine (Background) ====================
+class BgParticles {
+  constructor(canvas) {
+    this.canvas = canvas;
+    this.ctx = canvas.getContext('2d');
+    this.particles = [];
+    this.resize();
+    this.init();
+    window.addEventListener('resize', () => this.resize());
+  }
+  resize() {
+    this.canvas.width = window.innerWidth;
+    this.canvas.height = window.innerHeight;
+  }
+  init() {
+    const count = Math.floor((this.canvas.width * this.canvas.height) / 12000);
+    this.particles = [];
+    for (let i = 0; i < count; i++) {
+      this.particles.push({
+        x: Math.random() * this.canvas.width,
+        y: Math.random() * this.canvas.height,
+        r: Math.random() * 1.6 + 0.4,
+        vx: (Math.random() - 0.5) * 0.25,
+        vy: (Math.random() - 0.5) * 0.25,
+        alpha: Math.random() * 0.5 + 0.1,
+        pulse: Math.random() * Math.PI * 2,
+      });
+    }
+  }
+  update() {
+    this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+    for (const p of this.particles) {
+      p.x += p.vx;
+      p.y += p.vy;
+      p.pulse += 0.01;
+      if (p.x < -20) p.x = this.canvas.width + 20;
+      if (p.x > this.canvas.width + 20) p.x = -20;
+      if (p.y < -20) p.y = this.canvas.height + 20;
+      if (p.y > this.canvas.height + 20) p.y = -20;
+      const a = p.alpha + Math.sin(p.pulse) * 0.15;
+      this.ctx.beginPath();
+      this.ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+      this.ctx.fillStyle = `rgba(0,229,255,${Math.max(0.02, a)})`;
+      this.ctx.fill();
+    }
+    // Draw connections
+    for (let i = 0; i < this.particles.length; i++) {
+      for (let j = i + 1; j < this.particles.length; j++) {
+        const dx = this.particles[i].x - this.particles[j].x;
+        const dy = this.particles[i].y - this.particles[j].y;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        if (dist < 100) {
+          this.ctx.beginPath();
+          this.ctx.moveTo(this.particles[i].x, this.particles[i].y);
+          this.ctx.lineTo(this.particles[j].x, this.particles[j].y);
+          this.ctx.strokeStyle = `rgba(0,229,255,${0.03 * (1 - dist / 100)})`;
+          this.ctx.lineWidth = 0.5;
+          this.ctx.stroke();
+        }
+      }
+    }
+  }
+}
+
+// ==================== Board FX Particles ====================
+class FxParticles {
+  constructor(ctx) {
+    this.ctx = ctx;
+    this.particles = [];
+  }
+  emit(x, y, color, count = 14) {
+    for (let i = 0; i < count; i++) {
+      const angle = (Math.PI * 2 / count) * i + Math.random() * 0.3;
+      const speed = Math.random() * 3 + 2;
+      this.particles.push({
+        x, y,
+        vx: Math.cos(angle) * speed,
+        vy: Math.sin(angle) * speed,
+        life: 1,
+        decay: Math.random() * 0.04 + 0.03,
+        r: Math.random() * 2.5 + 1,
+        color,
+      });
+    }
+  }
+  emitWin(x, y, color, count = 40) {
+    for (let i = 0; i < count; i++) {
+      const angle = Math.random() * Math.PI * 2;
+      const speed = Math.random() * 6 + 3;
+      this.particles.push({
+        x, y,
+        vx: Math.cos(angle) * speed,
+        vy: Math.sin(angle) * speed - Math.random() * 4,
+        life: 1,
+        decay: Math.random() * 0.02 + 0.015,
+        r: Math.random() * 3.5 + 1.5,
+        color,
+      });
+    }
+  }
+  update() {
+    for (let i = this.particles.length - 1; i >= 0; i--) {
+      const p = this.particles[i];
+      p.x += p.vx;
+      p.y += p.vy;
+      p.vy += 0.04;
+      p.life -= p.decay;
+      if (p.life <= 0) this.particles.splice(i, 1);
+    }
+  }
+  draw() {
+    for (const p of this.particles) {
+      this.ctx.save();
+      this.ctx.globalAlpha = p.life;
+      this.ctx.beginPath();
+      this.ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+      this.ctx.fillStyle = p.color;
+      this.ctx.shadowColor = p.color;
+      this.ctx.shadowBlur = 8;
+      this.ctx.fill();
+      this.ctx.restore();
+    }
+  }
+  get count() { return this.particles.length; }
+  clear() { this.particles = []; }
+}
+
+// ==================== Ripple Effects ====================
+class Ripple {
+  constructor(x, y, color) {
+    this.x = x; this.y = y;
+    this.radius = 2; this.maxRadius = 28;
+    this.life = 1;
+    this.color = color;
+  }
+  update() {
+    this.radius += 1.8;
+    this.life -= 0.035;
+    return this.life > 0;
+  }
+  draw(ctx) {
+    ctx.save();
+    ctx.globalAlpha = this.life * 0.7;
+    ctx.beginPath();
+    ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+    ctx.strokeStyle = this.color;
+    ctx.lineWidth = 1.5;
+    ctx.shadowColor = this.color;
+    ctx.shadowBlur = 10;
+    ctx.stroke();
+    ctx.restore();
+  }
+}
+
+// ==================== Game Engine ====================
+const BOARD_SIZE = 15;
+const DIRECTIONS = [[0,1],[1,0],[1,1],[1,-1]];
+
+class GameEngine {
+  constructor() {
+    this.reset();
+  }
+  reset() {
+    this.board = Array(BOARD_SIZE).fill().map(() => Array(BOARD_SIZE).fill(null));
+    this.currentPlayer = 'black';
+    this.gameOver = false;
+    this.winner = null;
+    this.winCells = [];
+    this.history = [];
+  }
+  makeMove(x, y) {
+    if (this.gameOver || this.board[y][x] !== null) return false;
+    this.board[y][x] = this.currentPlayer;
+    this.history.push({ x, y, player: this.currentPlayer });
+    const result = this.checkWinner(x, y);
+    if (result) {
+      this.gameOver = true;
+      this.winner = result.player;
+      this.winCells = result.cells;
+      return { winner: result.player, cells: result.cells };
+    }
+    if (this.isBoardFull()) {
+      this.gameOver = true;
+      return { draw: true };
+    }
+    this.currentPlayer = this.currentPlayer === 'black' ? 'white' : 'black';
+    return true;
+  }
+  undo() {
+    if (this.history.length === 0) return null;
+    const last = this.history.pop();
+    this.board[last.y][last.x] = null;
+    this.currentPlayer = last.player;
+    this.gameOver = false;
+    this.winner = null;
+    this.winCells = [];
+    return last;
+  }
+  checkWinner(x, y) {
+    const player = this.board[y][x];
+    for (const [dx, dy] of DIRECTIONS) {
+      const cells = [[x, y]];
+      for (let i = 1; i < 5; i++) {
+        const nx = x + dx * i, ny = y + dy * i;
+        if (nx >= 0 && nx < BOARD_SIZE && ny >= 0 && ny < BOARD_SIZE && this.board[ny][nx] === player) cells.push([nx, ny]);
+        else break;
+      }
+      for (let i = 1; i < 5; i++) {
+        const nx = x - dx * i, ny = y - dy * i;
+        if (nx >= 0 && nx < BOARD_SIZE && ny >= 0 && ny < BOARD_SIZE && this.board[ny][nx] === player) cells.unshift([nx, ny]);
+        else break;
+      }
+      if (cells.length >= 5) return { player, cells };
+    }
+    return null;
+  }
+  isBoardFull() {
+    for (let y = 0; y < BOARD_SIZE; y++)
+      for (let x = 0; x < BOARD_SIZE; x++)
+        if (this.board[y][x] === null) return false;
+    return true;
+  }
+  getEmptyCells() {
+    const cells = [];
+    for (let y = 0; y < BOARD_SIZE; y++)
+      for (let x = 0; x < BOARD_SIZE; x++)
+        if (this.board[y][x] === null) cells.push([x, y]);
+    return cells;
+  }
+}
+
+// ==================== AI Engine (高效 Minimax + Alpha-Beta + 迭代加深) ====================
+// 策略：
+//   - 迭代加深：easy=2, medium=4, hard=6，逾時自動截斷
+//   - 根節點才做完整候選排序；內部節點用輕量方向掃描 + 歷史表
+//   - 葉子評估用行掃描法（scanLineEval）而非逐格分析，效能提升 20x+
+//   - 全搜尋樹共用 nodeCount / startTime / abortFlag，逾時直接剎車
+
+const AI_DIRS = [[1,0],[0,1],[1,1],[1,-1]];
+
+// 棋型權重表：索引 = count * 2 + openEnds（count:0-5, openEnds:0-2）
+const LINE_WEIGHTS = [
+  0, 0, 0,      // count=0 (無意義)
+  2, 20, 100,    // count=1: 單子  / 單子+1開 / 單子+2開
+  10, 200, 2000,  // count=2: 眠二  / 眠二+1開? / 活二
+  100, 5000, 50000, // count=3: 眠三  / 沖三??? / 活三 （活三是大威脅）
+  1000, 50000, 1000000, // count=4: 沖四  / 沖四(1開) / 活四
+  10000000, 10000000, 10000000, // count>=5: 五連
+];
+
+class AIEngine {
+  constructor(difficulty = 'medium') {
+    this.setDifficulty(difficulty);
+    this.nodeCount = 0;
+    this.history = new Int32Array(BOARD_SIZE * BOARD_SIZE); // 歷史啟發表 (flat)
+    this.startTime = 0;
+    this.timeLimit = 800;
+    this.aborted = false;
+  }
+
+  setDifficulty(d) {
+    this.difficulty = d;
+    this.maxDepth  = { easy: 2, medium: 4, hard: 6 }[d] || 4;
+    this.timeLimit = { easy: 200, medium: 600, hard: 1500 }[d] || 600;
+  }
+
+  // ---- 主入口 ----
+  getBestMove(board) {
+    const cells = this.getCandidates(board); // candidate = {x,y}
+    if (cells.length === 0) return [7, 7];
+    if (cells.length === 1) return [cells[0].x, cells[0].y];
+
+    // 1) 立即獲勝
+    for (const c of cells) {
+      if (this.isWinMove(board, c.x, c.y, 'white')) return [c.x, c.y];
+    }
+    // 2) 必須阻擋
+    const blocks = [];
+    for (const c of cells) {
+      if (this.isWinMove(board, c.x, c.y, 'black')) blocks.push(c);
+    }
+    if (blocks.length) return [blocks[0].x, blocks[0].y];
+
+    // 3) 迭代加深
+    this.startTime = performance.now();
+    this.aborted = false;
+    this.history.fill(0);
+    let best = cells[0];
+
+    // 根節點候選排序（只用威脅值 + 中心）
+    const rootCands = cells
+      .map(c => ({ ...c, s: this.scoreCell(board, c.x, c.y, 'white') + this.scoreCell(board, c.x, c.y, 'black') * 0.95 }))
+      .sort((a, b) => b.s - a.s)
+      .slice(0, 25);
+
+    for (let d = 2; d <= this.maxDepth; d += 2) {
+      let bestScore = -Infinity;
+      let currentBest = rootCands[0];
+      for (const c of rootCands) {
+        if (this.aborted) break;
+        board[c.y][c.x] = 'white';
+        const s = -this.negamax(board, d - 1, -Infinity, -bestScore, 'black');
+        board[c.y][c.x] = null;
+        if (s > bestScore) { bestScore = s; currentBest = c; }
+      }
+      if (!this.aborted) best = currentBest;
+      if (this.aborted || performance.now() - this.startTime > this.timeLimit * 0.5) break;
+    }
+
+    return [best.x, best.y];
+  }
+
+  // ---- Negamax（精簡、高效） ----
+  negamax(board, depth, alpha, beta, player) {
+    if (this.aborted) return 0;
+    this.nodeCount++;
+    if (this.nodeCount % 256 === 0 && performance.now() - this.startTime > this.timeLimit) {
+      this.aborted = true; return 0;
+    }
+
+    if (depth === 0) {
+      // 葉子評估：用行掃描法（極快）
+      return this.scanEval(board, player);
+    }
+
+    const cells = this.getCandidates(board);
+    if (cells.length === 0) return 0;
+
+    // 內部節點：輕量排序（威脅 + 歷史表），只取前 12 個
+    const scored = cells.map(c => ({
+      ...c,
+      s: this.scoreCell(board, c.x, c.y, player) + this.history[c.y * BOARD_SIZE + c.x]
+    }));
+    scored.sort((a, b) => b.s - a.s);
+    const top = scored.slice(0, 12);
+
+    const opp = player === 'white' ? 'black' : 'white';
+    let best = -Infinity;
+
+    for (const c of top) {
+      board[c.y][c.x] = player;
+      let val;
+      if (this.isWinMove(board, c.x, c.y, player)) {
+        val = 10000000 + depth;
+      } else {
+        val = -this.negamax(board, depth - 1, -beta, -alpha, opp);
+      }
+      board[c.y][c.x] = null;
+
+      if (val > best) {
+        best = val;
+        if (best >= beta) {
+          this.history[c.y * BOARD_SIZE + c.x] += depth * depth;
+          return best;
+        }
+        if (best > alpha) alpha = best;
+      }
+    }
+    return best;
+  }
+
+  // ---- 快速判斷放此處是否直接五連 ----
+  isWinMove(board, x, y, player) {
+    for (const [dx, dy] of AI_DIRS) {
+      let c = 1;
+      for (let i = 1; i < 5; i++) {
+        const nx = x + dx * i, ny = y + dy * i;
+        if (nx < 0 || nx >= BOARD_SIZE || ny < 0 || ny >= BOARD_SIZE || board[ny][nx] !== player) break;
+        c++;
+      }
+      for (let i = 1; i < 5; i++) {
+        const nx = x - dx * i, ny = y - dy * i;
+        if (nx < 0 || nx >= BOARD_SIZE || ny < 0 || ny >= BOARD_SIZE || board[ny][nx] !== player) break;
+        c++;
+      }
+      if (c >= 5) return true;
+    }
+    return false;
+  }
+
+  // ---- 候選格子生成（所有有棋子的 2 格範圍） ----
+  getCandidates(board) {
+    const set = new Set();
+    let has = false;
+    for (let y = 0; y < BOARD_SIZE; y++) {
+      for (let x = 0; x < BOARD_SIZE; x++) {
+        if (board[y][x] !== null) {
+          has = true;
+          for (let dy = -2; dy <= 2; dy++) {
+            for (let dx = -2; dx <= 2; dx++) {
+              const nx = x + dx, ny = y + dy;
+              if (nx >= 0 && nx < BOARD_SIZE && ny >= 0 && ny < BOARD_SIZE && board[ny][nx] === null) {
+                set.add(ny * BOARD_SIZE + nx);
+              }
+            }
+          }
+        }
+      }
+    }
+    if (!has) return [{ x: 7, y: 7 }];
+    return Array.from(set).map(idx => ({ x: idx % BOARD_SIZE, y: Math.floor(idx / BOARD_SIZE) }));
+  }
+
+  // ---- 單格威脅分數（4 方向） ----
+  scoreCell(board, x, y, player) {
+    let best = 0;
+    for (const [dx, dy] of AI_DIRS) {
+      let cnt = 1, oe = 0;
+      for (let i = 1; i <= 4; i++) {
+        const nx = x + dx * i, ny = y + dy * i;
+        if (nx >= 0 && nx < BOARD_SIZE && ny >= 0 && ny < BOARD_SIZE && board[ny][nx] === player) cnt++;
+        else { if (nx >= 0 && nx < BOARD_SIZE && ny >= 0 && ny < BOARD_SIZE && board[ny][nx] === null) oe++; break; }
+      }
+      for (let i = 1; i <= 4; i++) {
+        const nx = x - dx * i, ny = y - dy * i;
+        if (nx >= 0 && nx < BOARD_SIZE && ny >= 0 && ny < BOARD_SIZE && board[ny][nx] === player) cnt++;
+        else { if (nx >= 0 && nx < BOARD_SIZE && ny >= 0 && ny < BOARD_SIZE && board[ny][nx] === null) oe++; break; }
+      }
+      const idx = Math.min(cnt, 5) * 2 + Math.min(oe, 2);
+      best = Math.max(best, LINE_WEIGHTS[idx]);
+    }
+    return best;
+  }
+
+  // ---- 行掃描評估（葉子節點專用，極快） ----
+  // 核心思路：對棋盤逐行/逐列/逐對角線掃描，找出連續串並計分
+  scanEval(board, aiPlayer) {
+    let score = 0;
+
+    const scanLine = (cells) => {
+      let i = 0;
+      while (i < cells.length) {
+        const [sx, sy] = cells[i];
+        const p = board[sy][sx];
+        if (!p) { i++; continue; }
+        // 向後統計連續數
+        let j = i + 1;
+        while (j < cells.length) {
+          const [nx, ny] = cells[j];
+          if (board[ny][nx] !== p) break;
+          j++;
+        }
+        const cnt = j - i;
+        // 前後端是否有空位
+        let oeBefore = 0, oeAfter = 0;
+        if (i > 0) {
+          const [bx, by] = cells[i - 1];
+          if (board[by][bx] === null) oeBefore = 1;
+        }
+        if (j < cells.length) {
+          const [ax, ay] = cells[j];
+          if (board[ay][ax] === null) oeAfter = 1;
+        }
+        const oe = oeBefore + oeAfter;
+        const idx = Math.min(cnt, 5) * 2 + Math.min(oe, 2);
+        const s = LINE_WEIGHTS[idx];
+        score += p === aiPlayer ? s : -s * 1.1;
+        i = j;
+      }
+    };
+
+    // 水平掃描
+    for (let y = 0; y < BOARD_SIZE; y++) {
+      const line = [];
+      for (let x = 0; x < BOARD_SIZE; x++) line.push([x, y]);
+      scanLine(line);
+    }
+    // 垂直掃描
+    for (let x = 0; x < BOARD_SIZE; x++) {
+      const line = [];
+      for (let y = 0; y < BOARD_SIZE; y++) line.push([x, y]);
+      scanLine(line);
+    }
+    // 對角線 (↘)
+    for (let start = -(BOARD_SIZE - 1); start < BOARD_SIZE; start++) {
+      const line = [];
+      for (let y = 0; y < BOARD_SIZE; y++) {
+        const x = y + start;
+        if (x >= 0 && x < BOARD_SIZE) line.push([x, y]);
+      }
+      if (line.length >= 5) scanLine(line);
+    }
+    // 反對角線 (↗)
+    for (let start = 0; start < 2 * BOARD_SIZE - 1; start++) {
+      const line = [];
+      for (let y = 0; y < BOARD_SIZE; y++) {
+        const x = start - y;
+        if (x >= 0 && x < BOARD_SIZE) line.push([x, y]);
+      }
+      if (line.length >= 5) scanLine(line);
+    }
+
+    // 中心位置加成
+    for (let y = 0; y < BOARD_SIZE; y++) {
+      for (let x = 0; x < BOARD_SIZE; x++) {
+        const p = board[y][x];
+        if (!p) continue;
+        const cDist = Math.abs(x - 7) + Math.abs(y - 7);
+        const bonus = (14 - cDist) * 2;
+        score += p === aiPlayer ? bonus : -bonus;
+      }
+    }
+
+    return score;
+  }
+}
+
+// ==================== Game Controller ====================
+class GameController {
+  constructor(boardCanvas) {
+    this.boardCanvas = boardCanvas;
+    this.boardCtx = boardCanvas.getContext('2d');
+    this.engine = new GameEngine();
+    this.ai = new AIEngine('medium');
+    this.audio = new AudioEngine();
+    this.mode = 'pvp';
+    this.aiThinking = false;
+    this.hoverPos = null;
+    this.ripples = [];
+    this.fx = new FxParticles(this.boardCtx);
+    this.winAnimFrame = 0;
+    this.winAnimActive = false;
+
+    // Timers
+    this.timerBlack = 300;
+    this.timerWhite = 300;
+    this.timerInterval = null;
+
+    // Score
+    this.scoreBlack = 0;
+    this.scoreWhite = 0;
+
+    // Canvas sizing
+    this.cellSize = 0;
+    this.padding = 0;
+    this.canvasSize = 0;
+    this.resizeBoard();
+    window.addEventListener('resize', () => this.resizeBoard());
+
+    // Events
+    this.boardCanvas.addEventListener('click', (e) => this.handleClick(e));
+    this.boardCanvas.addEventListener('mousemove', (e) => this.handleMouseMove(e));
+    this.boardCanvas.addEventListener('mouseleave', () => { this.hoverPos = null; });
+
+    // Initial draw
+    this.draw();
+    this.startTimers();
+    this.animLoop();
+  }
+
+  resizeBoard() {
+    const maxSize = Math.min(window.innerWidth * 0.85, window.innerHeight * 0.58);
+    this.cellSize = Math.floor(maxSize / (BOARD_SIZE + 1));
+    this.padding = this.cellSize;
+    this.canvasSize = this.cellSize * (BOARD_SIZE + 1) + this.padding;
+    this.boardCanvas.width = this.canvasSize;
+    this.boardCanvas.height = this.canvasSize;
+
+    // Update CSS size
+    const displaySize = Math.min(window.innerWidth * 0.92, window.innerHeight * 0.6);
+    this.boardCanvas.style.width = displaySize + 'px';
+    this.boardCanvas.style.height = displaySize + 'px';
+  }
+
+  getCellCenter(x, y) {
+    return {
+      cx: this.padding + x * this.cellSize + this.cellSize / 2,
+      cy: this.padding + y * this.cellSize + this.cellSize / 2,
+    };
+  }
+
+  getGridFromMouse(e) {
+    const rect = this.boardCanvas.getBoundingClientRect();
+    const scaleX = this.canvasSize / rect.width;
+    const scaleY = this.canvasSize / rect.height;
+    const mx = (e.clientX - rect.left) * scaleX;
+    const my = (e.clientY - rect.top) * scaleY;
+    const gx = Math.round((mx - this.padding - this.cellSize / 2) / this.cellSize);
+    const gy = Math.round((my - this.padding - this.cellSize / 2) / this.cellSize);
+    if (gx < 0 || gx >= BOARD_SIZE || gy < 0 || gy >= BOARD_SIZE) return null;
+    return { gx, gy };
+  }
+
+  handleClick(e) {
+    this.audio.init();
+    if (this.aiThinking || this.engine.gameOver) return;
+
+    const pos = this.getGridFromMouse(e);
+    if (!pos) return;
+    if (this.engine.board[pos.gy][pos.gx] !== null) return;
+
+    // Place stone
+    this.doMove(pos.gx, pos.gy);
+
+    // AI turn
+    if (this.mode === 'pve' && !this.engine.gameOver && this.engine.currentPlayer === 'white') {
+      this.scheduleAIMove();
+    }
+  }
+
+  handleMouseMove(e) {
+    const pos = this.getGridFromMouse(e);
+    if (pos && this.engine.board[pos.gy][pos.gx] === null && !this.engine.gameOver && !this.aiThinking)
+      this.hoverPos = pos;
+    else
+      this.hoverPos = null;
+  }
+
+  doMove(x, y) {
+    const result = this.engine.makeMove(x, y);
+    if (!result) return;
+
+    const { cx, cy } = this.getCellCenter(x, y);
+    const color = this.engine.currentPlayer === 'black' ? 'white' : 'black';
+    const isBlack = color === 'black';
+    this.fx.emit(cx, cy, isBlack ? '#b44dff' : '#e8eaf0', 14);
+    this.ripples.push(new Ripple(cx, cy, isBlack ? '#b44dff' : '#00e5ff'));
+    this.audio.playPlace();
+
+    if (result.winner || result.draw) {
+      this.winAnimActive = true;
+      this.winAnimFrame = 0;
+      if (result.winner) {
+        this.audio.playWin();
+        if (result.winner === 'black') this.scoreBlack++;
+        else this.scoreWhite++;
+        this.updateScoreUI();
+        // Emit win particles at winning cells
+        for (const [wx, wy] of result.cells) {
+          const pos = this.getCellCenter(wx, wy);
+          this.fx.emitWin(pos.cx, pos.cy, result.winner === 'black' ? '#b44dff' : '#00e5ff', 20);
+        }
+      }
+      this.stopTimers();
+      this.updateUI();
+    } else {
+      this.updateUI();
+    }
+  }
+
+  scheduleAIMove() {
+    this.aiThinking = true;
+    this.updateUI();
+    setTimeout(() => {
+      const boardCopy = this.engine.board.map(row => [...row]);
+      const [ax, ay] = this.ai.getBestMove(boardCopy);
+      if (!this.engine.gameOver && this.engine.board[ay][ax] === null) {
+        this.doMove(ax, ay);
+      }
+      this.aiThinking = false;
+      this.updateUI();
+    }, 150);
+  }
+
+  undo() {
+    if (this.engine.gameOver) return;
+    // Undo 1 move in PvP, 2 moves in PvE
+    const count = this.mode === 'pve' ? 2 : 1;
+    for (let i = 0; i < count; i++) {
+      const undone = this.engine.undo();
+      if (!undone) break;
+    }
+    this.winAnimActive = false;
+    this.ripples = [];
+    this.fx.clear();
+    this.updateUI();
+  }
+
+  resetGame() {
+    this.engine.reset();
+    this.ripples = [];
+    this.fx.clear();
+    this.winAnimActive = false;
+    this.timerBlack = 300;
+    this.timerWhite = 300;
+    this.updateUI();
+    this.startTimers();
+  }
+
+  startTimers() {
+    this.stopTimers();
+    this.timerInterval = setInterval(() => {
+      if (this.engine.gameOver) return;
+      if (this.engine.currentPlayer === 'black') {
+        this.timerBlack = Math.max(0, this.timerBlack - 1);
+      } else {
+        this.timerWhite = Math.max(0, this.timerWhite - 1);
+      }
+      this.updateTimerUI();
+    }, 1000);
+  }
+
+  stopTimers() {
+    if (this.timerInterval) { clearInterval(this.timerInterval); this.timerInterval = null; }
+  }
+
+  updateTimerUI() {
+    document.getElementById('timer-black').textContent = this.formatTime(this.timerBlack);
+    document.getElementById('timer-white').textContent = this.formatTime(this.timerWhite);
+    document.getElementById('timer-black').classList.toggle('urgent', this.timerBlack <= 30 && this.engine.currentPlayer === 'black');
+    document.getElementById('timer-white').classList.toggle('urgent', this.timerWhite <= 30 && this.engine.currentPlayer === 'white');
+  }
+
+  updateScoreUI() {
+    document.getElementById('score-black').textContent = this.scoreBlack;
+    document.getElementById('score-white').textContent = this.scoreWhite;
+  }
+
+  formatTime(sec) {
+    const m = Math.floor(sec / 60);
+    const s = sec % 60;
+    return `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+  }
+
+  updateUI() {
+    const statusEl = document.getElementById('status-text');
+    statusEl.className = 'status-badge';
+    if (this.engine.gameOver) {
+      if (this.engine.winner) {
+        statusEl.textContent = `${this.engine.winner === 'black' ? '黑方' : '白方'} 獲勝！`;
+        statusEl.classList.add('win');
+      } else {
+        statusEl.textContent = '平局';
+      }
+    } else if (this.aiThinking) {
+      statusEl.textContent = 'AI 思考中...';
+      statusEl.classList.add('white-turn');
+    } else {
+      statusEl.textContent = this.engine.currentPlayer === 'black' ? '黑方行棋' : '白方行棋';
+      statusEl.classList.add(this.engine.currentPlayer === 'black' ? 'black-turn' : 'white-turn');
+    }
+    document.getElementById('btn-undo').disabled = this.engine.gameOver || this.engine.history.length === 0 || this.aiThinking;
+    this.updateTimerUI();
+    this.updateScoreUI();
+  }
+
+  // ==================== Drawing ====================
+  draw() {
+    const ctx = this.boardCtx;
+    const size = this.canvasSize;
+
+    // Clear
+    ctx.clearRect(0, 0, size, size);
+
+    // Board background
+    const gradient = ctx.createRadialGradient(size / 2, size / 2, size * 0.1, size / 2, size / 2, size * 0.8);
+    gradient.addColorStop(0, '#141420');
+    gradient.addColorStop(1, '#08080f');
+    ctx.fillStyle = gradient;
+    ctx.fillRect(0, 0, size, size);
+
+    // Board border glow
+    ctx.save();
+    ctx.shadowColor = 'rgba(0,229,255,0.3)';
+    ctx.shadowBlur = 20;
+    ctx.strokeStyle = 'rgba(0,229,255,0.5)';
+    ctx.lineWidth = 2;
+    const bx = this.padding - this.cellSize / 2;
+    const by = this.padding - this.cellSize / 2;
+    const bw = this.cellSize * BOARD_SIZE;
+    ctx.strokeRect(bx, by, bw, bw);
+    ctx.restore();
+
+    // Grid lines
+    ctx.strokeStyle = 'rgba(0,229,255,0.15)';
+    ctx.lineWidth = 0.8;
+    for (let i = 0; i < BOARD_SIZE; i++) {
+      const pos = this.padding + i * this.cellSize + this.cellSize / 2;
+      ctx.beginPath();
+      ctx.moveTo(this.padding + this.cellSize / 2, pos);
+      ctx.lineTo(this.padding + (BOARD_SIZE - 1) * this.cellSize + this.cellSize / 2, pos);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(pos, this.padding + this.cellSize / 2);
+      ctx.lineTo(pos, this.padding + (BOARD_SIZE - 1) * this.cellSize + this.cellSize / 2);
+      ctx.stroke();
+    }
+
+    // Sub-grid glow lines (thinner)
+    ctx.strokeStyle = 'rgba(0,229,255,0.06)';
+    ctx.lineWidth = 0.4;
+    for (let i = 0; i < BOARD_SIZE; i++) {
+      const pos = this.padding + i * this.cellSize + this.cellSize / 2;
+      ctx.beginPath(); ctx.moveTo(this.padding + this.cellSize / 2, pos); ctx.lineTo(this.padding + (BOARD_SIZE - 1) * this.cellSize + this.cellSize / 2, pos); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(pos, this.padding + this.cellSize / 2); ctx.lineTo(pos, this.padding + (BOARD_SIZE - 1) * this.cellSize + this.cellSize / 2); ctx.stroke();
+    }
+
+    // Star points (天元 + 四星)
+    const starPoints = [[3,3],[3,7],[3,11],[7,3],[7,7],[7,11],[11,3],[11,7],[11,11]];
+    for (const [sx, sy] of starPoints) {
+      const { cx, cy } = this.getCellCenter(sx, sy);
+      ctx.beginPath();
+      ctx.arc(cx, cy, this.cellSize * 0.08, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(0,229,255,0.25)';
+      ctx.shadowColor = 'rgba(0,229,255,0.2)';
+      ctx.shadowBlur = 4;
+      ctx.fill();
+      ctx.shadowBlur = 0;
+    }
+
+    // Draw stones
+    for (let y = 0; y < BOARD_SIZE; y++) {
+      for (let x = 0; x < BOARD_SIZE; x++) {
+        const stone = this.engine.board[y][x];
+        if (!stone) continue;
+        const { cx, cy } = this.getCellCenter(x, y);
+        this.drawStone(ctx, cx, cy, stone, 1, false);
+      }
+    }
+
+    // Draw win highlight
+    if (this.winAnimActive && this.engine.winCells) {
+      const pulse = Math.sin(this.winAnimFrame * 0.08) * 0.5 + 0.5;
+      for (const [wx, wy] of this.engine.winCells) {
+        const { cx, cy } = this.getCellCenter(wx, wy);
+        ctx.save();
+        ctx.globalAlpha = 0.35 + pulse * 0.45;
+        ctx.beginPath();
+        ctx.arc(cx, cy, this.cellSize * 0.55, 0, Math.PI * 2);
+        ctx.fillStyle = this.engine.winner === 'black' ? '#b44dff' : '#00e5ff';
+        ctx.shadowColor = this.engine.winner === 'black' ? '#b44dff' : '#00e5ff';
+        ctx.shadowBlur = 20 + pulse * 20;
+        ctx.fill();
+        ctx.restore();
+        // Redraw stone on top
+        this.drawStone(ctx, cx, cy, this.engine.winner, 1, false);
+      }
+    }
+
+    // Draw hover preview
+    if (this.hoverPos && !this.engine.gameOver && !this.aiThinking) {
+      const { cx, cy } = this.getCellCenter(this.hoverPos.gx, this.hoverPos.gy);
+      this.drawStone(ctx, cx, cy, this.engine.currentPlayer, 0.35, false);
+    }
+
+    // Draw ripples
+    this.ripples = this.ripples.filter(r => r.update());
+    for (const r of this.ripples) r.draw(ctx);
+
+    // Draw fx particles
+    this.fx.update();
+    this.fx.draw();
+  }
+
+  drawStone(ctx, cx, cy, player, alpha, isWinHighlight) {
+    const r = this.cellSize * 0.4;
+    ctx.save();
+    ctx.globalAlpha = alpha;
+
+    if (player === 'black') {
+      // 3D radial gradient
+      const g = ctx.createRadialGradient(cx - r * 0.3, cy - r * 0.3, r * 0.05, cx, cy, r);
+      g.addColorStop(0, '#d89cff');
+      g.addColorStop(0.35, '#b44dff');
+      g.addColorStop(0.7, '#6a1fb0');
+      g.addColorStop(1, '#3a0a6a');
+      ctx.beginPath();
+      ctx.arc(cx, cy, r, 0, Math.PI * 2);
+      ctx.fillStyle = g;
+      ctx.shadowColor = '#b44dff';
+      ctx.shadowBlur = 14 * alpha;
+      ctx.fill();
+      // Specular highlight
+      ctx.beginPath();
+      ctx.arc(cx - r * 0.22, cy - r * 0.25, r * 0.22, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(255,255,255,0.2)';
+      ctx.shadowBlur = 0;
+      ctx.fill();
+    } else {
+      const g = ctx.createRadialGradient(cx - r * 0.3, cy - r * 0.3, r * 0.05, cx, cy, r);
+      g.addColorStop(0, '#ffffff');
+      g.addColorStop(0.4, '#e8eaf0');
+      g.addColorStop(0.7, '#bcc4d4');
+      g.addColorStop(1, '#7a8298');
+      ctx.beginPath();
+      ctx.arc(cx, cy, r, 0, Math.PI * 2);
+      ctx.fillStyle = g;
+      ctx.shadowColor = '#00e5ff';
+      ctx.shadowBlur = 12 * alpha;
+      ctx.fill();
+      ctx.beginPath();
+      ctx.arc(cx - r * 0.22, cy - r * 0.25, r * 0.18, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(255,255,255,0.35)';
+      ctx.shadowBlur = 0;
+      ctx.fill();
+    }
+    ctx.restore();
+  }
+
+  animLoop() {
+    // Only redraw if there are active animations
+    const hasAnim = this.ripples.length > 0 || this.fx.count > 0 || this.winAnimActive || this.hoverPos !== null;
+    if (hasAnim) {
+      if (this.winAnimActive) this.winAnimFrame++;
+      this.draw();
+    }
+    requestAnimationFrame(() => this.animLoop());
+  }
+
+  // Trigger redraw next frame
+  requestDraw() {
+    this.draw();
+  }
+
+  setMode(mode) {
+    this.mode = mode;
+    document.getElementById('btn-pvp').classList.toggle('active', mode === 'pvp');
+    document.getElementById('btn-pve').classList.toggle('active', mode === 'pve');
+    document.getElementById('difficulty').style.display = mode === 'pve' ? 'inline-block' : 'none';
+    document.getElementById('mode-hint').textContent = mode === 'pvp' ? '雙人對戰模式' : '人機對戰模式';
+    this.resetGame();
+  }
+
+  setDifficulty(d) {
+    this.ai.setDifficulty(d);
+    this.resetGame();
+  }
+}
+
+// ==================== Init ====================
+const bgCanvas = document.getElementById('bg-canvas');
+const boardCanvas = document.getElementById('board-canvas');
+const bgParticles = new BgParticles(bgCanvas);
+
+let controller;
+
+function init() {
+  controller = new GameController(boardCanvas);
+  window.controller = controller;
+}
+
+function setMode(m) { controller?.setMode(m); }
+function setDifficulty(d) { controller?.setDifficulty(d); }
+function undo() { controller?.undo(); controller?.requestDraw(); }
+function resetGame() { controller?.resetGame(); controller?.requestDraw(); }
+
+// Background animation loop
+function bgLoop() {
+  bgParticles.update();
+  requestAnimationFrame(bgLoop);
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  init();
+  bgLoop();
+});
+</script>
+</body>
+</html>

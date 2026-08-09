@@ -740,7 +740,7 @@ function bindBoardEvents(){
 
   const b=document.getElementById('board');
 
-  // Unified touchstart: track swipe + start long-press timer
+  // Unified touchstart: track swipe
   b.addEventListener('touchstart',function(e){
     if(GS.locked)return;
     const t=e.touches[0];
@@ -749,18 +749,11 @@ function bindBoardEvents(){
     touchTracking.startX=t.clientX;
     touchTracking.startY=t.clientY;
     touchTracking.swipedCells=new Set();
-
-    // Start long-press timer if touching an X cell
-    const hit=getCellAtPoint(t.clientX,t.clientY);
-    if(hit&&GS.board[hit.y][hit.x].state===2){
-      handleLongPressStart(hit.x,hit.y);
-    }
   },{passive:true});
 
   b.addEventListener('touchmove',function(e){
     if(!touchTracking.active||GS.locked)return;
     e.preventDefault();
-    handleLongPressCancel(); // cancel long-press if finger moves
     const t=e.touches[0];
     const dx=t.clientX-touchTracking.startX;
     const dy=t.clientY-touchTracking.startY;
@@ -787,7 +780,6 @@ function bindBoardEvents(){
   },{passive:false});
 
   b.addEventListener('touchend',function(e){
-    handleLongPressCancel();
     if(!touchTracking.active)return;
     touchTracking.active=false;
 
@@ -803,7 +795,7 @@ function bindBoardEvents(){
     }
     e.preventDefault(); // prevent ghost click
   },{passive:false});
-  b.addEventListener('touchcancel',function(){handleLongPressCancel();touchTracking.active=false},{passive:false});
+  b.addEventListener('touchcancel',function(){touchTracking.active=false},{passive:false});
 
   // Click = tap (fires after touchend for taps, or mouse click on desktop)
   b.addEventListener('click',function(e){
@@ -818,18 +810,6 @@ function bindBoardEvents(){
     const y=parseInt(cellEl.dataset.y);
     handleCellClick(x,y);
   });
-
-  // Mouse long-press for desktop
-  b.addEventListener('mousedown',function(e){
-    if(GS.locked)return;
-    const cellEl=e.target.closest('.cell');
-    if(!cellEl||!cellEl.dataset.x)return;
-    const x=parseInt(cellEl.dataset.x);
-    const y=parseInt(cellEl.dataset.y);
-    if(GS.board[y][x].state===2)handleLongPressStart(x,y);
-  });
-  b.addEventListener('mouseup',handleLongPressCancel);
-  b.addEventListener('mouseleave',handleLongPressCancel);
 
   boardEventsBound=true;
 }
@@ -883,9 +863,33 @@ function getCellAtPoint(clientX,clientY){
   return{x:parseInt(cell.dataset.x),y:parseInt(cell.dataset.y),el:cell};
 }
 
-// ===================== Cell Click Handler (tap only) =====================
+// ===================== Cell Click Handler (single click = X, double click = queen) =====================
+let lastTapTime=0;
+let lastTapCell=null;
+
 function handleCellClick(x,y){
   const cell=GS.board[y][x];
+  const now=Date.now();
+
+  // Double-click detection: same cell within 300ms
+  if(lastTapCell&&lastTapCell.x===x&&lastTapCell.y===y&&(now-lastTapTime)<300){
+    // Double click: place queen (only if currently X)
+    lastTapTime=0;
+    lastTapCell=null;
+    if(cell.state===2){
+      // During tutorial, only allow specific targets
+      if(GS.tutorial&&tutStep>=0){
+        const target=tutSteps[tutStep];
+        if(!target||(target.x!==x||target.y!==y))return;
+      }
+      placeQueen(x,y);
+    }
+    return;
+  }
+
+  // Single click: record for double-click detection
+  lastTapTime=now;
+  lastTapCell={x,y};
 
   // During tutorial, only allow specific targets
   if(GS.tutorial&&tutStep>=0){
@@ -893,7 +897,6 @@ function handleCellClick(x,y){
     if(!target||(target.x!==x||target.y!==y))return;
   }
 
-  // Cycle: 0(empty) -> 2(X) -> 1(queen) -> 0
   if(cell.state===0){
     // Place X
     cell.state=2;
@@ -915,45 +918,26 @@ function handleCellClick(x,y){
   }
 }
 
-// ===================== Long press to place queen =====================
-let longPressTimer=null;
-let longPressTarget=null;
-
-function handleLongPressStart(x,y){
-  if(GS.locked)return;
+function placeQueen(x,y){
   const cell=GS.board[y][x];
   if(cell.state!==2)return; // only from X state
-  // During tutorial, only allow specific targets
-  if(GS.tutorial&&tutStep>=0){
-    const target=tutSteps[tutStep];
-    if(!target||(target.x!==x||target.y!==y))return;
+  if(checkConflict(x,y)){
+    cell.state=0;
+    cell.err=true;
+    GS.lives--;
+    snd('err');
+    renderBoard();
+    const idx=y*GS.data.size+x;
+    const el=document.querySelectorAll('#board .cell')[idx];
+    if(el)el.classList.add('conflict');
+    setTimeout(()=>{if(el)el.classList.remove('conflict')},500);
+    if(GS.lives<=0){setTimeout(()=>gameOver(),600)}
+  }else{
+    saveHistory();
+    cell.state=1;
+    snd('place');
+    renderBoard();
   }
-  longPressTarget={x,y};
-  longPressTimer=setTimeout(()=>{
-    // Place queen
-    if(checkConflict(x,y)){
-      cell.state=0;
-      cell.err=true;
-      GS.lives--;
-      snd('err');
-      renderBoard();
-      const idx=y*GS.data.size+x;
-      const el=document.querySelectorAll('#board .cell')[idx];
-      if(el)el.classList.add('conflict');
-      setTimeout(()=>{if(el)el.classList.remove('conflict')},500);
-      if(GS.lives<=0){setTimeout(()=>gameOver(),600)}
-    }else{
-      saveHistory();
-      cell.state=1;
-      snd('place');
-      renderBoard();
-    }
-    longPressTarget=null;
-  },400);
-}
-
-function handleLongPressCancel(){
-  if(longPressTimer){clearTimeout(longPressTimer);longPressTimer=null;longPressTarget=null}
 }
 
 // ===================== Cell Click Handler =====================
@@ -1197,7 +1181,7 @@ function startTutorial(level){
   tutSteps.push({
     x:q0.x,y:q0.y,type:'queen',
     title:`第 1 步：放置牛`,
-    desc:`點擊高亮格子標記 ✕，再長按同一格子放置 🐮！`,
+    desc:`雙擊高亮格子放置 🐮！`,
     logic:`💡 推理：這個格子的同行、同列、同色區域以及周圍8格都沒有其他牛，是唯一安全的位置。`
   });
 
@@ -1254,7 +1238,7 @@ function startTutorial(level){
         x:colorTarget.x,y:colorTarget.y,type:'x',
         title:`第 4 步：顏色排除`,
         desc:`同一顏色區域只能有1頭牛。點擊標記 ✕！`,
-        logic:`💡 推理：這個格子和已放置的牛同屬${cn0}色區域，根據「每色1頭牛」規則，此處不能再放牛。`
+        logic:`💡 推理：這個格子和已放置的牛同屬${cn0}色區域，根據「每色1頭牛」規則，所有相同色不能再放牛。`
       });
     }
   }
@@ -1268,7 +1252,7 @@ function startTutorial(level){
     tutSteps.push({
       x:q1.x,y:q1.y,type:'queen',
       title:`第 5 步：組合推理`,
-      desc:`現在試著用排除法找出第二頭牛！點擊標記 ✕，再長按放置 🐮！`,
+      desc:`現在試著用排除法找出第二頭牛！點擊標記 ✕，再雙擊放置 🐮！`,
       logic:`💡 推理：綜合行列、顏色和相鄰規則，這個${cn1}色格子是當前唯一能放牛的位置。`
     });
   }

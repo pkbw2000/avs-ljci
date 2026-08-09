@@ -89,10 +89,10 @@ html,body{margin:0;padding:0;width:100%;height:100%;overflow:hidden;background:v
 @keyframes pulse{0%{transform:scale(.92);opacity:1}50%{transform:scale(1.08);opacity:.5}100%{transform:scale(.92);opacity:1}}
 @keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-12px)}}
 
-/* Tutorial Panel */
-#tutPanel{display:none;background:var(--surface);border-radius:var(--radius);margin:0 16px 6px;padding:12px 14px;box-shadow:var(--shadow-lg);border-left:4px solid var(--accent)}
+/* Tutorial Panel - floating overlay, does NOT affect board layout */
+#tutPanel{display:none;position:absolute;left:50%;bottom:90px;transform:translateX(-50%);width:calc(100% - 32px);max-width:420px;background:var(--surface);border-radius:var(--radius);padding:12px 14px;box-shadow:var(--shadow-lg);border-left:4px solid var(--accent);z-index:30}
 #tutPanel.show{display:flex;flex-direction:column;gap:6px;animation:slideUp .3s}
-@keyframes slideUp{from{transform:translateY(20px);opacity:0}to{transform:translateY(0);opacity:1}}
+@keyframes slideUp{from{transform:translateX(-50%) translateY(20px);opacity:0}to{transform:translateX(-50%) translateY(0);opacity:1}}
 .tut-h{display:flex;align-items:center;gap:8px}
 .tut-ico{font-size:22px}
 .tut-t{font-weight:700;font-size:14px}
@@ -728,8 +728,110 @@ function loadLevel(n){
 
   renderBoard();
   startTimer(getTimeForSize(d.size));
+  bindBoardEvents();
 
   if(GS.tutorial)setTimeout(()=>startTutorial(n),500);
+}
+
+// ===================== Bind board touch/click events (once per level) =====================
+let boardEventsBound=false;
+function bindBoardEvents(){
+  if(boardEventsBound)return;
+
+  const b=document.getElementById('board');
+
+  // Unified touchstart: track swipe + start long-press timer
+  b.addEventListener('touchstart',function(e){
+    if(GS.locked)return;
+    const t=e.touches[0];
+    touchTracking.active=true;
+    touchTracking.moved=false;
+    touchTracking.startX=t.clientX;
+    touchTracking.startY=t.clientY;
+    touchTracking.swipedCells=new Set();
+
+    // Start long-press timer if touching an X cell
+    const hit=getCellAtPoint(t.clientX,t.clientY);
+    if(hit&&GS.board[hit.y][hit.x].state===2){
+      handleLongPressStart(hit.x,hit.y);
+    }
+  },{passive:true});
+
+  b.addEventListener('touchmove',function(e){
+    if(!touchTracking.active||GS.locked)return;
+    e.preventDefault();
+    handleLongPressCancel(); // cancel long-press if finger moves
+    const t=e.touches[0];
+    const dx=t.clientX-touchTracking.startX;
+    const dy=t.clientY-touchTracking.startY;
+    if(Math.abs(dx)>8||Math.abs(dy)>8)touchTracking.moved=true;
+
+    if(touchTracking.moved&&!GS.tutorial){
+      const hit=getCellAtPoint(t.clientX,t.clientY);
+      if(hit){
+        const key=hit.x+','+hit.y;
+        if(!touchTracking.swipedCells.has(key)){
+          touchTracking.swipedCells.add(key);
+          const cell=GS.board[hit.y][hit.x];
+          if(cell.state===0){
+            cell.state=2;
+            snd('cross');
+            const sp=document.createElement('span');
+            sp.className='xmark';
+            sp.textContent='✕';
+            hit.el.appendChild(sp);
+          }
+        }
+      }
+    }
+  },{passive:false});
+
+  b.addEventListener('touchend',function(e){
+    handleLongPressCancel();
+    if(!touchTracking.active)return;
+    touchTracking.active=false;
+
+    if(!touchTracking.moved)return; // was a tap, let click handle it
+
+    // Swipe finalized
+    if(touchTracking.swipedCells.size>0){
+      saveHistory();
+      let placed=0;
+      for(let y=0;y<GS.data.size;y++)for(let x=0;x<GS.data.size;x++)if(GS.board[y][x].state===1)placed++;
+      document.getElementById('remain').innerText=GS.data.size-placed;
+      checkWin();
+    }
+    e.preventDefault(); // prevent ghost click
+  },{passive:false});
+  b.addEventListener('touchcancel',function(){handleLongPressCancel();touchTracking.active=false},{passive:false});
+
+  // Click = tap (fires after touchend for taps, or mouse click on desktop)
+  b.addEventListener('click',function(e){
+    if(GS.locked)return;
+    const cellEl=e.target.closest('.cell');
+    if(!cellEl||!cellEl.dataset.x)return;
+    if(touchTracking.moved){
+      touchTracking.moved=false;
+      return;
+    }
+    const x=parseInt(cellEl.dataset.x);
+    const y=parseInt(cellEl.dataset.y);
+    handleCellClick(x,y);
+  });
+
+  // Mouse long-press for desktop
+  b.addEventListener('mousedown',function(e){
+    if(GS.locked)return;
+    const cellEl=e.target.closest('.cell');
+    if(!cellEl||!cellEl.dataset.x)return;
+    const x=parseInt(cellEl.dataset.x);
+    const y=parseInt(cellEl.dataset.y);
+    if(GS.board[y][x].state===2)handleLongPressStart(x,y);
+  });
+  b.addEventListener('mouseup',handleLongPressCancel);
+  b.addEventListener('mouseleave',handleLongPressCancel);
+
+  boardEventsBound=true;
 }
 
 // ===================== Board Rendering =====================
@@ -745,6 +847,7 @@ function renderBoard(){
       const div=document.createElement('div');
       div.className='cell';
       div.style.backgroundColor=d.colors[y][x];
+      div.dataset.x=x;div.dataset.y=y;
       const cell=GS.board[y][x];
 
       if(cell.state===1){
@@ -760,23 +863,6 @@ function renderBoard(){
         div.appendChild(sp);
       }
 
-      // Cycle interaction: tap empty->X, tap X->queen, tap queen->empty
-      div.addEventListener('click',function(e){
-        e.preventDefault();
-        if(GS.locked)return;
-        handleCellClick(x,y);
-      });
-
-      // Swipe to mark X (for non-tutorial)
-      div.addEventListener('touchstart',function(e){
-        if(GS.locked||GS.tutorial)return;
-        if(cell.state===0){
-          cell.state=2;
-          snd('cross');
-          renderBoard();
-        }
-      },{passive:true});
-
       b.appendChild(div);
     }
   }
@@ -785,11 +871,21 @@ function renderBoard(){
   checkWin();
 }
 
-// ===================== Cell Click Handler =====================
-let lastTap=0;
+// ===================== Touch / Click Interaction =====================
+// Track touch state to distinguish tap vs swipe
+let touchTracking={active:false,moved:false,startX:0,startY:0,swipedCells:new Set()};
+
+function getCellAtPoint(clientX,clientY){
+  const el=document.elementFromPoint(clientX,clientY);
+  if(!el)return null;
+  const cell=el.closest('.cell');
+  if(!cell||!cell.dataset.x)return null;
+  return{x:parseInt(cell.dataset.x),y:parseInt(cell.dataset.y),el:cell};
+}
+
+// ===================== Cell Click Handler (tap only) =====================
 function handleCellClick(x,y){
   const cell=GS.board[y][x];
-  const now=Date.now();
 
   // During tutorial, only allow specific targets
   if(GS.tutorial&&tutStep>=0){
@@ -805,14 +901,42 @@ function handleCellClick(x,y){
     saveHistory();
     renderBoard();
   }else if(cell.state===2){
+    // Remove X -> back to empty
+    cell.state=0;
+    snd('cross');
+    saveHistory();
+    renderBoard();
+  }else if(cell.state===1){
+    // Remove queen -> back to empty
+    saveHistory();
+    cell.state=0;
+    snd('cross');
+    renderBoard();
+  }
+}
+
+// ===================== Long press to place queen =====================
+let longPressTimer=null;
+let longPressTarget=null;
+
+function handleLongPressStart(x,y){
+  if(GS.locked)return;
+  const cell=GS.board[y][x];
+  if(cell.state!==2)return; // only from X state
+  // During tutorial, only allow specific targets
+  if(GS.tutorial&&tutStep>=0){
+    const target=tutSteps[tutStep];
+    if(!target||(target.x!==x||target.y!==y))return;
+  }
+  longPressTarget={x,y};
+  longPressTimer=setTimeout(()=>{
     // Place queen
     if(checkConflict(x,y)){
-      cell.state=0; // revert to empty, show error
+      cell.state=0;
       cell.err=true;
       GS.lives--;
       snd('err');
       renderBoard();
-      // flash conflict
       const idx=y*GS.data.size+x;
       const el=document.querySelectorAll('#board .cell')[idx];
       if(el)el.classList.add('conflict');
@@ -824,14 +948,17 @@ function handleCellClick(x,y){
       snd('place');
       renderBoard();
     }
-  }else if(cell.state===1){
-    // Remove queen
-    saveHistory();
-    cell.state=0;
-    snd('cross');
-    renderBoard();
-  }
+    longPressTarget=null;
+  },400);
 }
+
+function handleLongPressCancel(){
+  if(longPressTimer){clearTimeout(longPressTimer);longPressTimer=null;longPressTarget=null}
+}
+
+// ===================== Cell Click Handler =====================
+let lastTap=0;
+
 
 function saveHistory(){
   GS.history.push(GS.board.map(row=>row.map(c=>({...c}))));
@@ -1070,7 +1197,7 @@ function startTutorial(level){
   tutSteps.push({
     x:q0.x,y:q0.y,type:'queen',
     title:`第 1 步：放置牛`,
-    desc:`點擊高亮的${cn0}色格子兩次（空→✕→🐮），放置第一頭牛！`,
+    desc:`點擊高亮格子標記 ✕，再長按同一格子放置 🐮！`,
     logic:`💡 推理：這個格子的同行、同列、同色區域以及周圍8格都沒有其他牛，是唯一安全的位置。`
   });
 
@@ -1141,7 +1268,7 @@ function startTutorial(level){
     tutSteps.push({
       x:q1.x,y:q1.y,type:'queen',
       title:`第 5 步：組合推理`,
-      desc:`現在試著用排除法找出第二頭牛！點擊高亮格子放置 🐮！`,
+      desc:`現在試著用排除法找出第二頭牛！點擊標記 ✕，再長按放置 🐮！`,
       logic:`💡 推理：綜合行列、顏色和相鄰規則，這個${cn1}色格子是當前唯一能放牛的位置。`
     });
   }

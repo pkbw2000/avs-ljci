@@ -1,0 +1,2006 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>2026 馬祖四鄉五島旅遊終極指南 v2</title>
+<style>
+:root {
+  --ocean-deep: #0a3d62;
+  --ocean-mid: #1a5a8a;
+  --ocean-light: #4a90b8;
+  --ocean-pale: #a8d4e6;
+  --seafoam: #7fc8a9;
+  --sand: #f0e6d3;
+  --stone: #8b8378;
+  --stone-dark: #5c5347;
+  --amber: #e8a838;
+  --amber-dark: #c48820;
+  --cream: #faf6f0;
+  --white: #ffffff;
+  --text-dark: #2c3e50;
+  --text-mid: #5a6c7d;
+  --shadow: 0 2px 12px rgba(10,61,98,0.12);
+  --shadow-hover: 0 8px 32px rgba(10,61,98,0.2);
+  --radius: 16px;
+  --radius-sm: 10px;
+  --nav-h: 60px;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+html { scroll-behavior: smooth; scroll-padding-top: calc(var(--nav-h) + 20px); }
+
+body {
+  font-family: -apple-system, "Microsoft JhengHei", "PingFang TC", "Noto Sans TC", sans-serif;
+  background: var(--cream);
+  color: var(--text-dark);
+  line-height: 1.8;
+  font-size: 16px;
+  overflow-x: hidden;
+}
+
+/* ===== PROGRESS BAR ===== */
+#progressBar {
+  position: fixed;
+  top: 0; left: 0;
+  width: 0%;
+  height: 3px;
+  background: linear-gradient(90deg, var(--seafoam), var(--amber), var(--ocean-light));
+  z-index: 10000;
+  transition: width 0.1s;
+}
+
+/* ===== NAVBAR ===== */
+#navbar {
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  height: var(--nav-h);
+  background: rgba(10,61,98,0.95);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 24px;
+  box-shadow: 0 2px 20px rgba(0,0,0,0.15);
+  transform: translateY(-100%);
+  transition: transform 0.4s ease;
+}
+
+#navbar.show { transform: translateY(0); }
+
+.nav-brand {
+  color: var(--white);
+  font-weight: 700;
+  font-size: 16px;
+  letter-spacing: 1px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.nav-brand .dot {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  background: var(--seafoam);
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.5; transform: scale(1.3); }
+}
+
+.nav-links {
+  display: flex;
+  gap: 4px;
+  list-style: none;
+}
+
+.nav-links a {
+  color: rgba(255,255,255,0.75);
+  text-decoration: none;
+  font-size: 13px;
+  padding: 6px 14px;
+  border-radius: 50px;
+  transition: all 0.3s;
+  white-space: nowrap;
+}
+
+.nav-links a:hover, .nav-links a.active {
+  color: var(--white);
+  background: rgba(255,255,255,0.15);
+}
+
+#navToggle {
+  display: none;
+  background: none;
+  border: none;
+  color: var(--white);
+  font-size: 24px;
+  cursor: pointer;
+}
+
+@media (max-width: 768px) {
+  #navToggle { display: block; }
+  .nav-links {
+    position: fixed;
+    top: var(--nav-h); left: 0; right: 0;
+    background: rgba(10,61,98,0.98);
+    flex-direction: column;
+    padding: 16px;
+    gap: 8px;
+    transform: translateY(-150%);
+    transition: transform 0.4s;
+  }
+  .nav-links.open { transform: translateY(0); }
+  .nav-links a { font-size: 15px; padding: 10px 16px; }
+}
+
+/* ===== BACK TO TOP ===== */
+#backTop {
+  position: fixed;
+  bottom: 30px; right: 30px;
+  width: 48px; height: 48px;
+  border-radius: 50%;
+  background: var(--ocean-deep);
+  color: var(--white);
+  border: none;
+  font-size: 20px;
+  cursor: pointer;
+  opacity: 0;
+  transform: translateY(20px);
+  transition: all 0.4s;
+  z-index: 9998;
+  box-shadow: 0 4px 16px rgba(10,61,98,0.3);
+}
+
+#backTop.show { opacity: 1; transform: translateY(0); }
+#backTop:hover { background: var(--ocean-mid); transform: scale(1.1); }
+
+/* ===== HERO ===== */
+.hero {
+  position: relative;
+  min-height: 600px;
+  background: linear-gradient(135deg, var(--ocean-deep) 0%, var(--ocean-mid) 50%, var(--ocean-light) 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  overflow: hidden;
+}
+
+#heroCanvas {
+  position: absolute;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  z-index: 1;
+}
+
+.hero::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: radial-gradient(circle at 20% 30%, rgba(127,200,169,0.15) 0%, transparent 50%),
+              radial-gradient(circle at 80% 70%, rgba(232,168,56,0.1) 0%, transparent 50%);
+  z-index: 2;
+}
+
+.hero-content {
+  position: relative;
+  z-index: 3;
+  padding: 80px 24px 60px;
+  max-width: 800px;
+}
+
+.hero-tag {
+  display: inline-block;
+  padding: 6px 18px;
+  background: rgba(255,255,255,0.12);
+  border: 1px solid rgba(255,255,255,0.25);
+  border-radius: 50px;
+  color: var(--seafoam);
+  font-size: 13px;
+  letter-spacing: 3px;
+  margin-bottom: 24px;
+  backdrop-filter: blur(8px);
+  animation: fadeInDown 1s ease;
+}
+
+.hero h1 {
+  font-size: 44px;
+  color: var(--white);
+  font-weight: 700;
+  letter-spacing: 2px;
+  margin-bottom: 16px;
+  text-shadow: 0 2px 20px rgba(0,0,0,0.25);
+  animation: fadeInUp 1s ease 0.2s both;
+}
+
+.hero-sub {
+  font-size: 18px;
+  color: rgba(255,255,255,0.85);
+  line-height: 1.7;
+  max-width: 600px;
+  margin: 0 auto;
+  animation: fadeInUp 1s ease 0.4s both;
+}
+
+.hero-stats {
+  display: flex;
+  justify-content: center;
+  gap: 40px;
+  margin-top: 36px;
+  animation: fadeInUp 1s ease 0.6s both;
+}
+
+.hero-stat { text-align: center; }
+.hero-stat .num { font-size: 32px; font-weight: 800; color: var(--seafoam); }
+.hero-stat .label { font-size: 12px; color: rgba(255,255,255,0.6); letter-spacing: 2px; }
+
+@media (max-width: 600px) {
+  .hero h1 { font-size: 28px; }
+  .hero-sub { font-size: 15px; }
+  .hero-stats { gap: 20px; }
+  .hero-stat .num { font-size: 24px; }
+}
+
+@keyframes fadeInDown { from { opacity: 0; transform: translateY(-20px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes fadeInUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+
+.hero-wave {
+  position: absolute;
+  bottom: 0; left: 0; right: 0;
+  height: 80px;
+  z-index: 4;
+}
+
+.hero-wave svg { width: 100%; height: 100%; }
+
+.wave-path { animation: waveMove 8s ease-in-out infinite; }
+@keyframes waveMove {
+  0%, 100% { transform: translateX(0); }
+  50% { transform: translateX(-30px); }
+}
+
+/* ===== CONTAINER ===== */
+.container {
+  max-width: 1000px;
+  margin: 0 auto;
+  padding: 0 20px;
+}
+
+/* ===== SECTION TITLE ===== */
+.section-title {
+  text-align: center;
+  margin: 64px 0 36px;
+}
+
+.section-title h2 {
+  font-size: 28px;
+  color: var(--ocean-deep);
+  font-weight: 700;
+  letter-spacing: 1px;
+  position: relative;
+  display: inline-block;
+  padding-bottom: 12px;
+}
+
+.section-title h2::after {
+  content: '';
+  position: absolute;
+  bottom: 0; left: 50%;
+  transform: translateX(-50%);
+  width: 48px; height: 3px;
+  background: var(--amber);
+  border-radius: 2px;
+}
+
+.section-title p {
+  color: var(--text-mid);
+  font-size: 15px;
+  margin-top: 10px;
+}
+
+/* ===== REVEAL ANIMATION ===== */
+.reveal {
+  opacity: 0;
+  transform: translateY(40px);
+  transition: opacity 0.8s ease, transform 0.8s ease;
+}
+
+.reveal.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* ===== ISLANDS OVERVIEW ===== */
+.islands-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: 16px;
+  margin: 32px 0;
+}
+
+.island-card {
+  background: var(--white);
+  border-radius: var(--radius);
+  padding: 28px 16px;
+  text-align: center;
+  box-shadow: var(--shadow);
+  transition: transform 0.4s, box-shadow 0.4s;
+  border-top: 4px solid var(--ocean-light);
+  cursor: pointer;
+  text-decoration: none;
+  color: inherit;
+  display: block;
+}
+
+.island-card:nth-child(1) { border-top-color: var(--ocean-deep); }
+.island-card:nth-child(2) { border-top-color: var(--seafoam); }
+.island-card:nth-child(3) { border-top-color: var(--amber); }
+.island-card:nth-child(4) { border-top-color: var(--ocean-light); }
+.island-card:nth-child(5) { border-top-color: var(--stone); }
+
+.island-card:hover {
+  transform: translateY(-8px) scale(1.03);
+  box-shadow: var(--shadow-hover);
+}
+
+.island-card .icon { font-size: 36px; margin-bottom: 10px; display: block; transition: transform 0.4s; }
+.island-card:hover .icon { transform: scale(1.2) rotate(5deg); }
+
+.island-card h3 { font-size: 18px; color: var(--ocean-deep); margin-bottom: 6px; }
+.island-card .nickname { font-size: 12px; color: var(--amber-dark); margin-bottom: 8px; letter-spacing: 1px; }
+.island-card p { font-size: 13px; color: var(--text-mid); line-height: 1.5; }
+
+/* ===== SEASON CHART ===== */
+.season-section {
+  background: var(--white);
+  border-radius: var(--radius);
+  padding: 36px;
+  box-shadow: var(--shadow);
+  margin: 32px 0;
+}
+
+.season-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 20px;
+  font-size: 14px;
+}
+
+.season-table th {
+  background: var(--ocean-deep);
+  color: var(--white);
+  padding: 12px 8px;
+  font-weight: 600;
+  text-align: center;
+}
+
+.season-table th:first-child { border-radius: 6px 0 0 0; }
+.season-table th:last-child { border-radius: 0 6px 0 0; }
+
+.season-table td {
+  padding: 10px 8px;
+  text-align: center;
+  border-bottom: 1px solid #e8e0d0;
+}
+
+.season-table tr:last-child td { border-bottom: none; }
+.season-table .month-col { font-weight: 600; color: var(--ocean-deep); background: #f5f0e6; }
+.season-table tr:hover td { background: #f9f6f0; }
+
+.badge-best { background: #e8f5e9; color: #2e7d32; padding: 3px 10px; border-radius: 50px; font-size: 12px; white-space: nowrap; }
+.badge-good { background: #fff3e0; color: #e65100; padding: 3px 10px; border-radius: 50px; font-size: 12px; white-space: nowrap; }
+.badge-avoid { background: #fce4ec; color: #c62828; padding: 3px 10px; border-radius: 50px; font-size: 12px; white-space: nowrap; }
+
+/* ===== ISLAND DETAIL ===== */
+.island-detail { margin: 56px 0; }
+
+.island-header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 24px;
+  padding: 24px 28px;
+  border-radius: var(--radius);
+  color: var(--white);
+  position: relative;
+  overflow: hidden;
+}
+
+.island-header::after {
+  content: '';
+  position: absolute;
+  top: -50%; right: -20%;
+  width: 200px; height: 200px;
+  background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
+  border-radius: 50%;
+}
+
+.island-header.nangan { background: linear-gradient(135deg, var(--ocean-deep), var(--ocean-mid)); }
+.island-header.beigan { background: linear-gradient(135deg, #5fb088, var(--seafoam)); }
+.island-header.dongyin { background: linear-gradient(135deg, var(--amber-dark), var(--amber)); }
+.island-header.dongjyu { background: linear-gradient(135deg, var(--ocean-light), #6ab0d0); }
+.island-header.xijyu { background: linear-gradient(135deg, var(--stone-dark), var(--stone)); }
+
+.island-header .num { font-size: 40px; font-weight: 800; opacity: 0.25; }
+.island-header h3 { font-size: 24px; font-weight: 700; letter-spacing: 1px; }
+.island-header .sub { font-size: 13px; opacity: 0.8; margin-top: 2px; }
+
+.detail-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+
+@media (max-width: 700px) {
+  .detail-grid { grid-template-columns: 1fr; }
+}
+
+.detail-card {
+  background: var(--white);
+  border-radius: var(--radius-sm);
+  padding: 24px;
+  box-shadow: var(--shadow);
+  transition: box-shadow 0.3s;
+}
+
+.detail-card:hover { box-shadow: var(--shadow-hover); }
+
+.detail-card .label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--ocean-deep);
+  margin-bottom: 14px;
+  padding-bottom: 8px;
+  border-bottom: 2px solid #e8e0d0;
+}
+
+.detail-card .label .emoji { font-size: 18px; }
+
+.detail-card ul { list-style: none; padding: 0; }
+
+.detail-card li {
+  padding: 8px 0;
+  font-size: 14px;
+  color: var(--text-dark);
+  line-height: 1.7;
+  padding-left: 20px;
+  position: relative;
+}
+
+.detail-card li::before {
+  content: '';
+  position: absolute;
+  left: 0; top: 16px;
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: var(--seafoam);
+  transition: transform 0.3s;
+}
+
+.detail-card li:hover::before { transform: scale(1.5); }
+
+.detail-card li .tag {
+  display: inline-block;
+  background: #f0e6d3;
+  color: var(--amber-dark);
+  padding: 1px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  margin-left: 6px;
+}
+
+.detail-card li .info {
+  display: block;
+  font-size: 12px;
+  color: var(--text-mid);
+  margin-top: 2px;
+  padding-left: 0;
+}
+
+.detail-card li .info::before { display: none; }
+
+.detail-card.full-width { grid-column: 1 / -1; }
+
+/* ===== BUDGET BOX ===== */
+.budget-box {
+  background: linear-gradient(135deg, #f5f0e6, #faf6f0);
+  border-left: 4px solid var(--amber);
+  padding: 20px 24px;
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+}
+
+.budget-box .label { border-bottom: none; margin-bottom: 10px; }
+
+.budget-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 0;
+  border-bottom: 1px dashed #d5cbb5;
+  font-size: 14px;
+}
+
+.budget-row:last-child { border-bottom: none; }
+.budget-row .item { color: var(--text-mid); }
+.budget-row .price { font-weight: 700; color: var(--ocean-deep); }
+
+.budget-total {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 2px solid var(--amber);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.budget-total .label-text { font-weight: 700; color: var(--text-dark); font-size: 15px; }
+.budget-total .total-price { font-size: 20px; font-weight: 800; color: var(--amber-dark); }
+
+/* ===== ITINERARY ===== */
+.itinerary-section {
+  background: var(--white);
+  border-radius: var(--radius);
+  padding: 36px;
+  box-shadow: var(--shadow);
+  margin: 32px 0;
+}
+
+.itinerary-tabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 24px;
+  flex-wrap: wrap;
+}
+
+.itinerary-tab {
+  padding: 8px 20px;
+  border-radius: 50px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  border: 2px solid var(--ocean-light);
+  color: var(--ocean-light);
+  background: var(--white);
+  transition: all 0.3s;
+}
+
+.itinerary-tab.active {
+  background: var(--ocean-deep);
+  border-color: var(--ocean-deep);
+  color: var(--white);
+  transform: scale(1.05);
+}
+
+.itinerary-tab:hover:not(.active) {
+  border-color: var(--ocean-deep);
+  color: var(--ocean-deep);
+}
+
+.itinerary-content { display: none; animation: fadeIn 0.5s; }
+.itinerary-content.active { display: block; }
+
+@keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+.itinerary-day {
+  display: flex;
+  gap: 16px;
+  padding: 16px 0;
+  border-bottom: 1px solid #eee;
+  transition: background 0.3s;
+  border-radius: 8px;
+  padding-left: 8px;
+}
+
+.itinerary-day:hover { background: #f9f6f0; }
+
+.itinerary-day:last-child { border-bottom: none; }
+
+.day-badge {
+  flex-shrink: 0;
+  width: 52px; height: 52px;
+  border-radius: 50%;
+  background: var(--ocean-deep);
+  color: var(--white);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 14px;
+  flex-direction: column;
+  line-height: 1.2;
+  transition: transform 0.3s;
+}
+
+.itinerary-day:hover .day-badge { transform: scale(1.1) rotate(5deg); }
+
+.day-badge span { font-size: 10px; opacity: 0.7; }
+
+.day-content h4 { font-size: 16px; color: var(--ocean-deep); margin-bottom: 4px; }
+.day-content p { font-size: 14px; color: var(--text-mid); line-height: 1.6; }
+
+/* ===== TIPS ===== */
+.tips-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 20px;
+  margin: 32px 0;
+}
+
+.tip-card {
+  background: var(--white);
+  border-radius: var(--radius-sm);
+  padding: 24px;
+  box-shadow: var(--shadow);
+  border-left: 4px solid var(--seafoam);
+  transition: transform 0.3s, box-shadow 0.3s;
+}
+
+.tip-card:nth-child(2) { border-left-color: var(--amber); }
+.tip-card:nth-child(3) { border-left-color: var(--ocean-light); }
+.tip-card:nth-child(4) { border-left-color: var(--stone); }
+.tip-card:nth-child(5) { border-left-color: var(--ocean-deep); }
+
+.tip-card:hover { transform: translateY(-4px); box-shadow: var(--shadow-hover); }
+
+.tip-card h4 {
+  font-size: 16px;
+  color: var(--ocean-deep);
+  margin-bottom: 10px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.tip-card p, .tip-card li {
+  font-size: 14px;
+  color: var(--text-mid);
+  line-height: 1.7;
+}
+
+.tip-card ul { list-style: none; padding: 0; }
+.tip-card li { padding: 4px 0; padding-left: 16px; position: relative; }
+.tip-card li::before { content: '>'; position: absolute; left: 0; color: var(--seafoam); font-weight: 700; }
+
+/* ===== TRANSPORT TABLE ===== */
+.transport-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 20px 0;
+  font-size: 13px;
+  background: var(--white);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  box-shadow: var(--shadow);
+}
+
+.transport-table th {
+  background: var(--ocean-mid);
+  color: var(--white);
+  padding: 12px 10px;
+  text-align: left;
+  font-weight: 600;
+}
+
+.transport-table td {
+  padding: 10px;
+  border-bottom: 1px solid #eee;
+  color: var(--text-dark);
+}
+
+.transport-table tr:last-child td { border-bottom: none; }
+.transport-table tr:hover td { background: #f9f6f0; }
+
+/* ===== NOTE BOX ===== */
+.note-box {
+  background: #fff8e1;
+  border: 1px solid #ffe082;
+  border-radius: var(--radius-sm);
+  padding: 16px 20px;
+  margin: 20px 0;
+  font-size: 14px;
+  color: var(--text-dark);
+}
+
+.note-box strong { color: var(--amber-dark); }
+
+/* ===== CONTACT BOX ===== */
+.contact-box {
+  background: #eaf4f9;
+  border: 1px solid #b8d4e6;
+  border-radius: var(--radius-sm);
+  padding: 14px 16px;
+  margin: 10px 0;
+  font-size: 13px;
+  color: var(--text-dark);
+}
+
+.contact-box .ct-name { font-weight: 700; color: var(--ocean-deep); }
+.contact-box .ct-line { display: flex; gap: 6px; align-items: baseline; margin-top: 4px; }
+.contact-box .ct-label { color: var(--text-mid); min-width: 48px; }
+.contact-box .ct-val { color: var(--text-dark); }
+.contact-box .ct-val a { color: var(--ocean-mid); text-decoration: none; }
+.contact-box .ct-val a:hover { text-decoration: underline; }
+
+/* ===== FOOTER ===== */
+.footer {
+  background: var(--ocean-deep);
+  color: rgba(255,255,255,0.7);
+  text-align: center;
+  padding: 48px 20px;
+  margin-top: 80px;
+  position: relative;
+  overflow: hidden;
+}
+
+.footer p { font-size: 14px; line-height: 1.8; }
+.footer .disclaimer { font-size: 12px; opacity: 0.6; margin-top: 16px; max-width: 600px; margin-left: auto; margin-right: auto; }
+.footer-links { margin-top: 20px; display: flex; justify-content: center; gap: 16px; flex-wrap: wrap; }
+.footer-links a { color: var(--seafoam); font-size: 13px; text-decoration: none; transition: color 0.3s; }
+.footer-links a:hover { color: var(--white); text-decoration: underline; }
+
+/* ===== RESPONSIVE ===== */
+@media (max-width: 600px) {
+  .hero h1 { font-size: 26px; }
+  .hero-sub { font-size: 14px; }
+  .island-header { flex-direction: column; text-align: center; }
+  .section-title h2 { font-size: 22px; }
+  .season-section, .itinerary-section { padding: 20px; }
+  .hero-stats { flex-wrap: wrap; }
+}
+</style>
+</head>
+<body>
+
+<!-- PROGRESS BAR -->
+<div id="progressBar"></div>
+
+<!-- NAVBAR -->
+<nav id="navbar">
+  <div class="nav-brand"><span class="dot"></span>馬祖五島指南</div>
+  <button id="navToggle" aria-label="menu">&#9776;</button>
+  <ul class="nav-links" id="navLinks">
+    <li><a href="#overview" class="nav-link">總覽</a></li>
+    <li><a href="#season" class="nav-link">出行時間</a></li>
+    <li><a href="#nangan" class="nav-link">南竿</a></li>
+    <li><a href="#beigan" class="nav-link">北竿</a></li>
+    <li><a href="#dongyin" class="nav-link">東引</a></li>
+    <li><a href="#dongjyu" class="nav-link">東莒</a></li>
+    <li><a href="#xijyu" class="nav-link">西莒</a></li>
+    <li><a href="#itinerary" class="nav-link">行程</a></li>
+    <li><a href="#transport" class="nav-link">交通</a></li>
+    <li><a href="#tips" class="nav-link">Tips</a></li>
+  </ul>
+</nav>
+
+<!-- BACK TO TOP -->
+<button id="backTop" aria-label="back to top">&#8593;</button>
+
+<!-- ===== HERO ===== -->
+<section class="hero">
+  <canvas id="heroCanvas"></canvas>
+  <div class="hero-content">
+    <span class="hero-tag">2026 TRAVEL GUIDE v2</span>
+    <h1>馬祖四鄉五島旅遊終極指南</h1>
+    <p class="hero-sub">閩東古韻 x 戰地秘境 x 藍眼淚奇觀<br>從南竿到東引，五座島嶼，五種風情<br>一份攻略，帶你玩遍馬祖每一寸海角</p>
+    <div class="hero-stats">
+      <div class="hero-stat"><div class="num">5</div><div class="label">島嶼</div></div>
+      <div class="hero-stat"><div class="num">40+</div><div class="label">景點</div></div>
+      <div class="hero-stat"><div class="num">20+</div><div class="label">美食</div></div>
+      <div class="hero-stat"><div class="num">3</div><div class="label">行程路線</div></div>
+    </div>
+  </div>
+  <div class="hero-wave">
+    <svg viewBox="0 0 1200 80" preserveAspectRatio="none">
+      <path class="wave-path" d="M0,40 C150,60 350,20 600,40 C850,60 1050,20 1200,40 L1200,80 L0,80 Z" fill="#faf6f0"/>
+      <path class="wave-path" d="M0,50 C200,30 400,70 600,50 C800,30 1000,70 1200,50 L1200,80 L0,80 Z" fill="#faf6f0" opacity="0.5" style="animation-delay: -3s;"/>
+    </svg>
+  </div>
+</section>
+
+<div class="container">
+
+<!-- ===== 五島概覽 ===== -->
+<div class="section-title reveal" id="overview">
+  <h2>四鄉五島總覽</h2>
+  <p>馬祖列島由南竿、北竿、東引、東莒、西莒五座有人島嶼組成，各具獨特魅力。點擊卡片跳轉至對應島嶼詳情</p>
+</div>
+
+<div class="islands-grid reveal">
+  <a class="island-card" href="#nangan">
+    <span class="icon">&#127970;</span>
+    <h3>南竿島</h3>
+    <div class="nickname">人文之心</div>
+    <p>馬祖政經中心，北海坑道、媽祖神像、八八坑道所在地，交通樞紐</p>
+  </a>
+  <a class="island-card" href="#beigan">
+    <span class="icon">&#127947;</span>
+    <h3>北竿島</h3>
+    <div class="nickname">馬祖地中海</div>
+    <p>芹壁石厝聚落、大坵梅花鹿、塘后沙灘，攝影天堂</p>
+  </a>
+  <a class="island-card" href="#dongyin">
+    <span class="icon">&#128680;</span>
+    <h3>東引島</h3>
+    <div class="nickname">國之北疆</div>
+    <p>最東最北領土，東湧燈塔、一線天、壯觀海蝕地景，孤絕之美</p>
+  </a>
+  <a class="island-card" href="#dongjyu">
+    <span class="icon">&#129413;</span>
+    <h3>東莒島</h3>
+    <div class="nickname">神話之鳥故鄉</div>
+    <p>百年東犬燈塔、蛇島燕鷗保護區、大埔石刻，靜謐漁村風情</p>
+  </a>
+  <a class="island-card" href="#xijyu">
+    <span class="icon">&#127754;</span>
+    <h3>西莒島</h3>
+    <div class="nickname">方塊海秘境</div>
+    <p>坤坵沙灘方塊海奇觀、趕海體驗、蛇島賞鷗，最原始的自然野趣</p>
+  </a>
+</div>
+
+<!-- ===== 最佳出行時間 ===== -->
+<div class="section-title reveal" id="season">
+  <h2>最佳出行時間</h2>
+  <p>掌握季節密碼，才能遇見最美的馬祖</p>
+</div>
+
+<div class="season-section reveal">
+  <div class="note-box">
+    <strong>藍眼淚核心季節：</strong>每年 4 月至 6 月為馬祖藍眼淚最佳觀賞期，其中 4 月中旬至 5 月下旬為高峰。夜光藻型藍眼淚（3-6月）呈大片藍色光帶，最為壯觀；7-8月轉為海螢型，顆粒感更強。最佳觀測時段為晚間 21:00 至凌晨 01:00，需無光害、漲潮前後。馬祖燕鷗保護區涵蓋 8 座無人島礁，每年 4-9 月為繁殖期，6-8 月為賞鷗旺季，有機會看見「神話之鳥」黑嘴端鳳頭燕鷗。
+  </div>
+  
+  <table class="season-table">
+    <thead>
+      <tr>
+        <th>月份</th>
+        <th>氣溫</th>
+        <th>藍眼淚</th>
+        <th>燕鷗季</th>
+        <th>綜合評價</th>
+        <th>推薦指數</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td class="month-col">1-2月</td>
+        <td>11-14&deg;C</td>
+        <td>--</td>
+        <td>--</td>
+        <td>東北季風強勁，寒冷乾燥，部分船班停航</td>
+        <td><span class="badge-avoid">不推薦</span></td>
+      </tr>
+      <tr>
+        <td class="month-col">3月</td>
+        <td>14-16&deg;C</td>
+        <td>初現</td>
+        <td>--</td>
+        <td>氣溫回暖，藍眼淚開始出現，遊客較少</td>
+        <td><span class="badge-good">可前往</span></td>
+      </tr>
+      <tr>
+        <td class="month-col">4-5月</td>
+        <td>18-21&deg;C</td>
+        <td>高峰</td>
+        <td>初至</td>
+        <td>藍眼淚爆發期 + 氣溫舒適 + 燕鷗現蹤</td>
+        <td><span class="badge-best">最佳時段</span></td>
+      </tr>
+      <tr>
+        <td class="month-col">6月</td>
+        <td>24&deg;C</td>
+        <td>佳</td>
+        <td>旺季</td>
+        <td>藍眼淚尾聲 + 燕鷗旺季 + 海上活動開放</td>
+        <td><span class="badge-best">最佳時段</span></td>
+      </tr>
+      <tr>
+        <td class="month-col">7-8月</td>
+        <td>28&deg;C</td>
+        <td>海螢型</td>
+        <td>旺季</td>
+        <td>暑期活動多（微光馬祖），海上看東引，炎熱但熱鬧</td>
+        <td><span class="badge-good">推薦</span></td>
+      </tr>
+      <tr>
+        <td class="month-col">9-10月</td>
+        <td>23-28&deg;C</td>
+        <td>偶現</td>
+        <td>尾聲</td>
+        <td>秋高氣爽，海水清澈，適合慢遊與攝影</td>
+        <td><span class="badge-best">推薦</span></td>
+      </tr>
+      <tr>
+        <td class="month-col">11-12月</td>
+        <td>13-19&deg;C</td>
+        <td>--</td>
+        <td>--</td>
+        <td>轉涼，東北季風漸強，適合人文深度遊</td>
+        <td><span class="badge-good">可前往</span></td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- ===== 1. 南竿島 ===== -->
+<div class="island-detail reveal" id="nangan">
+  <div class="island-header nangan">
+    <span class="num">01</span>
+    <div>
+      <h3>南竿島 &mdash; 人文之心</h3>
+      <div class="sub">馬祖政經中心 | 交通樞紐 | 歷史人文精華</div>
+    </div>
+  </div>
+
+  <div class="detail-grid">
+    <div class="detail-card">
+      <div class="label"><span class="emoji">&#128205;</span> 必訪景點</div>
+      <ul>
+        <li><strong>北海坑道</strong> &mdash; 全台36大秘境之一，1968年人工開鑿的花崗岩地下碼道，可乘船穿行 <span class="tag">需配合潮汐</span>
+          <span class="info">地址：連江縣南竿鄉仁愛村 | 電話：0836-25630（南竿遊客中心）| 免費參觀</span>
+        </li>
+        <li><strong>媽祖巨神像</strong> &mdash; 全球最高媽祖石像（29.6公尺），365塊花崗岩寓意日日平安
+          <span class="info">地址：連江縣南竿鄉馬祖村 | 免費參觀 | 含媽祖文化展館</span>
+        </li>
+        <li><strong>八八坑道</strong> &mdash; 全長273公尺戰備坑道，現為馬祖酒廠窖藏，恆溫16-19&deg;C <span class="tag">品酒</span>
+          <span class="info">地址：連江縣南竿鄉牛角嶺下 | 電話：0836-22928（馬祖酒廠）| 免費參觀</span>
+          <span class="info">導覽場次：09:30、10:30、14:30、16:30（需至酒廠展示館集合）</span>
+        </li>
+        <li><strong>馬祖境天后宮</strong> &mdash; 當地信仰中心，媽祖靈穴所在地
+          <span class="info">地址：連江縣南竿鄉馬祖村 | 免費參觀</span>
+        </li>
+        <li><strong>津沙聚落</strong> &mdash; 百年漁村，賞夕陽踏沙灘，保留古樸石厝建築
+          <span class="info">地址：連江縣南竿鄉津沙村 | 免費參觀</span>
+        </li>
+        <li><strong>鐵堡</strong> &mdash; 突出海上的獨立岩礁據點，地下化軍事工事
+          <span class="info">地址：連江縣南竿鄉仁愛村西側 | 全天開放免費</span>
+        </li>
+        <li><strong>雲台山</strong> &mdash; 海拔248公尺，登高俯瞰海天一色，列島風光盡收眼底
+          <span class="info">地址：連江縣南竿鄉 | 二級古蹟</span>
+        </li>
+        <li><strong>大漢據點</strong> &mdash; 海上鐵堡，戰地遺跡與海景交融
+          <span class="info">地址：連江縣南竿鄉仁愛村 | 免費參觀</span>
+        </li>
+        <li><strong>馬祖民俗文物館</strong> &mdash; 四層展廳，深入了解閩東文化與馬祖歷史
+          <span class="info">地址：連江縣南竿鄉清水村介壽公園內 | 電話：0836-22168 | 09:00-17:00（週一休）</span>
+        </li>
+        <li><strong>四維生態園區（新景點）</strong> &mdash; 馬祖第一座被步道環繞的軍事遺址，龍貓隧道、無敵海景觀景平台、西尾夕照
+          <span class="info">地址：連江縣南竿鄉四維村 | 免費參觀 | 無人工路燈，傍晚請趁天黑前下山</span>
+        </li>
+        <li><strong>腰山遊憩區（新景點）</strong> &mdash; 舊軍事營區改造，白天海景咖啡廳、夜晚微醺深夜食堂
+          <span class="info">地址：連江縣南竿鄉 | 含伴手禮店與體驗活動場館</span>
+        </li>
+        <li><strong>枕戈待旦</strong> &mdash; 福山照壁上馬祖最顯目的海上地標
+          <span class="info">地址：連江縣南竿鄉福山公園山頭 | 全天可見</span>
+        </li>
+      </ul>
+    </div>
+
+    <div class="detail-card">
+      <div class="label"><span class="emoji">&#127836;</span> 必吃美食</div>
+      <ul>
+        <li><strong>老酒麵線</strong> &mdash; 馬祖靈魂美食，老酒湯底配荷包蛋、紅糟，暖身暖心</li>
+        <li><strong>紅糟料理</strong> &mdash; 紅糟肉、紅糟炒、紅糟炒飯、紅糟雞，老酒釀造副產物的萬用法寶</li>
+        <li><strong>淡菜</strong> &mdash; 新鮮清蒸，肥美多汁，馬祖海味代表</li>
+        <li><strong>佛手</strong> &mdash; 當地特有貝類，外型如佛手，鮮甜嘗鮮</li>
+        <li><strong>戚光餅（繼光餅）</strong> &mdash; 馬祖版貝果，表面芝麻，可夾肉食用</li>
+        <li><strong>馬祖老酒</strong> &mdash; 紅寶石色石色澤，溫潤醇厚，直飲或入菜皆宜</li>
+        <li><strong>老酒拿鐵</strong> &mdash; 南竿機場特色咖啡，酒香與奶香交融</li>
+        <li><strong>箬飯（米時）</strong> &mdash; 馬祖傳統甜點，糯米糰包紅豆沙餡，外層滾糯米粒蒸熟
+          <span class="info">七月半祭祖應景點心，軟糯Q彈，可在介壽獅子市場尋找</span>
+        </li>
+      </ul>
+      <div class="contact-box">
+        <div class="ct-name">&#127869; 依嬷的店</div>
+        <div class="ct-line"><span class="ct-label">地址：</span><span class="ct-val">連江縣南竿鄉復興村72號</span></div>
+        <div class="ct-line"><span class="ct-label">電話：</span><span class="ct-val"><a href="tel:083626125">0836-26125</a></span></div>
+        <div class="ct-line"><span class="ct-label">特色：</span><span class="ct-val">南竿牛角村在地閩東風味餐廳</span></div>
+      </div>
+      <div class="contact-box">
+        <div class="ct-name">&#127869; 龍和閩東風味館</div>
+        <div class="ct-line"><span class="ct-label">地址：</span><span class="ct-val">連江縣南竿鄉復興村</span></div>
+        <div class="ct-line"><span class="ct-label">特色：</span><span class="ct-val">傳統閩東風味中求創新，紅糟料理招牌</span></div>
+      </div>
+      <div class="contact-box">
+        <div class="ct-name">&#127861; 馬祖酒廠</div>
+        <div class="ct-line"><span class="ct-label">地址：</span><span class="ct-val">連江縣南竿鄉復興村208號</span></div>
+        <div class="ct-line"><span class="ct-label">電話：</span><span class="ct-val"><a href="tel:083622928">0836-22928</a></span></div>
+        <div class="ct-line"><span class="ct-label">特色：</span><span class="ct-val">八八坑道品酒導覽、陳年高粱與老酒</span></div>
+      </div>
+    </div>
+
+    <div class="detail-card">
+      <div class="label"><span class="emoji">&#127919;</span> 玩法建議</div>
+      <ul>
+        <li><strong>北海坑道搖櫓追淚</strong> &mdash; 4-6月夜間限定，坑道內乘搖櫓船近距離欣賞藍眼淚
+          <span class="info">需預約，票價約NT$200/人，配合潮汐時間出航</span>
+        </li>
+        <li><strong>八八坑道品酒之旅</strong> &mdash; 免費參觀坑道酒窖，試飲陳年高粱與老酒
+          <span class="info">每日4場導覽（09:30/10:30/14:30/16:30），需先至展示館集合</span>
+        </li>
+        <li><strong>媽祖文化巡禮</strong> &mdash; 天后宮 → 巨神像 → 民俗文物館，串聯信仰與歷史</li>
+        <li><strong>津沙夕照漫步</strong> &mdash; 傍晚前往津沙聚落，欣賞落日餘暉映照石厝</li>
+        <li><strong>雲台山觀景</strong> &mdash; 登高鳥瞰南竿全景與周邊島嶼</li>
+        <li><strong>介壽獅子市場</strong> &mdash; 馬祖唯一傳統市場，體驗在地生活氣息
+          <span class="info">地址：連江縣南竿鄉介壽村 | 可購買紅糟、老酒等伴手禮</span>
+        </li>
+        <li><strong>四維生態園區散步</strong> &mdash; 走龍貓隧道、看西尾夕照，傍晚前下山</li>
+        <li><strong>腰山遊憩區</strong> &mdash; 白天海景咖啡、夜晚微醺食堂</li>
+        <li><strong>清水濕地尋鱟</strong> &mdash; 運氣好可發現活化石「鱎」，觀察招潮蟹</li>
+      </ul>
+    </div>
+
+    <div class="detail-card budget-box">
+      <div class="label"><span class="emoji">&#128176;</span> 預算估算（每人）</div>
+      <div class="budget-row"><span class="item">住宿（民宿/旅宿）</span><span class="price">NT$1,800-3,500/晚</span></div>
+      <div class="budget-row"><span class="item">餐飲（三餐+小吃）</span><span class="price">NT$600-1,000/天</span></div>
+      <div class="budget-row"><span class="item">機車租賃</span><span class="price">NT$500-600/天</span></div>
+      <div class="budget-row"><span class="item">北海坑道搖櫓船</span><span class="price">NT$200/人</span></div>
+      <div class="budget-row"><span class="item">景點門票</span><span class="price">多數免費</span></div>
+      <div class="budget-total">
+        <span class="label-text">單日預估（不含跨島交通）</span>
+        <span class="total-price">約 NT$3,100-5,100</span>
+      </div>
+      <div style="font-size:12px; color:var(--text-mid); margin-top:8px;">約合人民幣 690-1,130元/天</div>
+    </div>
+  </div>
+  <div class="note-box">
+    <strong>最佳出行時間：</strong>4-6月（藍眼淚+燕鷗）、9-10月（秋高氣爽）。南竿為交通樞紐，建議作為跳島基地。
+  </div>
+  <div class="contact-box">
+    <div class="ct-name">&#128205; 南竿遊客中心</div>
+    <div class="ct-line"><span class="ct-label">地址：</span><span class="ct-val">連江縣南竿鄉仁愛村95-2號</span></div>
+    <div class="ct-line"><span class="ct-label">電話：</span><span class="ct-val"><a href="tel:083625630">0836-25630</a></span></div>
+    <div class="ct-line"><span class="ct-label">時間：</span><span class="ct-val">08:00-17:30</span></div>
+    <div class="ct-line"><span class="ct-label">官網：</span><span class="ct-val"><a href="https://www.matsu-nsa.gov.tw" target="_blank" rel="noopener">matsu-nsa.gov.tw</a></span></div>
+  </div>
+</div>
+
+<!-- ===== 2. 北竿島 ===== -->
+<div class="island-detail reveal" id="beigan">
+  <div class="island-header beigan">
+    <span class="num">02</span>
+    <div>
+      <h3>北竿島 &mdash; 馬祖地中海</h3>
+      <div class="sub">芹壁石厝 | 大坵賞鹿 | 攝影天堂</div>
+    </div>
+  </div>
+
+  <div class="detail-grid">
+    <div class="detail-card">
+      <div class="label"><span class="emoji">&#128205;</span> 必訪景點</div>
+      <ul>
+        <li><strong>芹壁聚落</strong> &mdash; 「馬祖地中海」，花崗岩石厝依山面海，保存最完整的閩東聚落 <span class="tag">必去</span>
+          <span class="info">地址：連江縣北竿鄉芹壁村 | 免費參觀 | 舊名「鏡港」，清末福建長樂陳氏開發</span>
+        </li>
+        <li><strong>大坵島</strong> &mdash; 无人島梅花鹿樂園，搭船前往，近距離餵食互動 <span class="tag">季節限定</span>
+          <span class="info">面積0.69平方公里，全馬祖唯一無車無馬路島嶼 | 有環島步道與木棧平台</span>
+          <span class="info">船班：南竿↔大坵 鴻宇海運，4-10月每日多班，下午可能停航</span>
+        </li>
+        <li><strong>戰爭和平紀念公園</strong> &mdash; 戰地景觀縮影，12據點觀景平台俯瞰北竿
+          <span class="info">地址：連江縣北竿鄉后澳村大澳山 | 占地38.8公頃 | 電話：0836-56535（北竿遊客中心）</span>
+          <span class="info">開放時間：08:30-12:30、13:30-17:00（週三公休），夏季延長至17:30 | 免費參觀</span>
+        </li>
+        <li><strong>壁山觀景台</strong> &mdash; 海拔298公尺，馬祖第一高峰，眺望全島與機場
+          <span class="info">地址：連江縣北竿鄉 | 免費參觀</span>
+        </li>
+        <li><strong>橋仔漁村</strong> &mdash; 一村八廟「神比人多」，傳統廟宇建築與漁村風情
+          <span class="info">地址：連江縣北竿鄉橋仔村 | 含漁業展示館，可即時觀賞鐵尖島燕鷗即時影像</span>
+        </li>
+        <li><strong>塘后沙灘</strong> &mdash; 連接塘岐與后澳的沙灘，藍眼淚觀測熱點
+          <span class="info">地址：連江縣北竿鄉塘岐村 | 含石英砂，陽光下微微閃耀</span>
+        </li>
+        <li><strong>坂里沙灘與坂里天后宮</strong> &mdash; 細緻沙質平緩沙灘，全台最迷你媽祖廟
+          <span class="info">地址：連江縣北竿鄉坂里村 | 5-8月可見海邊月見草與蔓荆開花</span>
+        </li>
+        <li><strong>芹壁播音站</strong> &mdash; 全東南亞輸出功率最大喊話站，48具500瓦大喇叭
+          <span class="info">地址：北竿芹壁村 | 已增設藍牙播放功能</span>
+        </li>
+        <li><strong>午沙坑道</strong> &mdash; 北竿版北海坑道，戰備地下碼頭遺跡
+          <span class="info">地址：連江縣北竿鄉午沙村 | 長約550公尺 | 與南竿、東引北海坑道同時期開鑿</span>
+        </li>
+        <li><strong>螺山自然步道</strong> &mdash; 早期居民採蚵小徑，沿懸崖修築，無遮蔽壯闊海景
+          <span class="info">地址：連江縣北竿鄉 | 風勢較大，穿好走鞋子並防曬</span>
+        </li>
+        <li><strong>碧園</strong> &mdash; 稀有蕨類花園，自然生態豐富
+          <span class="info">地址：連江縣北竿鄉 | 免費參觀</span>
+        </li>
+      </ul>
+    </div>
+
+    <div class="detail-card">
+      <div class="label"><span class="emoji">&#127836;</span> 必吃美食</div>
+      <ul>
+        <li><strong>老酒麵線</strong> &mdash; 鏡沃小吃部招牌，荷包蛋臥麵線，淋老酒與紅糟</li>
+        <li><strong>紅糟豬肉蛋披薩</strong> &mdash; 芹沃烘焙咖啡館創意料理，閩東風味新吃</li>
+        <li><strong>戚光餅</strong> &mdash; 夾紅糟肉食用，馬祖專屬漢堡</li>
+        <li><strong>炸醬麵</strong> &mdash; 依嬷小吃店，QQ麵條配濃郁醬料</li>
+        <li><strong>海鮮料理</strong> &mdash; 淡菜、黃魚、酥炸酒糟鰻魚</li>
+        <li><strong>老酒冰沙 / 高粱酒冰淇淋</strong> &mdash; 微光馬祖活動限定特色冰品</li>
+      </ul>
+      <div class="contact-box">
+        <div class="ct-name">&#127869; 鏡沃小吃部</div>
+        <div class="ct-line"><span class="ct-label">地址：</span><span class="ct-val">連江縣北竿鄉芹壁村</span></div>
+        <div class="ct-line"><span class="ct-label">特色：</span><span class="ct-val">芹壁村老字號，招牌老酒麵線</span></div>
+      </div>
+      <div class="contact-box">
+        <div class="ct-name">&#127861; 芹沃烘焙咖啡館</div>
+        <div class="ct-line"><span class="ct-label">地址：</span><span class="ct-val">連江縣北竿鄉芹壁村</span></div>
+        <div class="ct-line"><span class="ct-label">特色：</span><span class="ct-val">老酒豬肉蛋披薩、海景咖啡</span></div>
+      </div>
+    </div>
+
+    <div class="detail-card">
+      <div class="label"><span class="emoji">&#127919;</span> 玩法建議</div>
+      <ul>
+        <li><strong>芹壁村石巷漫游</strong> &mdash; 穿梭石厝巷弄，4月起可見濱海紫羅羅蘭（繡球花）綻放石牆縫隙</li>
+        <li><strong>大坵島賞鹿</strong> &mdash; 搭船前往無人島，與梅花鹿近距離互動，約半天行程
+          <span class="info">島上有環島步道和木棧平台，適合生態尋幽與慢活觀景</span>
+        </li>
+        <li><strong>塘后沙灘追淚</strong> &mdash; 4-6月夜間，沙灘旁等候藍眼淚現身</li>
+        <li><strong>壁山登頂</strong> &mdash; 馬祖最高點，360度環景俯瞰北竿機場與島嶼</li>
+        <li><strong>獨木舟海上體驗</strong> &mdash; 從橋仔村出海，以海上視角欣賞北竿海岸線</li>
+        <li><strong>單車環島</strong> &mdash; 北竿地勢起伏大，挑戰性單車路線約16公里
+          <span class="info">推薦路線：戰爭和平紀念公園→坂里村→芹壁村→壁山→橋仔→塘后沙灘→塘岐村</span>
+        </li>
+        <li><strong>橋仔漁村探廟</strong> &mdash; 一村八廟的奇妙景象，漁業展示館看燕鷗即時影像</li>
+        <li><strong>螺山步道健行</strong> &mdash; 懸崖步道，壯闊無遮蔽海景攝影</li>
+        <li><strong>坂里沙灘踏浪</strong> &mdash; 石英砂閃耀，迷你天后宮打卡</li>
+      </ul>
+    </div>
+
+    <div class="detail-card budget-box">
+      <div class="label"><span class="emoji">&#128176;</span> 預算估算（每人）</div>
+      <div class="budget-row"><span class="item">芹壁民宿（海景房）</span><span class="price">NT$2,500-4,500/晚</span></div>
+      <div class="budget-row"><span class="item">一般民宿</span><span class="price">NT$1,500-2,500/晚</span></div>
+      <div class="budget-row"><span class="item">餐飲</span><span class="price">NT$500-800/天</span></div>
+      <div class="budget-row"><span class="item">機車租賃</span><span class="price">NT$500/天</span></div>
+      <div class="budget-row"><span class="item">大坵島船票（往返）</span><span class="price">NT$200-300</span></div>
+      <div class="budget-row"><span class="item">獨木舟體驗</span><span class="price">NT$500-800</span></div>
+      <div class="budget-total">
+        <span class="label-text">單日預估</span>
+        <span class="total-price">約 NT$2,700-6,000</span>
+      </div>
+      <div style="font-size:12px; color:var(--text-mid); margin-top:8px;">約合人民幣 600-1,330元/天（芹壁海景房旺季溢價明顯）</div>
+    </div>
+  </div>
+  <div class="note-box">
+    <strong>最佳出行時間：</strong>4月中旬-5月下旬（藍眼淚高峰+繡球花盛放）、7-8月（大坵賞鹿+海上活動）。芹壁民宿旺季需提前1-2個月預訂。
+  </div>
+  <div class="contact-box">
+    <div class="ct-name">&#128205; 北竿遊客中心</div>
+    <div class="ct-line"><span class="ct-label">地址：</span><span class="ct-val">連江縣北竿鄉坂里村47號</span></div>
+    <div class="ct-line"><span class="ct-label">電話：</span><span class="ct-val"><a href="tel:083656535">0836-56535</a></span></div>
+    <div class="ct-line"><span class="ct-label">時間：</span><span class="ct-val">08:00-17:30</span></div>
+  </div>
+</div>
+
+<!-- ===== 3. 東引島 ===== -->
+<div class="island-detail reveal" id="dongyin">
+  <div class="island-header dongyin">
+    <span class="num">03</span>
+    <div>
+      <h3>東引島 &mdash; 國之北疆</h3>
+      <div class="sub">最東最北領土 | 百年燈塔 | 海蝕地景</div>
+    </div>
+  </div>
+
+  <div class="detail-grid">
+    <div class="detail-card">
+      <div class="label"><span class="emoji">&#128205;</span> 必訪景點</div>
+      <ul>
+        <li><strong>東湧燈塔（東引燈塔）</strong> &mdash; 1904年亮燈，英國工程師設計，白色塔身立於懸崖，素有「東引別墅」之稱 <span class="tag">三級古蹟</span>
+          <span class="info">地址：連江縣東引鄉東引島東端 | 電話：0836-77267（東引遊客中心）</span>
+          <span class="info">燈塔下方有霧砲台兩座，早年春夏霧季以砲聲示警，現已退役為古蹟</span>
+        </li>
+        <li><strong>國之北疆</strong> &mdash; 我國領海基點之一，最北端地標，可見北固礁
+          <span class="info">地址：連江縣東引鄉西引島北岸 | 沿海岸步道步行抵達</span>
+        </li>
+        <li><strong>一線天</strong> &mdash; 海蝕溝地形，兩岩壁垂直相接，崖下海潮轟鳴如萬馬奔騰
+          <span class="info">地址：連江縣東引鄉天王澳左側岬角 | 岩壁題有「天縫聆濤」四字</span>
+        </li>
+        <li><strong>燕秀潮音</strong> &mdash; 海蝕洞地形，潮水灌入谷底迴響，天然交響樂
+          <span class="info">地址：連江縣東引鄉 | 「燕秀」馬祖話意指「燕巢」</span>
+        </li>
+        <li><strong>安東坑道</strong> &mdash; 東引版北海坑道，花崗岩中開鑿的戰備地下碼頭
+          <span class="info">地址：連江縣東引鄉 | 約450階陡峭階梯，總長約641公尺 | 免費參觀</span>
+          <span class="info">夏天可近距離欣賞黑尾鷗飛翔，坑口可見「印第安人與小狗頭」奇岩</span>
+        </li>
+        <li><strong>烈女義坑</strong> &mdash; 壯觀海蝕崖，傳說故事與自然奇景交織
+          <span class="info">地址：連江縣東引鄉 | 海上看東引航程可從海上仰望</span>
+        </li>
+        <li><strong>老鼠沙石林</strong> &mdash; 變化多端的海蝕柱地貌，攝影秘境
+          <span class="info">地址：連江縣東引鄉 | 馬祖最負盛名的海蝕地形</span>
+        </li>
+        <li><strong>中柱港與感恩亭</strong> &mdash; 東引門戶，港灣風景壯闊，感恩亭360度觀景
+          <span class="info">地址：連江縣東引鄉中柱島 | 蔣經國坐姿銅像面朝南方</span>
+        </li>
+        <li><strong>忠誠門</strong> &mdash; 東引舊門戶，城門上阿兵哥雕像「阿榮」，階梯聚落如穿越時空
+          <span class="info">地址：連江縣東引鄉中柳村</span>
+        </li>
+        <li><strong>三色石</strong> &mdash; 閃長岩、花崗岩、輝長岩三色岩壁，海上近距離仰望最壯觀
+          <span class="info">地址：連江縣東引鄉 | 海上看東引行程可觀賞</span>
+        </li>
+        <li><strong>太白天聲觀景台</strong> &mdash; 前往燈塔路上，春夏雲霧繚繞白茫茫霧景
+          <span class="info">地址：連江縣東引鄉 | 海浪拍打深淵巨岩轟鳴聲</span>
+        </li>
+        <li><strong>海現龍闕</strong> &mdash; 特殊海蝕地貌，風浪大時如龍現身
+          <span class="info">地址：連江縣東引鄉 | 免費參觀</span>
+        </li>
+        <li><strong>西引「事在人為」石刻</strong> &mdash; 紀念中柱港工程完工，紅色大字刻於岩壁
+          <span class="info">地址：連江縣東引鄉西引島岩壁</span>
+        </li>
+      </ul>
+    </div>
+
+    <div class="detail-card">
+      <div class="label"><span class="emoji">&#127836;</span> 必吃美食</div>
+      <ul>
+        <li><strong>戚光餅</strong> &mdash; 東引旅客服務中心旁，現烤可口</li>
+        <li><strong>無菜單海鮮料理</strong> &mdash; 魚多多餐廳，以海鮮為主
+          <span class="info">餐標約NT$550+10%/人，需預約</span>
+        </li>
+        <li><strong>紅糟肉排燒餅</strong> &mdash; 民宿早餐特色，紅糟醃製肉排夾燒餅</li>
+        <li><strong>剉冰</strong> &mdash; 鹹味島咖啡館，東引旅客服務中心旁</li>
+        <li><strong>海鮮麵食</strong> &mdash; 泰利食堂
+          <span class="info">餐標約NT$600/人</span>
+        </li>
+        <li><strong>條紋石鯛</strong> &mdash; 東引海域特有魚種，鮮美無比</li>
+        <li><strong>東引高粱酒</strong> &mdash; 東引酒廠出品，限量紀念酒</li>
+      </ul>
+      <div class="contact-box">
+        <div class="ct-name">&#127869; 魚多多餐廳</div>
+        <div class="ct-line"><span class="ct-label">地址：</span><span class="ct-val">連江縣東引鄉樂華村</span></div>
+        <div class="ct-line"><span class="ct-label">特色：</span><span class="ct-val">無菜單海鮮料理，餐標NT$550+10%/人</span></div>
+      </div>
+      <div class="contact-box">
+        <div class="ct-name">&#127869; 泰利食堂</div>
+        <div class="ct-line"><span class="ct-label">地址：</span><span class="ct-val">連江縣東引鄉樂華村</span></div>
+        <div class="ct-line"><span class="ct-label">特色：</span><span class="ct-val">海鮮麵食，餐標約NT$600/人</span></div>
+      </div>
+      <div class="contact-box">
+        <div class="ct-name">&#127861; 鹹味島咖啡館</div>
+        <div class="ct-line"><span class="ct-label">地址：</span><span class="ct-val">連江縣東引鄉（東引旅客服務中心旁）</span></div>
+        <div class="ct-line"><span class="ct-label">特色：</span><span class="ct-val">剉冰、戚光餅、下午茶</span></div>
+      </div>
+    </div>
+
+    <div class="detail-card">
+      <div class="label"><span class="emoji">&#127919;</span> 玩法建議</div>
+      <ul>
+        <li><strong>海上看東引</strong> &mdash; 4/1-9/30觀光船航程，從海上眺望燈塔與海蝕崖壁 <span class="tag">季節限定</span>
+          <span class="info">報名專線：0919-279-160 陳先生 | 票價約NT$500/人</span>
+          <span class="info">可從海上仰望東引燈塔、烈女義坑、三色石等</span>
+        </li>
+        <li><strong>燈塔日出</strong> &mdash; 清晨前往東湧燈塔，迎接全國第一道晨曦
+          <span class="info">記得走至燈塔下方看霧砲台古蹟</span>
+        </li>
+        <li><strong>一線天聽濤</strong> &mdash; 站在海蝕溝上方，感受海浪撞擊岩壁的震撼</li>
+        <li><strong>燕秀潮音尋聲</strong> &mdash; 配合潮汐時間，聆聽天然海蝕洞迴響</li>
+        <li><strong>國之北疆打卡</strong> &mdash; 站在我國最北端，眺望北固礁與無垠東海</li>
+        <li><strong>安東坑道探秘</strong> &mdash; 深入花崗岩體，450階階梯挑戰，夏天看黑尾鷗
+          <span class="info">做好心理準備：走得下去還要能走得上來</span>
+        </li>
+        <li><strong>忠誠門與階梯聚落</strong> &mdash; 穿過城門拾階而上，穿越時空電影感</li>
+        <li><strong>太白天聲觀景</strong> &mdash; 春夏霧季白茫茫霧景配海浪轟鳴</li>
+        <li><strong>感恩亭觀景</strong> &mdash; 360度被東西引與大海環抱</li>
+        <li><strong>東引高粱酒品鑑</strong> &mdash; 東引酒廠限量紀念酒</li>
+      </ul>
+    </div>
+
+    <div class="detail-card budget-box">
+      <div class="label"><span class="emoji">&#128176;</span> 預算估算（每人）</div>
+      <div class="budget-row"><span class="item">民宿（安逸民宿/海悅樓等）</span><span class="price">NT$1,800-3,000/晚</span></div>
+      <div class="budget-row"><span class="item">餐飲</span><span class="price">NT$600-1,000/天</span></div>
+      <div class="budget-row"><span class="item">機車租賃</span><span class="price">NT$500/天</span></div>
+      <div class="budget-row"><span class="item">海上看東引船票</span><span class="price">NT$500/人</span></div>
+      <div class="budget-row"><span class="item">南竿→東引船票</span><span class="price">NT$400/單程</span></div>
+      <div class="budget-total">
+        <span class="label-text">單日預估（含船票均攤）</span>
+        <span class="total-price">約 NT$3,500-5,500</span>
+      </div>
+      <div style="font-size:12px; color:var(--text-mid); margin-top:8px;">約合人民幣 780-1,220元/天。東引住宿選擇較少，建議提前預訂。</div>
+    </div>
+  </div>
+  <div class="note-box">
+    <strong>最佳出行時間：</strong>4-9月（海上看東引活動開放）、5-6月（藍眼淚+燕鷗）。東引距離其他島嶼較遠，船程約2小時，建議至少安排1晚住宿。
+  </div>
+  <div class="contact-box">
+    <div class="ct-name">&#128205; 東引遊客中心</div>
+    <div class="ct-line"><span class="ct-label">地址：</span><span class="ct-val">連江縣東引鄉樂華村160之1號</span></div>
+    <div class="ct-line"><span class="ct-label">電話：</span><span class="ct-val"><a href="tel:083677267">0836-77267</a></span></div>
+    <div class="ct-line"><span class="ct-label">時間：</span><span class="ct-val">08:00-17:30</span></div>
+  </div>
+  <div class="contact-box">
+    <div class="ct-name">&#128674; 海上看東引 報名專線</div>
+    <div class="ct-line"><span class="ct-label">電話：</span><span class="ct-val"><a href="tel:0919279160">0919-279-160</a> 陳先生</span></div>
+    <div class="ct-line"><span class="ct-label">期間：</span><span class="ct-val">每年4/1-10/31</span></div>
+    <div class="ct-line"><span class="ct-label">票價：</span><span class="ct-val">約NT$500/人</span></div>
+  </div>
+</div>
+
+<!-- ===== 4. 東莒島 ===== -->
+<div class="island-detail reveal" id="dongjyu">
+  <div class="island-header dongjyu">
+    <span class="num">04</span>
+    <div>
+      <h3>東莒島 &mdash; 神話之鳥故鄉</h3>
+      <div class="sub">百年燈塔 | 蛇島燕鷗 | 靜謐漁村</div>
+    </div>
+  </div>
+
+  <div class="detail-grid">
+    <div class="detail-card">
+      <div class="label"><span class="emoji">&#128205;</span> 必訪景點</div>
+      <ul>
+        <li><strong>東莒燈塔（東犬燈塔）</strong> &mdash; 1872年建造，閩台地區第一座花崗岩燈塔，二級古蹟 <span class="tag">夜間觀星點</span>
+          <span class="info">地址：連江縣莒光鄉福正村 | 光程可達16.7海里（約31公里）</span>
+          <span class="info">開放時間：夏令4-10月 09:00-18:00；冬令11-3月 09:00-17:00 | 週一休館</span>
+        </li>
+        <li><strong>蛇島</strong> &mdash; 馬祖燕鷗保護區，神話之鳥「黑嘴端鳳頭燕鷗」繁殖地 <span class="tag">6-8月</span>
+          <span class="info">保護區核心區全年嚴禁登島，緩衝區為低潮線向海100公尺內 | 請從賞鳥亭遠距觀賞</span>
+          <span class="info">可見紅燕鷗、白眉燕鷗、蒼燕鷗、鳳頭燕鷗等</span>
+        </li>
+        <li><strong>大埔石刻</strong> &mdash; 明萬曆年間沈有容將軍抗倭事迹石刻，不傷一兵一卒生擒69名海盜
+          <span class="info">地址：連江縣莒光鄉東莒島最南端 | 保護於懷古亭內</span>
+        </li>
+        <li><strong>福正聚落</strong> &mdash; 傳統閩東石厝聚落，依山傍海，屋頂壓瓦石防風
+          <span class="info">地址：連江縣莒光鄉福正村 | 前方為福正沙灘，配白色燈塔為東莒限定明信片視角</span>
+        </li>
+        <li><strong>神秘小海灣</strong> &mdash; 隱密的海灣，清澈海水與奇岩怪石</li>
+        <li><strong>東莒燈塔賞星</strong> &mdash; 夜間無光害，絕佳觀月與觀星地點</li>
+        <li><strong>福正沙灘</strong> &mdash; 配合燈塔與聚落的絕美明信片角度
+          <span class="info">夏天可踩水吹海風</span>
+        </li>
+        <li><strong>大埔聚落</strong> &mdash; 另一處保存完整的閩東石厝聚落
+          <span class="info">地址：連江縣莒光鄉大埔村</span>
+        </li>
+        <li><strong>東莒天人菊花海</strong> &mdash; 每年5-10月盛開，7月最燦爛
+          <span class="info">鮮豔紅黃配色，在海風中挺直腰桿的海島植物</span>
+        </li>
+      </ul>
+    </div>
+
+    <div class="detail-card">
+      <div class="label"><span class="emoji">&#127836;</span> 必吃美食</div>
+      <ul>
+        <li><strong>海鮮料理</strong> &mdash; 淡菜、石狗公等新鮮漁獲，簡單清蒸即鮮美</li>
+        <li><strong>傳統閩東家常菜</strong> &mdash; 紅糟肉、老酒麵線等馬祖經典</li>
+        <li><strong>漁村小吃</strong> &mdash; 在地小館供應的炸魚、海菜料理</li>
+      </ul>
+      <div style="margin-top:12px; font-size:13px; color:var(--text-mid); padding:8px 12px; background:#f5f0e6; border-radius:6px;">
+        東莒餐飲選擇較少，建議入住民宿含餐或提前向民宿預訂晚餐
+      </div>
+    </div>
+
+    <div class="detail-card">
+      <div class="label"><span class="emoji">&#127919;</span> 玩法建議</div>
+      <ul>
+        <li><strong>蛇島賞鷗</strong> &mdash; 6-8月夏季，賞鳥亭觀賞燕鷗齊飛與沙灘沐浴 <span class="tag">季節限定</span>
+          <span class="info">禁止鳴喇叭、放煙炮、餵飼海鳥，違者罰NT$5萬-25萬</span>
+        </li>
+        <li><strong>燈塔日落與觀星</strong> &mdash; 白天拍古蹟風景，夜間賞月觀星</li>
+        <li><strong>福正村漫步</strong> &mdash; 穿梭石厝巷弄，感受百年漁村靜謐，看壓瓦石</li>
+        <li><strong>大埔石刻尋史</strong> &mdash; 明代抗倭石刻前駐足，遙想四百年前海戰</li>
+        <li><strong>神秘海灣踏浪</strong> &mdash; 退潮時探索潮間帶生態</li>
+        <li><strong>燈塔攝影</strong> &mdash; 白色燈塔配藍天碧海，經典馬祖明信片角度</li>
+        <li><strong>天人菊花海拍照</strong> &mdash; 5-10月花季，紅黃小花在翠綠草地與湛藍大海間</li>
+        <li><strong>東莒→西莒聯遊</strong> &mdash; 船程僅10分鐘，建議雙島一起玩</li>
+      </ul>
+    </div>
+
+    <div class="detail-card budget-box">
+      <div class="label"><span class="emoji">&#128176;</span> 預算估算（每人）</div>
+      <div class="budget-row"><span class="item">民宿（含早餐）</span><span class="price">NT$1,500-2,500/晚</span></div>
+      <div class="budget-row"><span class="item">餐飲</span><span class="price">NT$400-600/天</span></div>
+      <div class="budget-row"><span class="item">機車租賃</span><span class="price">NT$400-500/天</span></div>
+      <div class="budget-row"><span class="item">南竿→東莒船票</span><span class="price">NT$350/單程</span></div>
+      <div class="budget-row"><span class="item">景點門票</span><span class="price">全部免費</span></div>
+      <div class="budget-total">
+        <span class="label-text">單日預估（含船票均攤）</span>
+        <span class="total-price">約 NT$2,700-4,200</span>
+      </div>
+      <div style="font-size:12px; color:var(--text-mid); margin-top:8px;">約合人民幣 600-930元/天。東莒消費較低，是五島中CP值最高的目的地。</div>
+    </div>
+  </div>
+  <div class="note-box">
+    <strong>最佳出行時間：</strong>6-8月（燕鷗旺季，有機會看到神話之鳥）、9-10月（秋高氣爽適合攝影）、5-10月（天人菊花季）。東莒燈塔週一不開放，請注意安排。
+  </div>
+  <div class="contact-box">
+    <div class="ct-name">&#128205; 莒光遊客中心（東莒）</div>
+    <div class="ct-line"><span class="ct-label">地址：</span><span class="ct-val">連江縣莒光鄉福正村1號</span></div>
+    <div class="ct-line"><span class="ct-label">電話：</span><span class="ct-val"><a href="tel:083689388">0836-89388</a></span></div>
+    <div class="ct-line"><span class="ct-label">時間：</span><span class="ct-val">08:00-17:30</span></div>
+  </div>
+</div>
+
+<!-- ===== 5. 西莒島 ===== -->
+<div class="island-detail reveal" id="xijyu">
+  <div class="island-header xijyu">
+    <span class="num">05</span>
+    <div>
+      <h3>西莒島 &mdash; 方塊海秘境</h3>
+      <div class="sub">坤坵方塊海 | 蛇島步道 | 趕海體驗</div>
+    </div>
+  </div>
+
+  <div class="detail-grid">
+    <div class="detail-card">
+      <div class="label"><span class="emoji">&#128205;</span> 必訪景點</div>
+      <ul>
+        <li><strong>坤坵沙灘</strong> &mdash; 馬祖最美沙灘，洋流與潮汐交錯形成「方塊海」奇觀 <span class="tag">世界唯二</span>
+          <span class="info">地址：連江縣莒光鄉西莒島坤坵 | 免費參觀 | 需查潮汐表</span>
+          <span class="info">方塊海形成原理：兩股海流在蛇島與沙灘間交會推擠，退潮時可見海面如棋盤</span>
+        </li>
+        <li><strong>蛇島步道</strong> &mdash; 退潮時坤坵沙灘延伸至蛇島的沙地步道顯露，潮間帶生態豐富
+          <span class="info">退潮時可步行至蛇島，漲潮時步道消失 | 請務必注意潮汐安全</span>
+        </li>
+        <li><strong>蛇島賞鷗</strong> &mdash; 與東莒共用燕鷗保護區，夏季燕鷗齊飛壯觀
+          <span class="info">西莒是馬祖唯一能在岸上賞鷗的地方</span>
+        </li>
+        <li><strong>坤坵夕照</strong> &mdash; 馬祖一絕的晚天嫣紅，日落映照方塊海
+          <span class="info">傍晚金黃夕陽將沙灘與海面染成橘紅色</span>
+        </li>
+        <li><strong>有容路（龍貓隧道）</strong> &mdash; 兩旁茂密榕樹交織成蔭，陽光灑落夢幻景色
+          <span class="info">以明末大將沈有容命名 | 民國79年軍方種植榕樹作為運補掩蔽</span>
+          <span class="info">坡度極陡且有落葉，騎車注意安全</span>
+        </li>
+        <li><strong>青帆村</strong> &mdash; 西莒最大聚落，依山傍海的石厝村落
+          <span class="info">地址：連江縣莒光鄉青帆村 | 莒光鄉公所所在地</span>
+        </li>
+        <li><strong>山海一家</strong> &mdash; 俯瞰青帆村的觀景據點</li>
+        <li><strong>坤坵步道</strong> &mdash; 依山傍海步道，賞蛇島、看夕陽
+          <span class="info">一側綠意植被，一側遼闊大海</span>
+        </li>
+      </ul>
+    </div>
+
+    <div class="detail-card">
+      <div class="label"><span class="emoji">&#127836;</span> 必吃美食</div>
+      <ul>
+        <li><strong>趕海漁獲</strong> &mdash; 民宿帶領遊客退潮時至坤坵抓章章魚、撈石狗公，現場加菜</li>
+        <li><strong>海鮮家常菜</strong> &mdash; 民宿供應的在地料理，新鮮漁獲簡單烹調</li>
+        <li><strong>馬祖傳統小吃</strong> &mdash; 紅糟料理、老酒麵線等經典口味</li>
+      </ul>
+      <div style="margin-top:12px; font-size:13px; color:var(--text-mid); padding:8px 12px; background:#f5f0e6; border-radius:6px;">
+        西莒餐廳極少，強烈建議入住含餐民宿，體驗「趕海+現做」的餐桌樂趣
+      </div>
+    </div>
+
+    <div class="detail-card">
+      <div class="label"><span class="emoji">&#127919;</span> 玩法建議</div>
+      <ul>
+        <li><strong>方塊海拍照</strong> &mdash; 潮汐交錯時段至坤坵沙灘，捕捉海面如棋盤的奇景 <span class="tag">需查潮汐表</span>
+          <span class="info">世界唯二的地質奇景，退潮時兩股海流交會推擠形成</span>
+        </li>
+        <li><strong>趕海體驗</strong> &mdash; 大退潮時由民宿業者帶領，2小時抓章魚、撈石狗公
+          <span class="info">坤坵沙灘是西莒人的「天然冰箱」</span>
+        </li>
+        <li><strong>蛇島步道探險</strong> &mdash; 退潮時走沙地步道至蛇島，觀察豐富潮間帶生態</li>
+        <li><strong>坤坵夕照</strong> &mdash; 傍晚守候方塊海日落，馬祖最美晚霞</li>
+        <li><strong>蛇島賞鷗</strong> &mdash; 夏季從岸上觀賞燕鷗群飛與沙灘沐浴
+          <span class="info">西莒是馬祖唯一能在岸上賞鷗的地方</span>
+        </li>
+        <li><strong>有容路龍貓隧道</strong> &mdash; 榕樹綠蔭隧道拍照，注意坡陡安全</li>
+        <li><strong>磯釣</strong> &mdash; 西莒為馬祖熱門磯釣點，礁石區漁獲豐富</li>
+        <li><strong>青帆村散步</strong> &mdash; 西莒最原始質樸的石厝聚落</li>
+      </ul>
+    </div>
+
+    <div class="detail-card budget-box">
+      <div class="label"><span class="emoji">&#128176;</span> 預算估算（每人）</div>
+      <div class="budget-row"><span class="item">民宿（含早晚餐）</span><span class="price">NT$1,500-2,200/晚</span></div>
+      <div class="budget-row"><span class="item">餐飲（午餐+小吃）</span><span class="price">NT$300-500/天</span></div>
+      <div class="budget-row"><span class="item">機車租賃</span><span class="price">NT$400/天</span></div>
+      <div class="budget-row"><span class="item">東莒→西莒船票</span><span class="price">NT$80/單程</span></div>
+      <div class="budget-row"><span class="item">景點門票</span><span class="price">全部免費</span></div>
+      <div class="budget-total">
+        <span class="label-text">單日預估</span>
+        <span class="total-price">約 NT$2,200-3,100</span>
+      </div>
+      <div style="font-size:12px; color:var(--text-mid); margin-top:8px;">約合人民幣 490-690元/天。西莒是五島中花費最低的。</div>
+    </div>
+  </div>
+  <div class="note-box">
+    <strong>最佳出行時間：</strong>6-8月（方塊海+賞鷗+趕海）。方塊海需特定潮汐條件，行前務必查詢潮汐表。東莒→西莒船程僅10分鐘，建議雙島聯遊。有容路坡度極陡，騎車务必放慢車速。
+  </div>
+  <div class="contact-box">
+    <div class="ct-name">&#128205; 莒光遊客中心</div>
+    <div class="ct-line"><span class="ct-label">地址：</span><span class="ct-val">連江縣莒光鄉福正村1號（東莒）</span></div>
+    <div class="ct-line"><span class="ct-label">電話：</span><span class="ct-val"><a href="tel:083689388">0836-89388</a></span></div>
+    <div class="ct-line"><span class="ct-label">備註：</span><span class="ct-val">西莒無獨立遊客中心，可向東莒遊客中心或民宿諮詢</span></div>
+  </div>
+  <div class="contact-box">
+    <div class="ct-name">&#127970; 莒光鄉公所</div>
+    <div class="ct-line"><span class="ct-label">地址：</span><span class="ct-val">連江縣莒光鄉青帆村74號附2號</span></div>
+    <div class="ct-line"><span class="ct-label">郵遞區號：</span><span class="ct-val">211</span></div>
+  </div>
+</div>
+
+<!-- ===== 跨島行程建議 ===== -->
+<div class="section-title reveal" id="itinerary">
+  <h2>跨島行程規劃建議</h2>
+  <p>三條精選路線，依時間與興趣選擇最適合的跳島方式</p>
+</div>
+
+<div class="itinerary-section reveal">
+  <div class="itinerary-tabs">
+    <div class="itinerary-tab active" onclick="showItinerary(0)">經典五日（南北竿+東引）</div>
+    <div class="itinerary-tab" onclick="showItinerary(1)">深度七日（五島全覽）</div>
+    <div class="itinerary-tab" onclick="showItinerary(2)">週末三日（南北竿精華）</div>
+  </div>
+
+  <div class="itinerary-content active" id="itin-0">
+    <div class="itinerary-day">
+      <div class="day-badge">D1<span>南竿</span></div>
+      <div class="day-content">
+        <h4>抵達南竿 &middot; 人文初探</h4>
+        <p>黃岐/基隆出發抵達南竿福澳港 → 遊客中心了解全貌 → 北海坑道（配合潮汐）→ 媽祖巨神像 → 晚餐依嬷的店（老酒麵線+淡菜，0836-26125）→ 夜間坑道搖櫹追藍眼淚（4-6月）</p>
+      </div>
+    </div>
+    <div class="itinerary-day">
+      <div class="day-badge">D2<span>北竿</span></div>
+      <div class="day-content">
+        <h4>北竿地中海 &middot; 芹壁風情</h4>
+        <p>南竿→北竿（20min船程）→ 戰爭和平紀念公園 → 壁山觀景台 → 橋仔漁村 → 芹壁聚落（午餐鏡沃小吃部）→ 大坵島賞鹿 → 夜宿芹壁民宿 → 塘后沙灘追淚</p>
+      </div>
+    </div>
+    <div class="itinerary-day">
+      <div class="day-badge">D3<span>北竿</span></div>
+      <div class="day-content">
+        <h4>北竿慢活 &middot; 攝影日</h4>
+        <p>芹壁石巷漫游（尋紫羅蘭）→ 芹沃烘焙咖啡館（紅糟豬肉蛋披薩）→ 坂里古厝與沙灘 → 午沙坑道 → 獨木舟體驗 → 塘岐街採購伴手禮</p>
+      </div>
+    </div>
+    <div class="itinerary-day">
+      <div class="day-badge">D4<span>東引</span></div>
+      <div class="day-content">
+        <h4>國之北疆 &middot; 東引探秘</h4>
+        <p>北竿→南竿→東引（約2hr船程）→ 中柱港 → 安東坑道 → 一線天聽濤 → 燕秀潮音 → 國之北疆 → 晚餐魚多多無菜單料理</p>
+      </div>
+    </div>
+    <div class="itinerary-day">
+      <div class="day-badge">D5<span>東引</span></div>
+      <div class="day-content">
+        <h4>東引燈塔 &middot; 返程</h4>
+        <p>清晨東湧燈塔看日出 → 霧砲台 → 老鼠沙石林 → 三山據點 → 海上看東引（4-9月，0919-279-160）→ 東引→南竿→黃岐/基隆返程</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="itinerary-content" id="itin-1">
+    <div class="itinerary-day">
+      <div class="day-badge">D1-2<span>南竿</span></div>
+      <div class="day-content">
+        <h4>南竿深度 &middot; 人文與藍淚</h4>
+        <p>北海坑道搖櫹追淚 → 八八坑道品酒（09:30/10:30/14:30/16:30導覽）→ 媽祖文化巡禮 → 津沙夕照 → 雲台山觀景 → 介壽市場體驗 → 四維生態園區 → 腰山遊憩區</p>
+      </div>
+    </div>
+    <div class="itinerary-day">
+      <div class="day-badge">D3-4<span>北竿</span></div>
+      <div class="day-content">
+        <h4>北竿地中海 &middot; 大坵賞鹿</h4>
+        <p>芹壁聚落深度游 → 大坵島梅花鹿 → 戰爭和平紀念公園 → 壁山登頂 → 橋仔漁村 → 獨木舟 → 螺山步道 → 坂里沙灘</p>
+      </div>
+    </div>
+    <div class="itinerary-day">
+      <div class="day-badge">D5<span>東引</span></div>
+      <div class="day-content">
+        <h4>國之北疆 &middot; 海蝕奇景</h4>
+        <p>東湧燈塔日出 → 一線天 → 燕秀潮音 → 國之北疆 → 安東坑道 → 海上看東引 → 忠誠門</p>
+      </div>
+    </div>
+    <div class="itinerary-day">
+      <div class="day-badge">D6<span>東莒</span></div>
+      <div class="day-content">
+        <h4>東莒 &middot; 燈塔與神話之鳥</h4>
+        <p>南竿→東莒（50min）→ 東莒燈塔 → 大埔石刻 → 福正村 → 蛇島賞鷗（6-8月）→ 天人菊花海 → 燈塔觀星</p>
+      </div>
+    </div>
+    <div class="itinerary-day">
+      <div class="day-badge">D7<span>西莒</span></div>
+      <div class="day-content">
+        <h4>西莒 &middot; 方塊海與趕海</h4>
+        <p>東莒→西莒（10min）→ 坤坵沙灘方塊海 → 蛇島步道 → 趕海體驗 → 有容路龍貓隧道 → 坤坵夕照 → 返南竿</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="itinerary-content" id="itin-2">
+    <div class="itinerary-day">
+      <div class="day-badge">D1<span>北竿</span></div>
+      <div class="day-content">
+        <h4>黃岐→北竿 &middot; 芹壁初見</h4>
+        <p>黃岐10:00出發→北竿白沙港（30min）→ 戰爭和平紀念公園 → 壁山觀景 → 橋仔漁村 → 芹壁聚落 → 夜宿芹壁</p>
+      </div>
+    </div>
+    <div class="itinerary-day">
+      <div class="day-badge">D2<span>南北竿</span></div>
+      <div class="day-content">
+        <h4>大坵賞鹿 &middot; 南竿人文</h4>
+        <p>上午大坵島梅花鹿 → 午餐芹壁老酒麵線 → 北竿→南竿（20min）→ 北海坑道 → 媽祖巨神像 → 八八坑道品酒 → 夜追藍眼淚</p>
+      </div>
+    </div>
+    <div class="itinerary-day">
+      <div class="day-badge">D3<span>南竿</span></div>
+      <div class="day-content">
+        <h4>南竿收尾 &middot; 返程</h4>
+        <p>津沙聚落晨漫步 → 雲台山觀景 → 四維生態園區 → 介壽市場採買伴手禮 → 南竿福澳港→黃岐返程（15:00班次）</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== 交通指南 ===== -->
+<div class="section-title reveal" id="transport">
+  <h2>交通接駁全指南</h2>
+  <p>小三通、台馬之星、島際航線一覽</p>
+</div>
+
+<div class="itinerary-section reveal">
+  <h4 style="color:var(--ocean-deep); margin-bottom:16px;">前往馬祖</h4>
+  <table class="transport-table">
+    <thead>
+      <tr><th>航線</th><th>船程</th><th>票價</th><th>班次</th><th>備註</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>連江黃岐 → 馬祖白沙（北竿）</td><td>約30分鐘</td><td>全票 RMB130<br>兒童 RMB80<br>嬰兒 RMB15</td><td>每日2班<br>去程10:00<br>回程15:00</td><td>最便捷路線，船名吉順9號/10號、安麒2號</td></tr>
+      <tr><td>馬尾琅岐 → 馬祖福澳（南竿）</td><td>約90分鐘</td><td>約NT$1,300</td><td>每日2班<br>去程09:00/10:00<br>回程13:30/15:30</td><td>船名安麒6號、金安輪、南北之星2號，時刻略有浮動</td></tr>
+      <tr><td>基隆 → 東引中柱港</td><td>約8小時（夜航）</td><td>NT$1,000-1,800</td><td>隔日班<br>22:30基隆開航</td><td>台馬之星/新臺馬輪，先馬後東或先東後馬交替</td></tr>
+      <tr><td>基隆 → 南竿福澳</td><td>約8-10小時</td><td>NT$1,000-1,800</td><td>隔日班</td><td>與東引航線交替發船</td></tr>
+    </tbody>
+  </table>
+
+  <div class="note-box" style="margin-top:16px;">
+    <strong>小三通票價詳情（黃岐→白沙）：</strong>2025年2月起全票RMB130；65歲以上馬祖戶籍敬老票RMB85；1-12歲兒童票RMB80；1歲以下嬰兒票RMB15。可至7-11 ibon取票。
+  </div>
+
+  <h4 style="color:var(--ocean-deep); margin: 24px 0 16px;">島際交通</h4>
+  <table class="transport-table">
+    <thead>
+      <tr><th>航線</th><th>船程</th><th>票價</th><th>班次</th><th>備註</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>南竿 ↔ 北竿</td><td>約20分鐘</td><td>NT$150/單程</td><td>07:00-17:30<br>每小時1班</td><td>最頻繁航線，南北海運</td></tr>
+      <tr><td>南竿 → 東莒 → 西莒</td><td>約50分鐘</td><td>NT$350/單程</td><td>每日3班</td><td>先東莒或先西莒按單雙月輪替</td></tr>
+      <tr><td>東莒 ↔ 西莒</td><td>約10分鐘</td><td>NT$80/單程</td><td>每日4班</td><td>最短航線</td></tr>
+      <tr><td>南竿 ↔ 東引</td><td>約2小時</td><td>NT$400/單程</td><td>每日1-2班</td><td>南北之星2號，需提前訂位</td></tr>
+      <tr><td>南竿 ↔ 大坵（北竿離島）</td><td>約15分鐘</td><td>NT$200-300/往返</td><td>每日多班（4-10月）</td><td>鴻宇海運，上午正常下午可能停航</td></tr>
+    </tbody>
+  </table>
+
+  <div class="note-box" style="margin-top:20px;">
+    <strong>島上交通：</strong>各島面積不大，機車是最主要交通工具。南竿、北竿機車租賃約 NT$500-600/天（含油）。部分景點可搭計程車或公車，但班次有限。東引、莒光島上機車租賃約 NT$400-500/天。
+  </div>
+
+  <div class="note-box">
+    <strong>船班查詢：</strong>所有島際船班可至<a href="https://matsuebs.com" target="_blank" rel="noopener" style="color:var(--ocean-mid);">馬祖海上交通訂位購票系統 matsuebs.com</a>查詢與預約。小三通航班可查<a href="https://www.fj.msa.gov.cn" target="_blank" rel="noopener" style="color:var(--ocean-mid);">福州海事局 fj.msa.gov.cn</a>每日航班計畫表。船班受天氣影響大，建議出發前再次確認。
+  </div>
+</div>
+
+<!-- ===== 實用Tips ===== -->
+<div class="section-title reveal" id="tips">
+  <h2>實用旅行Tips</h2>
+  <p>出發前必讀，讓旅程更順暢</p>
+</div>
+
+<div class="tips-grid reveal">
+  <div class="tip-card">
+    <h4>&#128203; 證件準備</h4>
+    <ul>
+      <li>大陸居民需辦理《往來台灣通行證》+「入馬證」</li>
+      <li>入馬證需透過旅行社辦理，約需1週</li>
+      <li>建議提前20天開始辦證流程</li>
+      <li>隨身攜帶身份證原件以備查驗</li>
+      <li>目前已開放福建及上海戶籍居民自由行</li>
+    </ul>
+  </div>
+  <div class="tip-card">
+    <h4>&#127976; 住宿預訂</h4>
+    <ul>
+      <li>芹壁民宿旺季（4-6月、7-8月）需提前1-2個月訂</li>
+      <li>東引、莒光住宿選擇少，務必提前預訂</li>
+      <li>民宿多不含一次性用品（政府環保政策）</li>
+      <li>西莒強烈建議入住含餐民宿</li>
+      <li>淡季（11-3月）房價可降30-50%</li>
+    </ul>
+  </div>
+  <div class="tip-card">
+    <h4>&#127754; 追淚攻略</h4>
+    <ul>
+      <li>4-6月為最佳期，4月中-5月下旬為高峰</li>
+      <li>需無月光、微風、漲潮前後1小時</li>
+      <li>最佳時段：21:00-01:00</li>
+      <li>北竿塘后沙灘、芹壁為熱點</li>
+      <li>南竿北海坑道搖櫹船可近距離觀賞</li>
+      <li>多停留幾晚，看到機率更高</li>
+      <li>下載潮汐APP，配合民宿通知出發</li>
+    </ul>
+  </div>
+  <div class="tip-card">
+    <h4>&#129413; 燕鷗保護區須知</h4>
+    <ul>
+      <li>保護區涵蓋8座無人島礁（含蛇島、鐵尖島等）</li>
+      <li>核心區全年嚴禁登島</li>
+      <li>緩衝區為低潮線向海100公尺內</li>
+      <li>禁止鳴喇叭、放煙炮、餵飼海鳥</li>
+      <li>違者罰NT$5萬-25萬</li>
+      <li>4-9月為繁殖期，6-8月最佳觀賞</li>
+      <li>從賞鳥亭或船上遠距觀賞即可</li>
+    </ul>
+  </div>
+  <div class="tip-card">
+    <h4>&#9888; 注意事項</h4>
+    <ul>
+      <li>冬季（12-2月）東北季風強勁，船班易停航</li>
+      <li>北海坑道、方塊海等需配合潮汐，行前查潮汐表</li>
+      <li>島際船班受天氣影響大，行程保留彈性</li>
+      <li>馬祖紫外線強，注意防曬</li>
+      <li>部分軍事景點仍有限制區域，勿擅入</li>
+      <li>東莒燈塔週一休館</li>
+      <li>帶保暖外套，海邊風大溫差大</li>
+      <li>有容路坡陡，騎車放慢速</li>
+      <li>四維生態園區無路燈，天黑前下山</li>
+    </ul>
+  </div>
+</div>
+
+<!-- ===== 總預算一覽 ===== -->
+<div class="section-title reveal">
+  <h2>五島預算總覽</h2>
+  <p>每人每日預估花費對比（不含前往馬祖的大交通）</p>
+</div>
+
+<div class="itinerary-section reveal">
+  <table class="transport-table">
+    <thead>
+      <tr><th>島嶼</th><th>住宿/晚</th><th>餐飲/天</th><th>交通/天</th><th>活動/天</th><th>每日合計</th><th>約RMB</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>南竿島</td><td>NT$1,800-3,500</td><td>NT$600-1,000</td><td>NT$500</td><td>NT$200</td><td>NT$3,100-5,100</td><td>690-1,130</td></tr>
+      <tr><td>北竿島</td><td>NT$1,500-4,500</td><td>NT$500-800</td><td>NT$500</td><td>NT$200-800</td><td>NT$2,700-6,000</td><td>600-1,330</td></tr>
+      <tr><td>東引島</td><td>NT$1,800-3,000</td><td>NT$600-1,000</td><td>NT$500</td><td>NT$500</td><td>NT$3,500-5,500</td><td>780-1,220</td></tr>
+      <tr><td>東莒島</td><td>NT$1,500-2,500</td><td>NT$400-600</td><td>NT$400</td><td>免費</td><td>NT$2,700-4,200</td><td>600-930</td></tr>
+      <tr><td>西莒島</td><td>NT$1,500-2,200</td><td>NT$300-500</td><td>NT$400</td><td>免費</td><td>NT$2,200-3,100</td><td>490-690</td></tr>
+    </tbody>
+  </table>
+
+  <div class="note-box" style="margin-top:20px;">
+    <strong>整體預算參考（不含大交通）：</strong><br>
+    週末三日（南北竿）：約 NT$8,000-15,000 / RMB 1,800-3,300<br>
+    經典五日（南北竿+東引）：約 NT$15,000-25,000 / RMB 3,300-5,500<br>
+    深度七日（五島全覽）：約 NT$20,000-35,000 / RMB 4,400-7,800<br>
+    <br>
+    <strong>大交通參考：</strong>黃岐→馬祖往返約 RMB 260；基隆→馬祖往返約 NT$2,000-3,600。旺季（4-6月、7-8月）住宿價格上浮30-50%。
+  </div>
+</div>
+
+</div>
+
+<!-- ===== FOOTER ===== -->
+<div class="footer">
+  <p>2026 馬祖四鄉五島旅遊終極指南 v2</p>
+  <p>願這份指南陪你走過每一座島嶼，遇見屬於你的馬祖故事</p>
+  <div class="footer-links">
+    <a href="https://www.matsu-nsa.gov.tw" target="_blank" rel="noopener">馬祖國家風景區官網</a>
+    <a href="https://matsuebs.com" target="_blank" rel="noopener">船班訂票系統</a>
+    <a href="#overview">回到頂部概覽</a>
+  </div>
+  <p class="disclaimer">
+    本指南資訊基於2025-2026年公開資料整理，船班時刻、票價、景點開放狀態可能隨季節調整。<br>
+    出發前請至馬祖國家風景區管理處官網（matsu-nsa.gov.tw）及馬祖海上交通訂位購票系統（matsuebs.com）查詢最新資訊。<br>
+    潮汐資訊請查詢中央氣象署潮汐預報。藍眼淚為自然現象，無法保證每次都能觀測到。<br>
+    景區管制：陣風達10級（含）以上或長浪發生時，坑道等景區將關閉。
+  </p>
+</div>
+
+<script>
+// ===== HERO CANVAS: 海浪粒子動畫 =====
+(function() {
+  var canvas = document.getElementById('heroCanvas');
+  var ctx = canvas.getContext('2d');
+  var particles = [];
+  var mouse = { x: -1000, y: -1000 };
+
+  function resize() {
+    canvas.width = canvas.offsetWidth;
+    canvas.height = canvas.offsetHeight;
+  }
+  resize();
+  window.addEventListener('resize', resize);
+
+  function createParticles() {
+    particles = [];
+    var count = Math.min(80, Math.floor(canvas.width / 15));
+    for (var i = 0; i < count; i++) {
+      particles.push({
+        x: Math.random() * canvas.width,
+        y: Math.random() * canvas.height,
+        r: Math.random() * 3 + 1,
+        vx: (Math.random() - 0.5) * 0.5,
+        vy: (Math.random() - 0.5) * 0.3,
+        opacity: Math.random() * 0.5 + 0.2,
+        color: Math.random() > 0.5 ? '127,200,169' : '168,212,230'
+      });
+    }
+  }
+  createParticles();
+  window.addEventListener('resize', createParticles);
+
+  canvas.addEventListener('mousemove', function(e) {
+    var rect = canvas.getBoundingClientRect();
+    mouse.x = e.clientX - rect.left;
+    mouse.y = e.clientY - rect.top;
+  });
+  canvas.addEventListener('mouseleave', function() {
+    mouse.x = -1000; mouse.y = -1000;
+  });
+
+  function animate() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    // 畫波浪線
+    var time = Date.now() * 0.0005;
+    for (var layer = 0; layer < 3; layer++) {
+      ctx.beginPath();
+      ctx.moveTo(0, canvas.height);
+      var baseY = canvas.height * (0.6 + layer * 0.12);
+      var amp = 15 + layer * 5;
+      for (var x = 0; x <= canvas.width; x += 5) {
+        var y = baseY + Math.sin(x * 0.008 + time + layer) * amp + Math.sin(x * 0.02 + time * 1.5) * 5;
+        ctx.lineTo(x, y);
+      }
+      ctx.lineTo(canvas.width, canvas.height);
+      ctx.closePath();
+      var grad = ctx.createLinearGradient(0, baseY, 0, canvas.height);
+      grad.addColorStop(0, 'rgba(127,200,169,' + (0.08 - layer * 0.02) + ')');
+      grad.addColorStop(1, 'rgba(74,144,184,' + (0.05 - layer * 0.015) + ')');
+      ctx.fillStyle = grad;
+      ctx.fill();
+    }
+
+    // 粒子
+    for (var i = 0; i < particles.length; i++) {
+      var p = particles[i];
+      p.x += p.vx;
+      p.y += p.vy;
+
+      // 滑鼠互動
+      var dx = mouse.x - p.x;
+      var dy = mouse.y - p.y;
+      var dist = Math.sqrt(dx * dx + dy * dy);
+      if (dist < 100) {
+        p.x -= dx * 0.02;
+        p.y -= dy * 0.02;
+      }
+
+      // 邊界回繞
+      if (p.x < 0) p.x = canvas.width;
+      if (p.x > canvas.width) p.x = 0;
+      if (p.y < 0) p.y = canvas.height;
+      if (p.y > canvas.height) p.y = 0;
+
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(' + p.color + ',' + p.opacity + ')';
+      ctx.fill();
+    }
+
+    // 粒子連線
+    for (var i = 0; i < particles.length; i++) {
+      for (var j = i + 1; j < particles.length; j++) {
+        var dx = particles[i].x - particles[j].x;
+        var dy = particles[i].y - particles[j].y;
+        var dist = Math.sqrt(dx * dx + dy * dy);
+        if (dist < 120) {
+          ctx.beginPath();
+          ctx.moveTo(particles[i].x, particles[i].y);
+          ctx.lineTo(particles[j].x, particles[j].y);
+          ctx.strokeStyle = 'rgba(168,212,230,' + (0.15 * (1 - dist / 120)) + ')';
+          ctx.lineWidth = 0.5;
+          ctx.stroke();
+        }
+      }
+    }
+
+    requestAnimationFrame(animate);
+  }
+  animate();
+})();
+
+// ===== PROGRESS BAR =====
+window.addEventListener('scroll', function() {
+  var scrollTop = document.documentElement.scrollTop || document.body.scrollTop;
+  var scrollHeight = document.documentElement.scrollHeight - document.documentElement.clientHeight;
+  var progress = (scrollTop / scrollHeight) * 100;
+  document.getElementById('progressBar').style.width = progress + '%';
+});
+
+// ===== NAVBAR SHOW/HIDE =====
+var navbar = document.getElementById('navbar');
+var navToggle = document.getElementById('navToggle');
+var navLinks = document.getElementById('navLinks');
+
+window.addEventListener('scroll', function() {
+  if (window.scrollY > 200) {
+    navbar.classList.add('show');
+  } else {
+    navbar.classList.remove('show');
+  }
+});
+
+navToggle.addEventListener('click', function() {
+  navLinks.classList.toggle('open');
+});
+
+// 點擊導航連結後關閉選單（手機版）
+document.querySelectorAll('.nav-links a').forEach(function(link) {
+  link.addEventListener('click', function() {
+    navLinks.classList.remove('open');
+  });
+});
+
+// ===== BACK TO TOP =====
+var backTop = document.getElementById('backTop');
+window.addEventListener('scroll', function() {
+  if (window.scrollY > 400) {
+    backTop.classList.add('show');
+  } else {
+    backTop.classList.remove('show');
+  }
+});
+backTop.addEventListener('click', function() {
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+});
+
+// ===== REVEAL ANIMATION (IntersectionObserver) =====
+var reveals = document.querySelectorAll('.reveal');
+var observer = new IntersectionObserver(function(entries) {
+  entries.forEach(function(entry) {
+    if (entry.isIntersecting) {
+      entry.target.classList.add('visible');
+    }
+  });
+}, { threshold: 0.1, rootMargin: '0px 0px -50px 0px' });
+
+reveals.forEach(function(el) { observer.observe(el); });
+
+// ===== NAV ACTIVE STATE =====
+var sections = document.querySelectorAll('section[id], div.island-detail[id], .section-title[id]');
+var navLinksAll = document.querySelectorAll('.nav-link');
+
+window.addEventListener('scroll', function() {
+  var scrollPos = window.scrollY + 100;
+  sections.forEach(function(section) {
+    if (section.offsetTop <= scrollPos && section.offsetTop + section.offsetHeight > scrollPos) {
+      navLinksAll.forEach(function(link) {
+        link.classList.remove('active');
+        if (link.getAttribute('href') === '#' + section.id) {
+          link.classList.add('active');
+        }
+      });
+    }
+  });
+});
+
+// ===== ITINERARY TABS =====
+function showItinerary(index) {
+  document.querySelectorAll('.itinerary-tab').forEach(function(tab, i) {
+    tab.classList.toggle('active', i === index);
+  });
+  document.querySelectorAll('.itinerary-content').forEach(function(content, i) {
+    content.classList.toggle('active', i === index);
+  });
+}
+</script>
+
+</body>
+</html>
